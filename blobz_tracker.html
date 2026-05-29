@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#050508">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>BLOBZ — Motion Tracker</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { height:-webkit-fill-available; }
+body {
+  font-family:'Courier New', Courier, monospace;
+  background:#050508;
+  color:#fff;
+  width:100vw;
+  height:100dvh;
+  overflow:hidden;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HIDDEN VIDEO SOURCE
+═══════════════════════════════════════════════════════════════ */
+#cam { display:none; }
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPOSITE CANVAS
+═══════════════════════════════════════════════════════════════ */
+#composite {
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SPLASH SCREEN
+═══════════════════════════════════════════════════════════════ */
+#splash {
+  position:fixed;
+  inset:0;
+  z-index:300;
+  background:
+    linear-gradient(rgba(255,40,0,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,40,0,.025) 1px, transparent 1px),
+    #050508;
+  background-size:32px 32px, 32px 32px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+  overflow-y:auto;
+  padding:2rem 2rem 2.5rem;
+  transition:opacity .4s ease;
+}
+#splash::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background:repeating-linear-gradient(0deg,
+    rgba(0,0,0,.07) 0px,rgba(0,0,0,.07) 1px,
+    transparent 1px,transparent 3px);
+  pointer-events:none;
+}
+
+/* Brand block */
+.spl-brand {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:.35rem;
+  margin-bottom:2rem;
+  position:relative;
+  z-index:1;
+}
+.spl-title {
+  font-size:4.2rem;
+  font-weight:900;
+  letter-spacing:-.04em;
+  line-height:1;
+  color:#fff;
+  animation:glitch 5s infinite;
+}
+.spl-title::after {
+  content:'';
+  display:block;
+  height:3px;
+  background:#ff2800;
+  width:55%;
+  margin:.3rem auto 0;
+  animation:bar-pulse 2s ease-in-out infinite;
+}
+@keyframes bar-pulse {
+  0%,100%{ opacity:1; }
+  50%{ opacity:.4; }
+}
+@keyframes glitch {
+  0%,92%,100%{ text-shadow:none; transform:none; }
+  93%{ text-shadow:2px 0 #ff2800,-2px 0 #00aaff; transform:translate(-1px,0); }
+  94%{ text-shadow:-2px 0 #ff2800,2px 0 #00aaff; transform:translate(1px,0); }
+  95%{ text-shadow:none; transform:none; }
+  96%{ text-shadow:1px 0 #ff2800; transform:translate(-1px,0); }
+  97%{ text-shadow:none; transform:none; }
+}
+.spl-sub {
+  font-size:.62rem;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.35);
+}
+.spl-ver {
+  font-size:.56rem;
+  letter-spacing:.1em;
+  color:rgba(255,255,255,.18);
+}
+
+/* SVG preview */
+.spl-preview {
+  width:220px;
+  height:130px;
+  margin-bottom:1.8rem;
+  position:relative;
+  z-index:1;
+}
+
+/* Settings block */
+.spl-settings {
+  width:100%;
+  max-width:360px;
+  display:flex;
+  flex-direction:column;
+  gap:1.2rem;
+  margin-bottom:1.8rem;
+  position:relative;
+  z-index:1;
+}
+.ctrl-row { display:flex; flex-direction:column; gap:.4rem; }
+.ctrl-label {
+  font-size:.59rem;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.4);
+  display:flex;
+  justify-content:space-between;
+}
+.ctrl-label span { color:#ff2800; font-weight:700; }
+
+input[type="range"] {
+  -webkit-appearance:none;
+  appearance:none;
+  width:100%;
+  height:2px;
+  background:rgba(255,255,255,.15);
+  outline:none;
+  cursor:pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance:none;
+  width:14px; height:14px;
+  background:#ff2800;
+  border-radius:50%;
+  cursor:pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width:14px; height:14px;
+  background:#ff2800;
+  border:none;
+  border-radius:50%;
+  cursor:pointer;
+}
+
+/* Style toggle */
+.style-toggle { display:flex; gap:.5rem; }
+.style-toggle button {
+  flex:1;
+  padding:.5rem;
+  background:transparent;
+  border:1px solid rgba(255,255,255,.18);
+  color:rgba(255,255,255,.45);
+  font-family:'Courier New',monospace;
+  font-size:.63rem;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .2s;
+}
+.style-toggle button.active {
+  background:#ff2800;
+  border-color:#ff2800;
+  color:#fff;
+}
+
+/* Start button */
+#btn-start {
+  width:100%;
+  max-width:360px;
+  padding:1rem;
+  background:#ff2800;
+  color:#fff;
+  border:none;
+  font-family:'Courier New',monospace;
+  font-size:.95rem;
+  font-weight:700;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  cursor:pointer;
+  position:relative;
+  z-index:1;
+  transition:opacity .15s, transform .15s;
+}
+#btn-start:active { opacity:.8; transform:scale(.98); }
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN CONTROLS (HTML layer, not captured in recording)
+═══════════════════════════════════════════════════════════════ */
+#ctrl-bar {
+  position:fixed;
+  bottom:0; left:0; right:0;
+  z-index:20;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:1rem 1.4rem;
+  padding-bottom:calc(1rem + env(safe-area-inset-bottom));
+  background:linear-gradient(to top, rgba(5,5,8,.88) 0%, transparent 100%);
+  pointer-events:auto;
+}
+
+.ctrl-btn {
+  background:rgba(5,5,8,.72);
+  border:1px solid rgba(255,255,255,.18);
+  color:rgba(255,255,255,.78);
+  font-family:'Courier New',monospace;
+  font-size:.58rem;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  padding:.55rem .9rem;
+  cursor:pointer;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  transition:all .15s;
+  touch-action:manipulation;
+}
+.ctrl-btn:active { opacity:.7; }
+.ctrl-btn.active {
+  background:rgba(255,40,0,.28);
+  border-color:#ff2800;
+  color:#ff2800;
+}
+
+/* Record button */
+#btn-record {
+  width:64px; height:64px;
+  border-radius:50%;
+  background:rgba(5,5,8,.8);
+  border:2px solid rgba(255,255,255,.3);
+  color:rgba(255,255,255,.9);
+  font-size:1.35rem;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  transition:all .2s;
+  touch-action:manipulation;
+}
+#btn-record.recording {
+  border-color:#ff2800;
+  background:rgba(255,40,0,.22);
+  animation:rec-pulse 1.4s ease-in-out infinite;
+}
+@keyframes rec-pulse {
+  0%,100%{ box-shadow:0 0 0 0 rgba(255,40,0,0); }
+  50%{ box-shadow:0 0 0 10px rgba(255,40,0,.18); }
+}
+
+/* Record area (record + download stacked) */
+#rec-area {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:.5rem;
+}
+
+/* Download link */
+#btn-download {
+  display:none;
+  align-items:center;
+  justify-content:center;
+  gap:.3rem;
+  background:rgba(20,200,80,.22);
+  border:1px solid rgba(20,200,80,.6);
+  color:rgba(30,220,90,1);
+  font-family:'Courier New',monospace;
+  font-size:.58rem;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  padding:.5rem .9rem;
+  text-decoration:none;
+  cursor:pointer;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  touch-action:manipulation;
+  white-space:nowrap;
+}
+
+/* Settings panel */
+#settings-panel {
+  position:fixed;
+  bottom:0; left:0; right:0;
+  z-index:19;
+  background:rgba(5,5,8,.95);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-top:1px solid rgba(255,255,255,.09);
+  padding:1.4rem 1.4rem;
+  padding-bottom:calc(5.8rem + env(safe-area-inset-bottom));
+  transform:translateY(100%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  pointer-events:none;
+}
+#settings-panel.open {
+  transform:translateY(0);
+  pointer-events:auto;
+}
+#settings-panel .ctrl-row { margin-bottom:.9rem; }
+
+.toggle-row {
+  display:flex;
+  gap:.5rem;
+  margin-top:.6rem;
+}
+.toggle-btn {
+  flex:1;
+  padding:.42rem;
+  background:transparent;
+  border:1px solid rgba(255,255,255,.13);
+  color:rgba(255,255,255,.3);
+  font-family:'Courier New',monospace;
+  font-size:.56rem;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:all .15s;
+}
+.toggle-btn.on {
+  border-color:#ff2800;
+  color:#ff2800;
+  background:rgba(255,40,0,.08);
+}
+
+/* Error banner */
+#error-banner {
+  display:none;
+  position:fixed;
+  top:1rem; left:1rem; right:1rem;
+  z-index:60;
+  background:rgba(160,15,0,.92);
+  backdrop-filter:blur(10px);
+  padding:.75rem 1rem;
+  font-size:.68rem;
+  line-height:1.55;
+  border-left:3px solid #ff2800;
+  pointer-events:none;
+}
+
+/* iOS note */
+#ios-note {
+  display:none;
+  position:fixed;
+  bottom:6.2rem; left:50%;
+  transform:translateX(-50%);
+  z-index:30;
+  background:rgba(5,5,8,.82);
+  padding:.42rem .9rem;
+  font-size:.56rem;
+  color:rgba(255,255,255,.4);
+  white-space:nowrap;
+  border:1px solid rgba(255,255,255,.1);
+  pointer-events:none;
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SPLASH SCREEN
+══════════════════════════════════════════════════════════════ -->
+<div id="splash">
+
+  <div class="spl-brand">
+    <div class="spl-title">BLOBZ</div>
+    <div class="spl-sub">Motion Tracking Overlay</div>
+    <div class="spl-ver">Browser Edition · v2.0</div>
+  </div>
+
+  <!-- Animated SVG preview -->
+  <div class="spl-preview">
+    <svg width="220" height="130" viewBox="0 0 220 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="110" cy="52" r="46" stroke="rgba(255,255,255,0.5)" stroke-width="1.5">
+        <animate attributeName="r" values="46;50;46" dur="2.8s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="110" cy="52" r="17" stroke="rgba(255,255,255,0.32)" stroke-width="1"/>
+      <rect x="106" y="48" width="8" height="8" stroke="#b4ff3c" stroke-width="1.5"/>
+      <circle cx="58" cy="92" r="23" stroke="rgba(255,255,255,0.45)" stroke-width="1.5">
+        <animate attributeName="r" values="23;26;23" dur="2.1s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="162" cy="96" r="17" stroke="rgba(255,255,255,0.4)" stroke-width="1.5">
+        <animate attributeName="r" values="17;20;17" dur="2.5s" repeatCount="indefinite"/>
+      </circle>
+      <line x1="110" y1="52" x2="58" y2="92" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
+      <line x1="110" y1="52" x2="162" y2="96" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
+      <polygon points="81,74 77,79 85,78" fill="rgba(180,255,60,0.85)"/>
+      <polygon points="138,76 134,81 142,79" fill="rgba(180,255,60,0.85)"/>
+      <text x="118" y="59" fill="rgba(255,255,255,0.7)" font-family="Courier New" font-size="8">096.0 PX S</text>
+      <text x="66" y="101" fill="rgba(255,255,255,0.7)" font-family="Courier New" font-size="7">053.3 PX S</text>
+      <text x="168" y="104" fill="rgba(255,255,255,0.7)" font-family="Courier New" font-size="7">039.9 PX S</text>
+    </svg>
+  </div>
+
+  <div class="spl-settings">
+
+    <!-- Style -->
+    <div class="ctrl-row">
+      <div class="ctrl-label">Detection Style</div>
+      <div class="style-toggle">
+        <button id="spl-style-b" class="active">⬤ Circles</button>
+        <button id="spl-style-a">☐ Boxes</button>
+      </div>
+    </div>
+
+    <!-- Motion sensitivity -->
+    <div class="ctrl-row">
+      <div class="ctrl-label">Motion Sensitivity <span id="val-mot">20</span></div>
+      <input type="range" id="rng-mot" min="5" max="60" value="20" step="1">
+    </div>
+
+    <!-- Brightness -->
+    <div class="ctrl-row">
+      <div class="ctrl-label">Brightness Pickup <span id="val-bri">220</span></div>
+      <input type="range" id="rng-bri" min="140" max="254" value="220" step="1">
+    </div>
+
+    <!-- Min blob size -->
+    <div class="ctrl-row">
+      <div class="ctrl-label">Min Blob Size <span id="val-min">12</span></div>
+      <input type="range" id="rng-min" min="4" max="120" value="12" step="1">
+    </div>
+
+  </div><!-- /.spl-settings -->
+
+  <button id="btn-start">START TRACKING</button>
+
+</div><!-- /#splash -->
+
+<!-- Hidden video element -->
+<video id="cam" autoplay playsinline muted></video>
+
+<!-- Main composite canvas (video + overlay + HUD) -->
+<canvas id="composite"></canvas>
+
+<!-- ══════════════════════════════════════════════════════════════
+     MAIN UI CONTROLS (not captured in recording)
+══════════════════════════════════════════════════════════════ -->
+<div id="ctrl-bar">
+  <button class="ctrl-btn" id="btn-style">STYLE: CIRCLES</button>
+
+  <div id="rec-area">
+    <a id="btn-download">⬇ SAVE</a>
+    <button id="btn-record">⏺</button>
+  </div>
+
+  <button class="ctrl-btn" id="btn-settings">⚙ TUNE</button>
+</div>
+
+<!-- Settings panel (slides up from bottom) -->
+<div id="settings-panel">
+  <div class="ctrl-row">
+    <div class="ctrl-label">Motion Sensitivity <span id="lv-mot">20</span></div>
+    <input type="range" id="lr-mot" min="5" max="60" value="20" step="1">
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-label">Brightness Pickup <span id="lv-bri">220</span></div>
+    <input type="range" id="lr-bri" min="140" max="254" value="220" step="1">
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-label">Min Blob Size <span id="lv-min">12</span></div>
+    <input type="range" id="lr-min" min="4" max="120" value="12" step="1">
+  </div>
+  <div class="toggle-row">
+    <button class="toggle-btn on" id="btn-conn">Connectors</button>
+    <button class="toggle-btn on" id="btn-lbl">Labels</button>
+    <button class="toggle-btn on" id="btn-vig">Vignette</button>
+  </div>
+</div>
+
+<div id="error-banner"></div>
+<div id="ios-note">Recording requires Chrome or Firefox</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PHASE 1 — MATH ENGINES & CORE UTILITY ALGORITHMS
+//
+//   1.1  Constants, pool declarations, buffer init
+//   1.2  Grayscale conversion  (BT.601, integer-fast, zero floats)
+//   1.3  Binary mask           (motion diff + brightness threshold)
+//   1.4  Buffer copy           (typed-array set — maps to memcpy)
+//   1.5  Connected components  (BFS, 4-connected, pre-allocated queue)
+//   1.6  Raw blob extraction   (area filter, insertion-sort, coord scale)
+//   1.7  Blob tracker          (nearest-centroid, exp-smoothing, TTL pool)
+//   1.8  Drawing utilities     (corner brackets, arrow, vignette cache)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── 1.1  Constants & buffer declarations ────────────────────────────────────
+
+const MAX_LABELS  = 64;   // max labelled regions per frame (BFS cap)
+const MAX_RAW     = 16;   // max raw blobs extracted per frame
+const MAX_TRACKED = 14;   // max concurrently live tracked blobs
+
+// Processing canvas dimensions — recomputed after camera starts
+let PROC_W = 320;
+let PROC_H = 180;
+let PROC_N = PROC_W * PROC_H;  // total proc pixels
+
+// Typed-array pixel buffers (all allocated once in initBuffers)
+let _grayBuf     = null;  // Uint8Array — current grayscale frame
+let _prevGrayBuf = null;  // Uint8Array — previous grayscale frame
+let _maskBuf     = null;  // Uint8Array — binary foreground mask
+let _labelBuf    = null;  // Int32Array — CC labels (−1=BG, 1..N=label)
+let _bfsQueue    = null;  // Int32Array — BFS scratch queue (size = PROC_N)
+
+// Per-label blob accumulators (index 0 unused; 1..MAX_LABELS)
+let _bArea = null;   // Float32Array — pixel area of each label
+let _bSumX = null;   // Float32Array — sum of X coords
+let _bSumY = null;   // Float32Array — sum of Y coords
+let _bMinX = null;   // Int32Array  — bounding-box min X
+let _bMinY = null;   // Int32Array  — bounding-box min Y
+let _bMaxX = null;   // Int32Array  — bounding-box max X
+let _bMaxY = null;   // Int32Array  — bounding-box max Y
+
+// Sorting scratch buffer: [area0, label0, area1, label1, …]
+let _sortBuf = null; // Float32Array(MAX_LABELS * 2)
+
+// Allocate (or reallocate) all typed-array buffers for given dimensions.
+// Called once at camera start, and on window resize if proc dims change.
+function initBuffers(pW, pH) {
+  PROC_W = pW;
+  PROC_H = pH;
+  PROC_N = pW * pH;
+  _grayBuf     = new Uint8Array(PROC_N);
+  _prevGrayBuf = new Uint8Array(PROC_N);
+  _maskBuf     = new Uint8Array(PROC_N);
+  _labelBuf    = new Int32Array(PROC_N);
+  _bfsQueue    = new Int32Array(PROC_N);
+  const mb = MAX_LABELS + 1;
+  _bArea   = new Float32Array(mb);
+  _bSumX   = new Float32Array(mb);
+  _bSumY   = new Float32Array(mb);
+  _bMinX   = new Int32Array(mb);
+  _bMinY   = new Int32Array(mb);
+  _bMaxX   = new Int32Array(mb);
+  _bMaxY   = new Int32Array(mb);
+  _sortBuf = new Float32Array(MAX_LABELS * 2);
+}
+
+// ── 1.2  Grayscale conversion — BT.601 fixed-point (no fp multiply) ────────
+// Weights: R×77, G×150, B×29  (sum=256 → >>8 divides by 256)
+// rgba : Uint8ClampedArray from ImageData  (length = PROC_N × 4)
+// gray : Uint8Array output                 (length = PROC_N)
+// n    : PROC_N
+
+function toGrayscale(rgba, gray, n) {
+  for (let i = 0, j = 0; i < n; i++, j += 4) {
+    gray[i] = (rgba[j] * 77 + rgba[j + 1] * 150 + rgba[j + 2] * 29) >> 8;
+  }
+}
+
+// ── 1.3  Binary mask — motion diff OR brightness threshold ──────────────────
+// A pixel is foreground (1) when:
+//   |current − previous| >= motionThresh   →  motion detected, OR
+//   current >= brightThresh                →  bright highlight pickup
+
+function computeMask(cur, prev, out, n, motionThresh, brightThresh) {
+  for (let i = 0; i < n; i++) {
+    const c = cur[i];
+    const d = c > prev[i] ? c - prev[i] : prev[i] - c;
+    out[i] = (d >= motionThresh || c >= brightThresh) ? 1 : 0;
+  }
+}
+
+// ── 1.4  Buffer copy — typed-array set() (backed by memcpy in V8) ───────────
+
+function copyBuf(src, dst, n) {
+  dst.set(src.subarray(0, n));
+}
+
+// ── 1.5  Connected components — iterative BFS, 4-connected ─────────────────
+// Reads:  _maskBuf, writes: _labelBuf + _bArea/_bSumX/…
+// All writes go to pre-allocated typed arrays → ZERO GC inside this function.
+// Returns the count of distinct labels assigned (capped at MAX_LABELS).
+
+function labelCC(mask, labels, queue, w, h) {
+  const n = w * h;
+
+  // Initialise label buffer: foreground→0 (unlabelled), background→−1
+  for (let i = 0; i < n; i++) labels[i] = mask[i] ? 0 : -1;
+
+  // Reset per-label accumulators
+  for (let k = 1; k <= MAX_LABELS; k++) {
+    _bArea[k] = 0;  _bSumX[k] = 0;  _bSumY[k] = 0;
+    _bMinX[k] = w;  _bMinY[k] = h;
+    _bMaxX[k] = 0;  _bMaxY[k] = 0;
+  }
+
+  let nextLabel = 1;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const start = y * w + x;
+      if (labels[start] !== 0) continue; // already labelled or background
+
+      // Overflow guard: mark as ignored and skip
+      if (nextLabel > MAX_LABELS) {
+        labels[start] = -1;
+        continue;
+      }
+
+      // Begin BFS for new connected component
+      const label = nextLabel++;
+      labels[start] = label;
+      let qi = 0;
+      let qe = 1;
+      queue[0] = start;
+
+      while (qi < qe) {
+        const idx = queue[qi++];
+        const cx  = idx % w;
+        const cy  = (idx / w) | 0;
+
+        // Accumulate statistics
+        _bArea[label]++;
+        _bSumX[label] += cx;
+        _bSumY[label] += cy;
+        if (cx < _bMinX[label]) _bMinX[label] = cx;
+        if (cx > _bMaxX[label]) _bMaxX[label] = cx;
+        if (cy < _bMinY[label]) _bMinY[label] = cy;
+        if (cy > _bMaxY[label]) _bMaxY[label] = cy;
+
+        // 4-connected neighbours (bounds-checked)
+        if (cx > 0) {
+          const ni = idx - 1;
+          if (labels[ni] === 0) { labels[ni] = label; queue[qe++] = ni; }
+        }
+        if (cx < w - 1) {
+          const ni = idx + 1;
+          if (labels[ni] === 0) { labels[ni] = label; queue[qe++] = ni; }
+        }
+        if (cy > 0) {
+          const ni = idx - w;
+          if (labels[ni] === 0) { labels[ni] = label; queue[qe++] = ni; }
+        }
+        if (cy < h - 1) {
+          const ni = idx + w;
+          if (labels[ni] === 0) { labels[ni] = label; queue[qe++] = ni; }
+        }
+      }
+    }
+  }
+
+  return nextLabel - 1;
+}
+
+// ── 1.6  Raw blob extraction — area filter, sort by area, scale to canvas ──
+// Reads the per-label accumulators written by labelCC().
+// Writes up to MAX_RAW entries into _rawBlobs; sets _rawBlobCount.
+// scaleX/scaleY map proc-pixel coords → composite-canvas coords.
+
+const _rawBlobs = Array.from({ length: MAX_RAW }, () => ({
+  cx: 0, cy: 0, r: 0, pxS: 0,
+  bx: 0, by: 0, bw: 0, bh: 0, area: 0
+}));
+let _rawBlobCount = 0;
+
+function extractRawBlobs(labelCount, scaleX, scaleY, minArea, maxArea) {
+  // Collect valid labels into sort buffer
+  let vc = 0;
+  for (let k = 1; k <= labelCount; k++) {
+    const a = _bArea[k];
+    if (a < minArea || a > maxArea) continue;
+    if (vc >= MAX_LABELS) break;
+    _sortBuf[vc * 2]     = a; // area
+    _sortBuf[vc * 2 + 1] = k; // label
+    vc++;
+  }
+
+  // Insertion-sort descending by area (N ≤ MAX_LABELS — insertion sort optimal)
+  for (let i = 1; i < vc; i++) {
+    const keyA = _sortBuf[i * 2];
+    const keyL = _sortBuf[i * 2 + 1];
+    let j = i - 1;
+    while (j >= 0 && _sortBuf[j * 2] < keyA) {
+      _sortBuf[(j + 1) * 2]     = _sortBuf[j * 2];
+      _sortBuf[(j + 1) * 2 + 1] = _sortBuf[j * 2 + 1];
+      j--;
+    }
+    _sortBuf[(j + 1) * 2]     = keyA;
+    _sortBuf[(j + 1) * 2 + 1] = keyL;
+  }
+
+  // Write into raw blob pool (top MAX_RAW by area)
+  _rawBlobCount = Math.min(vc, MAX_RAW);
+  for (let i = 0; i < _rawBlobCount; i++) {
+    const k    = _sortBuf[i * 2 + 1] | 0;
+    const area = _bArea[k];
+    const cx   = (_bSumX[k] / area) * scaleX;
+    const cy   = (_bSumY[k] / area) * scaleY;
+    const r    = Math.sqrt(area / Math.PI) * ((scaleX + scaleY) * 0.5);
+    const bx   = _bMinX[k] * scaleX;
+    const by   = _bMinY[k] * scaleY;
+    const bw   = (_bMaxX[k] - _bMinX[k]) * scaleX;
+    const bh   = (_bMaxY[k] - _bMinY[k]) * scaleY;
+    const b    = _rawBlobs[i];
+    b.cx = cx;  b.cy = cy;  b.r  = r;
+    b.pxS = r * 2;  // equivalent diameter in display pixels
+    b.bx = bx;  b.by = by;  b.bw = bw;  b.bh = bh;
+    b.area = area;
+  }
+}
+
+// ── 1.7  Blob tracker — nearest-centroid match, exp-smoothing, TTL ─────────
+
+const TRACK_ALPHA      = 0.26;        // weight of new measurement in smoothing
+const TRACK_MATCH_D2   = 140 * 140;   // max squared match distance (px²)
+const TRACK_TTL        = 10;          // frames a blob survives without detection
+
+const _tracked = Array.from({ length: MAX_TRACKED }, (_, i) => ({
+  id: i,
+  scx: 0, scy: 0, sr: 0, spxS: 0,   // smoothed centroid, radius, label
+  bx: 0, by: 0, bw: 0, bh: 0,        // last bounding box (canvas px)
+  age: 0, ttl: 0,
+  active: false, matched: false
+}));
+
+function updateTracked() {
+  // Mark all active blobs as unmatched for this frame
+  for (let ti = 0; ti < MAX_TRACKED; ti++) {
+    if (_tracked[ti].active) _tracked[ti].matched = false;
+  }
+
+  // Match each raw blob to nearest active tracked blob
+  for (let ri = 0; ri < _rawBlobCount; ri++) {
+    const rb = _rawBlobs[ri];
+    let bestI = -1;
+    let bestD = TRACK_MATCH_D2;
+
+    for (let ti = 0; ti < MAX_TRACKED; ti++) {
+      const t = _tracked[ti];
+      if (!t.active || t.matched) continue;
+      const dx = rb.cx - t.scx;
+      const dy = rb.cy - t.scy;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < bestD) { bestD = d2; bestI = ti; }
+    }
+
+    if (bestI >= 0) {
+      // Update matched tracked blob with exponential smoothing
+      const t = _tracked[bestI];
+      const a = TRACK_ALPHA, ia = 1.0 - a;
+      t.scx  = t.scx  * ia + rb.cx  * a;
+      t.scy  = t.scy  * ia + rb.cy  * a;
+      t.sr   = t.sr   * ia + rb.r   * a;
+      t.spxS = t.spxS * ia + rb.pxS * a;
+      t.bx = rb.bx; t.by = rb.by; t.bw = rb.bw; t.bh = rb.bh;
+      t.ttl = TRACK_TTL;
+      t.age++;
+      t.matched = true;
+    } else {
+      // Spawn in first free slot
+      for (let ti = 0; ti < MAX_TRACKED; ti++) {
+        if (!_tracked[ti].active) {
+          const t = _tracked[ti];
+          t.scx = rb.cx; t.scy = rb.cy;
+          t.sr  = rb.r;  t.spxS = rb.pxS;
+          t.bx = rb.bx; t.by = rb.by; t.bw = rb.bw; t.bh = rb.bh;
+          t.ttl = TRACK_TTL; t.age = 0;
+          t.active = true; t.matched = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // Decrement TTL for unmatched; deactivate expired
+  for (let ti = 0; ti < MAX_TRACKED; ti++) {
+    const t = _tracked[ti];
+    if (!t.active) continue;
+    if (!t.matched) {
+      if (--t.ttl <= 0) { t.active = false; t.age = 0; }
+    }
+  }
+}
+
+// ── 1.8  Drawing utilities ──────────────────────────────────────────────────
+
+// Four L-shaped corner brackets around rect (x, y, w, h)
+function drawCornerBrackets(ctx, x, y, w, h, arm, color, lw) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = lw;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(x,         y + arm); ctx.lineTo(x,         y); ctx.lineTo(x + arm,     y);
+  ctx.moveTo(x + w - arm, y);     ctx.lineTo(x + w,     y); ctx.lineTo(x + w,       y + arm);
+  ctx.moveTo(x,         y + h - arm); ctx.lineTo(x,     y + h); ctx.lineTo(x + arm, y + h);
+  ctx.moveTo(x + w - arm, y + h); ctx.lineTo(x + w, y + h);   ctx.lineTo(x + w,   y + h - arm);
+  ctx.stroke();
+}
+
+// Arrowhead at midpoint of segment (x1,y1)→(x2,y2)
+function drawArrow(ctx, x1, y1, x2, y2, color) {
+  const mx = (x1 + x2) * 0.5, my = (y1 + y2) * 0.5;
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const as = 7, a1 = angle - 0.45, a2 = angle + 0.45;
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = 1.5;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(mx - as * Math.cos(a1), my - as * Math.sin(a1));
+  ctx.lineTo(mx, my);
+  ctx.lineTo(mx - as * Math.cos(a2), my - as * Math.sin(a2));
+  ctx.stroke();
+}
+
+// Vignette radial gradient — cached; recreated only on canvas resize
+let _vigGrad = null, _vigW = 0, _vigH = 0;
+
+function drawVignette(ctx, w, h) {
+  if (!_vigGrad || _vigW !== w || _vigH !== h) {
+    _vigGrad = ctx.createRadialGradient(
+      w * 0.5, h * 0.5, h * 0.22,
+      w * 0.5, h * 0.5, Math.max(w, h) * 0.74
+    );
+    _vigGrad.addColorStop(0, 'rgba(0,0,0,0)');
+    _vigGrad.addColorStop(1, 'rgba(0,0,0,0.52)');
+    _vigW = w; _vigH = h;
+  }
+  ctx.fillStyle = _vigGrad;
+  ctx.fillRect(0, 0, w, h);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PHASE 2 — APP STATE & GLOBAL CONFIGURATION
+//
+//   2.1  CFG   — tunable algorithm & visual parameters (driven by UI)
+//   2.2  STATE — runtime mutable state (camera, recording, FPS, crop)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── 2.1  Configuration object ───────────────────────────────────────────────
+
+const CFG = {
+  motionThresh:   20,      // |Δgray| to classify as motion (5–60)
+  brightThresh:   220,     // gray level to classify as bright highlight (140–254)
+  minArea:        12,      // min blob area in proc pixels
+  maxArea:        20000,   // max blob area in proc pixels
+  style:          'B',     // 'A' = red boxes, 'B' = white circles
+  showConnectors: true,
+  showLabels:     true,
+  showVignette:   true,
+};
+
+// ── 2.2  Runtime state object ────────────────────────────────────────────────
+
+const STATE = {
+  cameraOk:      false,
+  camStream:     null,
+  videoW:        1280,
+  videoH:        720,
+  isRecording:   false,
+  mediaRecorder: null,
+  chunks:        [],
+  recordStartT:  0,
+  lastDlUrl:     null,
+  fps:           0,
+  fpsT:          0,
+  fpsFrames:     0,
+  warmup:        0,        // skip detection while prevGray not yet primed
+  lastDetectT:   0,
+};
+
+// Cover-crop cache — { sx, sy, sw, sh, valid }
+// Pixel coordinates inside the video frame that tile-cover the canvas.
+const _crop = { sx: 0, sy: 0, sw: 0, sh: 0, valid: false };
+
+function updateCrop(videoW, videoH, cW, cH) {
+  const vr = videoW / videoH, cr = cW / cH;
+  if (vr > cr) {
+    _crop.sh = videoH;
+    _crop.sw = videoH * cr;
+    _crop.sx = (videoW - _crop.sw) * 0.5;
+    _crop.sy = 0;
+  } else {
+    _crop.sw = videoW;
+    _crop.sh = videoW / cr;
+    _crop.sx = 0;
+    _crop.sy = (videoH - _crop.sh) * 0.5;
+  }
+  _crop.valid = true;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PHASE 3 — CORE RENDERING & PROCESSING ENGINE
+//
+//   3.1  DOM handles (set in DOMContentLoaded)
+//   3.2  drawStyleA  — BLOBZ red-box visual   (nested dashed frames)
+//   3.3  drawStyleB  — BLOBZ circle visual    (concentric rings + tree)
+//   3.4  drawHUD     — branding, blob count, FPS, REC timer
+//   3.5  loop()      — main requestAnimationFrame loop
+//   3.6  startCamera() / startCameraFallback()
+//   3.7  startRecording() / stopRecording()
+//   3.8  showError()
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── 3.1  Element handles (populated at DOMContentLoaded) ────────────────────
+
+let compositeCanvas = null;
+let compositeCtx    = null;
+let workCanvas      = null;
+let workCtx         = null;
+let videoEl         = null;
+let rafId           = null;
+
+const DETECT_INTERVAL_MS = 48; // ~21 detections/sec; rendering runs at rAF rate
+
+// ── 3.2  Style A — Red tracker boxes ─────────────────────────────────────────
+
+function drawStyleA(ctx, cW, cH) {
+  // Collect stabilised active blobs (age ≥ 2 means they've been confirmed)
+  const blobs = [];
+  for (let ti = 0; ti < MAX_TRACKED; ti++) {
+    const t = _tracked[ti];
+    if (t.active && t.age >= 2) blobs.push(t);
+  }
+  if (blobs.length === 0) return;
+
+  // Encompassing dashed ellipse around all blob centroids (≥ 3 blobs)
+  if (blobs.length >= 3) {
+    let mnX = Infinity, mnY = Infinity, mxX = -Infinity, mxY = -Infinity;
+    for (const b of blobs) {
+      if (b.scx < mnX) mnX = b.scx;
+      if (b.scy < mnY) mnY = b.scy;
+      if (b.scx > mxX) mxX = b.scx;
+      if (b.scy > mxY) mxY = b.scy;
+    }
+    const ecx = (mnX + mxX) * 0.5, ecy = (mnY + mxY) * 0.5;
+    const erx = (mxX - mnX) * 0.5 * 1.32 + 42;
+    const ery = (mxY - mnY) * 0.5 * 1.32 + 42;
+    if (erx > 20 && ery > 20) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,60,0,0.42)';
+      ctx.lineWidth   = 1.5;
+      ctx.setLineDash([10, 8]);
+      ctx.beginPath();
+      ctx.ellipse(ecx, ecy, erx, ery, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+
+  // Nearest-neighbour dashed connector lines
+  if (CFG.showConnectors && blobs.length > 1) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,50,0,0.28)';
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([3, 6]);
+    for (let i = 0; i < blobs.length; i++) {
+      let nearJ = -1, nearD = Infinity;
+      for (let j = 0; j < blobs.length; j++) {
+        if (j === i) continue;
+        const dx = blobs[i].scx - blobs[j].scx;
+        const dy = blobs[i].scy - blobs[j].scy;
+        const d  = dx * dx + dy * dy;
+        if (d < nearD) { nearD = d; nearJ = j; }
+      }
+      if (nearJ > i) {
+        ctx.beginPath();
+        ctx.moveTo(blobs[i].scx, blobs[i].scy);
+        ctx.lineTo(blobs[nearJ].scx, blobs[nearJ].scy);
+        ctx.stroke();
+      }
+    }
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  // Per-blob tracker boxes
+  for (const b of blobs) {
+    const fadeA = Math.min(1, b.age / 4) * Math.min(1, b.ttl / 3);
+    if (fadeA < 0.05) continue;
+
+    const cx = b.scx, cy = b.scy;
+    const r  = Math.max(b.sr, 14);
+    const hw = Math.max(b.bw * 0.5 + 10, r + 8);
+    const hh = Math.max(b.bh * 0.5 + 10, r + 8);
+    const x0 = cx - hw, y0 = cy - hh;
+    const w0 = hw * 2,  h0 = hh * 2;
+
+    ctx.save();
+    ctx.globalAlpha = fadeA;
+
+    // Outer dashed frame (red)
+    ctx.strokeStyle = '#ff2800';
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.strokeRect(x0, y0, w0, h0);
+    ctx.setLineDash([]);
+
+    // Middle dashed frame (60%, orange-red)
+    const s2 = 0.60;
+    const x2 = cx - hw * s2, y2 = cy - hh * s2;
+    const w2 = hw * s2 * 2,  h2 = hh * s2 * 2;
+    ctx.strokeStyle = 'rgba(255,80,30,0.62)';
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.strokeRect(x2, y2, w2, h2);
+    ctx.setLineDash([]);
+
+    // Small corner dot-squares at inner frame corners
+    const ds = 5;
+    ctx.strokeStyle = 'rgba(255,255,255,0.72)';
+    ctx.lineWidth   = 1;
+    ctx.strokeRect(x2 - ds * 0.5, y2 - ds * 0.5, ds, ds);
+    ctx.strokeRect(x2 + w2 - ds * 0.5, y2 - ds * 0.5, ds, ds);
+    ctx.strokeRect(x2 - ds * 0.5, y2 + h2 - ds * 0.5, ds, ds);
+    ctx.strokeRect(x2 + w2 - ds * 0.5, y2 + h2 - ds * 0.5, ds, ds);
+
+    // Outer corner bracket marks (L-shapes, white)
+    const arm = Math.min(16, w0 * 0.22);
+    drawCornerBrackets(ctx, x0, y0, w0, h0, arm, 'rgba(255,255,255,0.92)', 2);
+
+    // PX S label above the outer box
+    if (CFG.showLabels) {
+      ctx.font      = '10px "Courier New", monospace';
+      ctx.fillStyle = 'rgba(255,255,255,0.88)';
+      ctx.fillText(b.spxS.toFixed(1) + ' PX S', x0 + 2, y0 - 6);
+    }
+
+    ctx.restore();
+  }
+}
+
+// ── 3.3  Style B — White circle blobs ────────────────────────────────────────
+
+function drawStyleB(ctx, cW, cH) {
+  // Collect stabilised blobs, sorted by radius desc (largest first = root)
+  const blobs = [];
+  for (let ti = 0; ti < MAX_TRACKED; ti++) {
+    const t = _tracked[ti];
+    if (t.active && t.age >= 2) blobs.push(t);
+  }
+  if (blobs.length === 0) return;
+  blobs.sort((a, b) => b.sr - a.sr);
+
+  // Tree connector lines: each blob connects to nearest larger ancestor
+  if (CFG.showConnectors && blobs.length > 1) {
+    ctx.save();
+    for (let i = 1; i < blobs.length; i++) {
+      let nearJ = 0, nearD = Infinity;
+      for (let j = 0; j < i; j++) {
+        const dx = blobs[i].scx - blobs[j].scx;
+        const dy = blobs[i].scy - blobs[j].scy;
+        const d  = dx * dx + dy * dy;
+        if (d < nearD) { nearD = d; nearJ = j; }
+      }
+      ctx.strokeStyle = 'rgba(255,255,255,0.38)';
+      ctx.lineWidth   = 1;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(blobs[i].scx, blobs[i].scy);
+      ctx.lineTo(blobs[nearJ].scx, blobs[nearJ].scy);
+      ctx.stroke();
+      drawArrow(ctx,
+        blobs[i].scx, blobs[i].scy,
+        blobs[nearJ].scx, blobs[nearJ].scy,
+        'rgba(180,255,55,0.88)'
+      );
+    }
+    ctx.restore();
+  }
+
+  // Per-blob concentric circles
+  for (const b of blobs) {
+    const fadeA = Math.min(1, b.age / 4) * Math.min(1, b.ttl / 3);
+    if (fadeA < 0.05) continue;
+
+    const cx = b.scx, cy = b.scy;
+    const r  = Math.max(b.sr, 10);
+
+    ctx.save();
+    ctx.globalAlpha = fadeA;
+
+    // Outer circle
+    ctx.strokeStyle = 'rgba(255,255,255,0.84)';
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner circle (35% radius)
+    ctx.strokeStyle = 'rgba(255,255,255,0.48)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(r * 0.35, 5), 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Centre tracking square (green-yellow accent)
+    const ts = 9;
+    ctx.strokeStyle = 'rgba(180,255,55,0.95)';
+    ctx.lineWidth   = 1.5;
+    ctx.strokeRect(cx - ts * 0.5, cy - ts * 0.5, ts, ts);
+
+    // PX S label to the right of outer circle
+    if (CFG.showLabels) {
+      ctx.font      = '10px "Courier New", monospace';
+      ctx.fillStyle = 'rgba(255,255,255,0.86)';
+      ctx.fillText(b.spxS.toFixed(1) + ' PX S', cx + r + 5, cy + 4);
+    }
+
+    ctx.restore();
+  }
+}
+
+// ── 3.4  HUD — branding, stats, REC indicator ────────────────────────────────
+
+function drawHUD(ctx, cW, cH) {
+  // Brand text (top-left)
+  ctx.save();
+  ctx.font      = 'bold 12px "Courier New", monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.88)';
+  ctx.fillText('BLOBZ TRACKER', 14, 27);
+
+  let nActive = 0;
+  for (let ti = 0; ti < MAX_TRACKED; ti++) if (_tracked[ti].active) nActive++;
+
+  ctx.font      = '9px "Courier New", monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.38)';
+  ctx.fillText(
+    'BLOBS: ' + nActive +
+    '   FPS: ' + STATE.fps +
+    '   ' + (CFG.style === 'A' ? 'BOXES' : 'CIRCLES'),
+    14, 41
+  );
+  ctx.restore();
+
+  // Recording dot + timer (top-right)
+  if (STATE.isRecording) {
+    const elapsed = ((performance.now() - STATE.recordStartT) / 1000) | 0;
+    const mm      = String((elapsed / 60) | 0).padStart(2, '0');
+    const ss      = String(elapsed % 60).padStart(2, '0');
+    const pulse   = 0.55 + 0.45 * Math.sin(performance.now() / 270);
+
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle   = '#ff2800';
+    ctx.beginPath();
+    ctx.arc(cW - 18, 21, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.font        = 'bold 10px "Courier New", monospace';
+    ctx.fillStyle   = '#fff';
+    ctx.textAlign   = 'right';
+    ctx.fillText('REC ' + mm + ':' + ss, cW - 32, 25);
+    ctx.textAlign   = 'left';
+    ctx.restore();
+  }
+}
+
+// ── 3.5  Main animation loop ──────────────────────────────────────────────────
+
+function loop(now) {
+  rafId = requestAnimationFrame(loop);
+  if (!STATE.cameraOk || videoEl.readyState < 2) return;
+
+  // FPS counter
+  STATE.fpsFrames++;
+  if (now - STATE.fpsT >= 1000) {
+    STATE.fps       = STATE.fpsFrames;
+    STATE.fpsFrames = 0;
+    STATE.fpsT      = now;
+  }
+
+  const cW = compositeCanvas.width;
+  const cH = compositeCanvas.height;
+
+  // Ensure cover-crop is computed
+  if (!_crop.valid) updateCrop(STATE.videoW, STATE.videoH, cW, cH);
+
+  // ── A. Draw video frame (cover-crop mode) ──
+  compositeCtx.drawImage(
+    videoEl,
+    _crop.sx, _crop.sy, _crop.sw, _crop.sh,
+    0, 0, cW, cH
+  );
+
+  // ── B. Optional vignette ──
+  if (CFG.showVignette) drawVignette(compositeCtx, cW, cH);
+
+  // ── C. Blob detection (throttled to DETECT_INTERVAL_MS) ──
+  if (now - STATE.lastDetectT >= DETECT_INTERVAL_MS) {
+    STATE.lastDetectT = now;
+
+    // Capture proc-resolution frame (same cover crop as composite)
+    workCtx.drawImage(
+      videoEl,
+      _crop.sx, _crop.sy, _crop.sw, _crop.sh,
+      0, 0, PROC_W, PROC_H
+    );
+    const imgData = workCtx.getImageData(0, 0, PROC_W, PROC_H);
+
+    // Grayscale
+    toGrayscale(imgData.data, _grayBuf, PROC_N);
+
+    if (STATE.warmup >= 2) {
+      // Binary mask: motion + brightness
+      computeMask(_grayBuf, _prevGrayBuf, _maskBuf, PROC_N,
+                  CFG.motionThresh, CFG.brightThresh);
+
+      // Connected components
+      const labelCount = labelCC(_maskBuf, _labelBuf, _bfsQueue, PROC_W, PROC_H);
+
+      // Extract raw blobs (proc coords → canvas coords)
+      extractRawBlobs(
+        labelCount,
+        cW / PROC_W, cH / PROC_H,
+        CFG.minArea, CFG.maxArea
+      );
+
+      // Update tracked blob pool
+      updateTracked();
+
+    } else {
+      STATE.warmup++;  // prime prevGrayBuf over first 2 frames
+    }
+
+    // Roll frame: current → previous
+    copyBuf(_grayBuf, _prevGrayBuf, PROC_N);
+  }
+
+  // ── D. Draw visual overlay (tracked blobs) ──
+  if (CFG.style === 'A') drawStyleA(compositeCtx, cW, cH);
+  else                   drawStyleB(compositeCtx, cW, cH);
+
+  // ── E. HUD on canvas (included in recording) ──
+  drawHUD(compositeCtx, cW, cH);
+}
+
+// ── 3.6  Camera initialisation ───────────────────────────────────────────────
+
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' },
+        width:      { ideal: 1280 },
+        height:     { ideal: 720 },
+      },
+      audio: false,
+    });
+
+    videoEl.srcObject = stream;
+    STATE.camStream   = stream;
+
+    await new Promise((resolve, reject) => {
+      videoEl.onloadedmetadata = resolve;
+      videoEl.onerror = () => reject(new Error('Video metadata load error'));
+    });
+    await videoEl.play();
+
+    STATE.videoW = videoEl.videoWidth  || 1280;
+    STATE.videoH = videoEl.videoHeight || 720;
+
+    return _finaliseCamera();
+
+  } catch (err) {
+    let msg = 'Camera error: ' + err.message;
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      msg = '⚠ Camera access denied. Allow camera permission and reload.';
+    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      msg = '⚠ No camera found on this device.';
+    } else if (err.name === 'NotReadableError') {
+      msg = '⚠ Camera is in use by another app. Close it and reload.';
+    } else if (err.name === 'OverconstrainedError') {
+      // Retry with minimal constraints
+      return _startCameraFallback();
+    }
+    showError(msg);
+    return false;
+  }
+}
+
+// Fallback: retry with minimal constraints (handles OverconstrainedError)
+async function _startCameraFallback() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    videoEl.srcObject = stream;
+    STATE.camStream   = stream;
+    await new Promise(res => { videoEl.onloadedmetadata = res; });
+    await videoEl.play();
+    STATE.videoW = videoEl.videoWidth  || 640;
+    STATE.videoH = videoEl.videoHeight || 480;
+    return _finaliseCamera();
+  } catch (e) {
+    showError('⚠ Could not access any camera: ' + e.message);
+    return false;
+  }
+}
+
+// Shared finalisation: set up canvases, buffers, crop after video is ready
+function _finaliseCamera() {
+  const cW = window.innerWidth;
+  const cH = window.innerHeight;
+  compositeCanvas.width  = cW;
+  compositeCanvas.height = cH;
+
+  // Proc dimensions: match canvas AR, cap total pixels at 200 k
+  let pW = 320;
+  let pH = Math.round(pW * cH / cW);
+  if (pW * pH > 200000) {
+    const s = Math.sqrt(200000 / (pW * pH));
+    pW = (pW * s) | 0;
+    pH = (pH * s) | 0;
+  }
+  workCanvas.width  = pW;
+  workCanvas.height = pH;
+  initBuffers(pW, pH);
+  updateCrop(STATE.videoW, STATE.videoH, cW, cH);
+
+  STATE.fpsT     = performance.now();
+  STATE.cameraOk = true;
+  return true;
+}
+
+// ── 3.7  Recording ───────────────────────────────────────────────────────────
+
+function startRecording() {
+  if (STATE.isRecording) return;
+
+  if (typeof compositeCanvas.captureStream !== 'function') {
+    showError('⚠ Screen capture not supported. Use Chrome or Firefox.');
+    return;
+  }
+
+  // Pick best supported MIME type
+  const mimeTypes = [
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+    'video/mp4',
+  ];
+  let mimeType = '';
+  for (const mt of mimeTypes) {
+    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(mt)) {
+      mimeType = mt; break;
+    }
+  }
+
+  try {
+    const stream  = compositeCanvas.captureStream(30);
+    const options = mimeType
+      ? { mimeType, videoBitsPerSecond: 4_000_000 }
+      : {};
+
+    STATE.mediaRecorder = new MediaRecorder(stream, options);
+    STATE.chunks        = [];
+
+    STATE.mediaRecorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) STATE.chunks.push(e.data);
+    };
+
+    STATE.mediaRecorder.onstop = () => {
+      const blob = new Blob(STATE.chunks, { type: mimeType || 'video/webm' });
+      if (STATE.lastDlUrl) URL.revokeObjectURL(STATE.lastDlUrl);
+      STATE.lastDlUrl = URL.createObjectURL(blob);
+      const ext  = mimeType.includes('mp4') ? 'mp4' : 'webm';
+      const dlBtn = document.getElementById('btn-download');
+      dlBtn.href     = STATE.lastDlUrl;
+      dlBtn.download = 'blobz_' + Date.now() + '.' + ext;
+      dlBtn.style.display = 'inline-flex';
+    };
+
+    STATE.mediaRecorder.onerror = (e) => {
+      showError('Recording error: ' + (e.error ? e.error.message : 'unknown'));
+      stopRecording();
+    };
+
+    STATE.mediaRecorder.start(100); // chunk every 100 ms
+    STATE.isRecording  = true;
+    STATE.recordStartT = performance.now();
+
+    document.getElementById('btn-record').textContent = '⏹';
+    document.getElementById('btn-record').classList.add('recording');
+
+  } catch (err) {
+    showError('⚠ Could not start recording: ' + err.message);
+  }
+}
+
+function stopRecording() {
+  if (!STATE.isRecording || !STATE.mediaRecorder) return;
+  try { STATE.mediaRecorder.stop(); } catch (_) {}
+  STATE.isRecording   = false;
+  STATE.mediaRecorder = null;
+  document.getElementById('btn-record').textContent = '⏺';
+  document.getElementById('btn-record').classList.remove('recording');
+}
+
+// ── 3.8  Error display ───────────────────────────────────────────────────────
+
+function showError(msg) {
+  const el = document.getElementById('error-banner');
+  el.textContent   = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 9000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PHASE 4 — DOM EVENT LISTENERS & HARDWARE LIFECYCLE HOOKS
+//
+//   4.1  DOMContentLoaded — element wiring & context creation
+//   4.2  Splash controls  — style toggle, sliders (synced to CFG)
+//   4.3  Main controls    — style, record, settings, toggle buttons
+//   4.4  Live settings panel sliders (synced back to splash display)
+//   4.5  Splash → main transition (btn-start → startCamera → loop)
+//   4.6  Canvas context loss/restore handlers
+//   4.7  Window resize handler
+//   4.8  Page visibility handler (pause rAF when hidden)
+// ═══════════════════════════════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  // ── 4.1  Element references ──────────────────────────────────────────────
+
+  compositeCanvas = document.getElementById('composite');
+  compositeCtx    = compositeCanvas.getContext('2d', {
+    willReadFrequently: false,
+    alpha: false,
+  });
+
+  workCanvas = document.createElement('canvas');
+  workCtx    = workCanvas.getContext('2d', { willReadFrequently: true });
+
+  videoEl = document.getElementById('cam');
+
+  // Show iOS recording note if applicable
+  const isIOS =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) document.getElementById('ios-note').style.display = 'block';
+
+  // ── 4.2  Splash controls ──────────────────────────────────────────────────
+
+  const splBtnB = document.getElementById('spl-style-b');
+  const splBtnA = document.getElementById('spl-style-a');
+
+  splBtnB.addEventListener('click', () => {
+    CFG.style = 'B';
+    splBtnB.classList.add('active'); splBtnA.classList.remove('active');
+    document.getElementById('btn-style').textContent = 'STYLE: CIRCLES';
+  });
+  splBtnA.addEventListener('click', () => {
+    CFG.style = 'A';
+    splBtnA.classList.add('active'); splBtnB.classList.remove('active');
+    document.getElementById('btn-style').textContent = 'STYLE: BOXES';
+  });
+
+  // Helper to sync a pair of matching inputs (splash ↔ live panel)
+  function syncSlider(splashId, splashValId, liveId, liveValId, setter) {
+    const sRng = document.getElementById(splashId);
+    const lRng = document.getElementById(liveId);
+    const sVal = document.getElementById(splashValId);
+    const lVal = document.getElementById(liveValId);
+    sRng.addEventListener('input', function () {
+      setter(parseInt(this.value, 10));
+      sVal.textContent = this.value;
+      lRng.value       = this.value;
+      lVal.textContent = this.value;
+    });
+    lRng.addEventListener('input', function () {
+      setter(parseInt(this.value, 10));
+      lVal.textContent = this.value;
+      sRng.value       = this.value;
+      sVal.textContent = this.value;
+    });
+  }
+
+  syncSlider('rng-mot', 'val-mot', 'lr-mot', 'lv-mot', v => { CFG.motionThresh = v; });
+  syncSlider('rng-bri', 'val-bri', 'lr-bri', 'lv-bri', v => { CFG.brightThresh = v; });
+  syncSlider('rng-min', 'val-min', 'lr-min', 'lv-min', v => { CFG.minArea = v; });
+
+  // ── 4.3  Main controls ────────────────────────────────────────────────────
+
+  // Style toggle (in-session toggle button)
+  document.getElementById('btn-style').addEventListener('click', () => {
+    CFG.style = CFG.style === 'A' ? 'B' : 'A';
+    document.getElementById('btn-style').textContent =
+      CFG.style === 'A' ? 'STYLE: BOXES' : 'STYLE: CIRCLES';
+    // Keep splash buttons in sync
+    if (CFG.style === 'A') {
+      splBtnA.classList.add('active'); splBtnB.classList.remove('active');
+    } else {
+      splBtnB.classList.add('active'); splBtnA.classList.remove('active');
+    }
+  });
+
+  // Record / stop button
+  document.getElementById('btn-record').addEventListener('click', () => {
+    if (!STATE.cameraOk) { showError('Camera not ready yet.'); return; }
+    STATE.isRecording ? stopRecording() : startRecording();
+  });
+
+  // Settings panel toggle
+  let settingsOpen = false;
+  document.getElementById('btn-settings').addEventListener('click', () => {
+    settingsOpen = !settingsOpen;
+    document.getElementById('settings-panel').classList.toggle('open', settingsOpen);
+    document.getElementById('btn-settings').classList.toggle('active', settingsOpen);
+  });
+
+  // Toggle buttons inside settings panel
+  document.getElementById('btn-conn').addEventListener('click', function () {
+    CFG.showConnectors = !CFG.showConnectors;
+    this.classList.toggle('on', CFG.showConnectors);
+  });
+  document.getElementById('btn-lbl').addEventListener('click', function () {
+    CFG.showLabels = !CFG.showLabels;
+    this.classList.toggle('on', CFG.showLabels);
+  });
+  document.getElementById('btn-vig').addEventListener('click', function () {
+    CFG.showVignette = !CFG.showVignette;
+    this.classList.toggle('on', CFG.showVignette);
+  });
+
+  // ── 4.5  Splash → main transition ─────────────────────────────────────────
+
+  document.getElementById('btn-start').addEventListener('click', async () => {
+    const splash = document.getElementById('splash');
+    splash.style.opacity    = '0';
+    splash.style.transition = 'opacity 0.4s ease';
+
+    setTimeout(() => {
+      splash.style.display = 'none';
+    }, 400);
+
+    const ok = await startCamera();
+    if (!ok) {
+      // Camera failed — show splash again
+      splash.style.display  = 'flex';
+      splash.style.opacity  = '1';
+      splash.style.transition = 'none';
+      return;
+    }
+
+    STATE.lastDetectT = performance.now();
+    STATE.fpsT        = performance.now();
+    rafId = requestAnimationFrame(loop);
+  });
+
+  // ── 4.6  Canvas context loss / restore ────────────────────────────────────
+
+  compositeCanvas.addEventListener('contextlost', (e) => {
+    e.preventDefault();
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    showError('⚠ Canvas context lost. Please reload the page.');
+    STATE.cameraOk = false;
+  });
+
+  compositeCanvas.addEventListener('contextrestored', () => {
+    if (STATE.cameraOk) {
+      STATE.lastDetectT = performance.now();
+      rafId = requestAnimationFrame(loop);
+    }
+  });
+
+  // ── 4.7  Window resize ─────────────────────────────────────────────────────
+
+  window.addEventListener('resize', () => {
+    if (!STATE.cameraOk) return;
+
+    const cW = window.innerWidth;
+    const cH = window.innerHeight;
+    compositeCanvas.width  = cW;
+    compositeCanvas.height = cH;
+
+    // Recompute cover crop for new canvas dimensions
+    updateCrop(STATE.videoW, STATE.videoH, cW, cH);
+
+    // Invalidate cached vignette gradient
+    _vigGrad = null; _vigW = 0; _vigH = 0;
+
+    // Recompute proc canvas dimensions if aspect ratio changed
+    let pW = 320;
+    let pH = Math.round(pW * cH / cW);
+    if (pW * pH > 200000) {
+      const s = Math.sqrt(200000 / (pW * pH));
+      pW = (pW * s) | 0;
+      pH = (pH * s) | 0;
+    }
+    if (pW !== workCanvas.width || pH !== workCanvas.height) {
+      workCanvas.width  = pW;
+      workCanvas.height = pH;
+      initBuffers(pW, pH);
+      STATE.warmup = 0; // re-prime prev frame buffer after resize
+    }
+  });
+
+  // ── 4.8  Page visibility (pause rAF when tab hidden) ──────────────────────
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      // Pause rendering to save battery; leave recording running if active
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    } else if (STATE.cameraOk && !rafId) {
+      // Resume when tab becomes active again
+      STATE.warmup        = 0;
+      STATE.fpsT          = performance.now();
+      STATE.fpsFrames     = 0;
+      STATE.lastDetectT   = performance.now();
+      rafId = requestAnimationFrame(loop);
+    }
+  });
+
+}); // end DOMContentLoaded
+</script>
+</body>
+</html>
