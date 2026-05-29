@@ -21,13 +21,10 @@ body{
 }
 #cam{display:none;}
 #composite{
-  position:fixed;inset:0;
-  width:100%;height:100%;
-  display:block;
-  touch-action:none;
-  cursor:crosshair;
+  position:fixed;inset:0;width:100%;height:100%;
+  display:block;touch-action:none;cursor:crosshair;
 }
-/* ── SPLASH ─────────────────────────────────────────────────────────────── */
+/* ── SPLASH ────────────────────────────────────────────────────────────── */
 #splash{
   position:fixed;inset:0;z-index:300;
   background:
@@ -36,8 +33,7 @@ body{
     #050508;
   background-size:32px 32px,32px 32px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:0;overflow-y:auto;
-  padding:2rem 2rem 2.5rem;
+  gap:0;overflow-y:auto;padding:2rem 2rem 2.5rem;
   transition:opacity .4s ease;
 }
 #splash::before{
@@ -49,17 +45,15 @@ body{
 }
 .spl-brand{
   display:flex;flex-direction:column;align-items:center;gap:.35rem;
-  margin-bottom:1.8rem;position:relative;z-index:1;
+  margin-bottom:1.6rem;position:relative;z-index:1;
 }
 .spl-title{
-  font-size:4.2rem;font-weight:900;
-  letter-spacing:-.04em;line-height:1;color:#fff;
+  font-size:4.2rem;font-weight:900;letter-spacing:-.04em;line-height:1;color:#fff;
   animation:glitch 5s infinite;
 }
 .spl-title::after{
   content:'';display:block;height:3px;background:#ff2800;
-  width:55%;margin:.3rem auto 0;
-  animation:bar-pulse 2s ease-in-out infinite;
+  width:55%;margin:.3rem auto 0;animation:bar-pulse 2s ease-in-out infinite;
 }
 @keyframes bar-pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 @keyframes glitch{
@@ -72,11 +66,10 @@ body{
 }
 .spl-sub{font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.35);}
 .spl-ver{font-size:.56rem;letter-spacing:.1em;color:rgba(255,255,255,.18);}
-.spl-preview{width:220px;height:130px;margin-bottom:1.6rem;position:relative;z-index:1;}
+.spl-preview{width:220px;height:110px;margin-bottom:1.4rem;position:relative;z-index:1;}
 .spl-settings{
-  width:100%;max-width:360px;
-  display:flex;flex-direction:column;gap:1.1rem;
-  margin-bottom:1.6rem;position:relative;z-index:1;
+  width:100%;max-width:360px;display:flex;flex-direction:column;gap:1rem;
+  margin-bottom:1.5rem;position:relative;z-index:1;
 }
 .ctrl-row{display:flex;flex-direction:column;gap:.4rem;}
 .ctrl-label{
@@ -86,51 +79,44 @@ body{
 .ctrl-label span{color:#ff2800;font-weight:700;}
 input[type="range"]{
   -webkit-appearance:none;appearance:none;
-  width:100%;height:2px;background:rgba(255,255,255,.15);
-  outline:none;cursor:pointer;
+  width:100%;height:2px;background:rgba(255,255,255,.15);outline:none;cursor:pointer;
 }
 input[type="range"]::-webkit-slider-thumb{
-  -webkit-appearance:none;
-  width:14px;height:14px;background:#ff2800;border-radius:50%;cursor:pointer;
+  -webkit-appearance:none;width:14px;height:14px;background:#ff2800;border-radius:50%;cursor:pointer;
 }
 input[type="range"]::-moz-range-thumb{
-  width:14px;height:14px;background:#ff2800;
-  border:none;border-radius:50%;cursor:pointer;
+  width:14px;height:14px;background:#ff2800;border:none;border-radius:50%;cursor:pointer;
 }
-.style-toggle{display:flex;gap:.5rem;}
-.style-toggle button,#btn-start{
+/* 4-style selector grid */
+.style-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;}
+.style-grid button,.style-toggle button,#btn-start{
   border:none;cursor:pointer;font-family:'Courier New',monospace;
-  letter-spacing:.1em;text-transform:uppercase;
-  -webkit-tap-highlight-color:transparent;
+  letter-spacing:.1em;text-transform:uppercase;-webkit-tap-highlight-color:transparent;
 }
-.style-toggle button{
-  flex:1;padding:.5rem;background:transparent;
+.style-grid button{
+  padding:.5rem .3rem;background:transparent;
   border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.45);
-  font-size:.63rem;transition:all .2s;
+  font-size:.59rem;transition:all .2s;
 }
-.style-toggle button.active{background:#ff2800;border-color:#ff2800;color:#fff;}
+.style-grid button.active{background:#ff2800;border-color:#ff2800;color:#fff;}
 #btn-start{
-  width:100%;max-width:360px;padding:1rem;
-  background:#ff2800;color:#fff;
+  width:100%;max-width:360px;padding:1rem;background:#ff2800;color:#fff;
   font-size:.95rem;font-weight:700;letter-spacing:.18em;
-  position:relative;z-index:1;
-  transition:opacity .15s,transform .15s;
+  position:relative;z-index:1;transition:opacity .15s,transform .15s;
 }
 #btn-start:active{opacity:.8;transform:scale(.98);}
-/* ── MAIN CONTROLS ────────────────────────────────────────────────────── */
+/* ── MAIN CONTROLS ─────────────────────────────────────────────────────── */
 #ctrl-bar{
   position:fixed;bottom:0;left:0;right:0;z-index:20;
   display:flex;align-items:center;justify-content:space-between;
   padding:1rem 1.4rem;
   padding-bottom:calc(1rem + env(safe-area-inset-bottom));
   background:linear-gradient(to top,rgba(5,5,8,.88) 0%,transparent 100%);
-  pointer-events:auto;
 }
 .ctrl-btn{
-  background:rgba(5,5,8,.72);
-  border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.78);
-  font-family:'Courier New',monospace;font-size:.58rem;
-  letter-spacing:.1em;text-transform:uppercase;
+  background:rgba(5,5,8,.72);border:1px solid rgba(255,255,255,.18);
+  color:rgba(255,255,255,.78);font-family:'Courier New',monospace;
+  font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;
   padding:.55rem .9rem;cursor:pointer;
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   transition:all .15s;touch-action:manipulation;
@@ -163,7 +149,7 @@ input[type="range"]::-moz-range-thumb{
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   touch-action:manipulation;white-space:nowrap;
 }
-/* ── SETTINGS PANEL ──────────────────────────────────────────────────── */
+/* ── SETTINGS PANEL ────────────────────────────────────────────────────── */
 #settings-panel{
   position:fixed;bottom:0;left:0;right:0;z-index:19;
   background:rgba(5,5,8,.95);
@@ -171,8 +157,7 @@ input[type="range"]::-moz-range-thumb{
   border-top:1px solid rgba(255,255,255,.09);
   padding:1.4rem 1.4rem;
   padding-bottom:calc(5.8rem + env(safe-area-inset-bottom));
-  transform:translateY(100%);
-  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
   pointer-events:none;
 }
 #settings-panel.open{transform:translateY(0);pointer-events:auto;}
@@ -185,20 +170,18 @@ input[type="range"]::-moz-range-thumb{
   letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .15s;
 }
 .toggle-btn.on{border-color:#ff2800;color:#ff2800;background:rgba(255,40,0,.08);}
-/* ── TOUCH HINT ──────────────────────────────────────────────────────── */
+/* ── TOUCH HINT ────────────────────────────────────────────────────────── */
 #touch-hint{
   position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
   z-index:15;pointer-events:none;
   display:flex;flex-direction:column;align-items:center;gap:.5rem;
-  animation:hint-fade 3s ease 1.5s forwards;
-  opacity:0;
+  opacity:0;transition:opacity .4s;
 }
 #touch-hint.show{opacity:1;}
-@keyframes hint-fade{0%{opacity:1;}80%{opacity:1;}100%{opacity:0;}}
 .hint-icon{font-size:2rem;animation:hint-pulse 1s ease-in-out infinite;}
 @keyframes hint-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
 .hint-txt{font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);}
-/* ── ERROR BANNER ─────────────────────────────────────────────────────── */
+/* ── ERROR BANNER ──────────────────────────────────────────────────────── */
 #error-banner{
   display:none;position:fixed;top:1rem;left:1rem;right:1rem;z-index:60;
   background:rgba(160,15,0,.92);backdrop-filter:blur(10px);
@@ -214,36 +197,36 @@ input[type="range"]::-moz-range-thumb{
   <div class="spl-brand">
     <div class="spl-title">BLOBZ</div>
     <div class="spl-sub">Motion Tracking Overlay</div>
-    <div class="spl-ver">Browser Edition · v2.1</div>
+    <div class="spl-ver">Browser Edition · v3.0</div>
   </div>
   <div class="spl-preview">
-    <svg width="220" height="130" viewBox="0 0 220 130" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="110" cy="52" r="46" stroke="rgba(255,255,255,0.5)" stroke-width="1.5">
-        <animate attributeName="r" values="46;50;46" dur="2.8s" repeatCount="indefinite"/>
+    <svg width="220" height="110" viewBox="0 0 220 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="110" cy="46" r="40" stroke="rgba(255,255,255,0.5)" stroke-width="1.5">
+        <animate attributeName="r" values="40;44;40" dur="2.8s" repeatCount="indefinite"/>
       </circle>
-      <circle cx="110" cy="52" r="17" stroke="rgba(255,255,255,0.32)" stroke-width="1"/>
-      <rect x="106" y="48" width="8" height="8" stroke="#b4ff3c" stroke-width="1.5"/>
-      <circle cx="58" cy="92" r="23" stroke="rgba(255,255,255,0.45)" stroke-width="1.5">
-        <animate attributeName="r" values="23;26;23" dur="2.1s" repeatCount="indefinite"/>
+      <circle cx="110" cy="46" r="14" stroke="rgba(255,255,255,0.32)" stroke-width="1"/>
+      <rect x="106" y="42" width="8" height="8" stroke="#b4ff3c" stroke-width="1.5"/>
+      <circle cx="56" cy="82" r="20" stroke="rgba(255,255,255,0.45)" stroke-width="1.5">
+        <animate attributeName="r" values="20;23;20" dur="2.1s" repeatCount="indefinite"/>
       </circle>
-      <circle cx="162" cy="96" r="17" stroke="rgba(255,255,255,0.4)" stroke-width="1.5">
-        <animate attributeName="r" values="17;20;17" dur="2.5s" repeatCount="indefinite"/>
+      <circle cx="164" cy="80" r="15" stroke="rgba(255,255,255,0.4)" stroke-width="1.5">
+        <animate attributeName="r" values="15;18;15" dur="2.5s" repeatCount="indefinite"/>
       </circle>
-      <line x1="110" y1="52" x2="58" y2="92" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
-      <line x1="110" y1="52" x2="162" y2="96" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
-      <polygon points="81,74 77,79 85,78" fill="rgba(180,255,60,0.85)"/>
-      <polygon points="138,76 134,81 142,79" fill="rgba(180,255,60,0.85)"/>
-      <text x="118" y="59" fill="rgba(255,255,255,0.7)" font-family="Courier New" font-size="8">096.0 PX S</text>
-      <text x="66" y="101" fill="rgba(255,255,255,0.7)" font-family="Courier New" font-size="7">053.3 PX S</text>
-      <text x="168" y="104" fill="rgba(255,255,255,0.7)" font-family="Courier New" font-size="7">039.9 PX S</text>
+      <line x1="110" y1="46" x2="56" y2="82" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
+      <line x1="110" y1="46" x2="164" y2="80" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
+      <polygon points="79,66 75,71 83,70" fill="rgba(180,255,60,0.85)"/>
+      <polygon points="140,65 136,70 144,68" fill="rgba(180,255,60,0.85)"/>
+      <text x="116" y="53" fill="rgba(255,255,255,0.7)" font-family="Courier New" font-size="7">096 PX S</text>
     </svg>
   </div>
   <div class="spl-settings">
     <div class="ctrl-row">
       <div class="ctrl-label">Detection Style</div>
-      <div class="style-toggle">
-        <button id="spl-style-b" class="active">⬤ Circles</button>
-        <button id="spl-style-a">☐ Boxes</button>
+      <div class="style-grid">
+        <button id="spl-b" class="active">⬤ Circles</button>
+        <button id="spl-a">☐ Boxes</button>
+        <button id="spl-c">◌ Ghost</button>
+        <button id="spl-d">⬡ Neural</button>
       </div>
     </div>
     <div class="ctrl-row">
@@ -267,7 +250,7 @@ input[type="range"]::-moz-range-thumb{
 
 <!-- ── MAIN CONTROLS ───────────────────────────────────────────────────── -->
 <div id="ctrl-bar">
-  <button class="ctrl-btn" id="btn-style">STYLE: CIRCLES</button>
+  <button class="ctrl-btn" id="btn-style">⬤ CIRCLES</button>
   <div id="rec-area">
     <a id="btn-download">⬇ SAVE</a>
     <button id="btn-record">⏺</button>
@@ -296,10 +279,9 @@ input[type="range"]::-moz-range-thumb{
 </div>
 
 <div id="touch-hint">
-  <div class="hint-icon">👆</div>
+  <div class="hint-icon">&#128070;</div>
   <div class="hint-txt">Touch to focus tracking</div>
 </div>
-
 <div id="error-banner"></div>
 
 <script>
@@ -309,52 +291,81 @@ input[type="range"]::-moz-range-thumb{
 // PHASE 1 — MATH ENGINES & CORE UTILITY ALGORITHMS
 //
 //   1.1  Constants & typed-array buffer pool
-//   1.2  Grayscale  (BT.601 fixed-point, zero float multiply)
-//   1.3  Binary mask with 4-connected erosion  ← FIX: kills single-pixel noise
+//   1.2  Grayscale conversion (BT.601 integer, zero float multiply)
+//   1.3  Binary mask + 4-connected erosion (kills single-pixel noise)
 //   1.4  Buffer copy (typed-array .set → V8 memcpy)
-//   1.5  Connected components  (BFS 4-connected, pre-allocated queue)
-//   1.6  Raw blob extraction  (area filter, insertion-sort, touch-boost score)
-//   1.7  Blob tracker  (nearest-centroid, exp-smoothing α=0.38, TTL pool)
-//   1.8  Drawing utilities  (brackets, arrow, vignette, touch reticle)
+//   1.5  Connected components BFS 4-connected
+//   1.6  Raw blob extraction (area filter, touch-proximity sort boost)
+//   1.7  Blob tracker (nearest-centroid, exp-smoothing α=0.38, TTL pool)
+//   1.8  Drawing utilities (brackets, arrow, vignette, touch reticle)
+//   1.9  Ghost particle sampler (Sobel-free foreground mask sampling)
+//   1.10 Neural node system (orbit particles + bezier connection builder)
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── 1.1  Constants & buffer declarations ────────────────────────────────────
-// MAX_LABELS raised 64→256: with only 64 slots the budget was exhausted by
-// top-of-frame noise, causing blobs in the lower half to be silently dropped.
-const MAX_LABELS  = 256;
-const MAX_RAW     = 16;
-const MAX_TRACKED = 14;
+const MAX_LABELS  = 256;   // raised from 64 → prevents top-frame bias
+const MAX_RAW     = 16;    // max raw blobs per frame
+const MAX_TRACKED = 14;    // max concurrently live tracked blobs
 
-let PROC_W = 240;        // reduced from 320 → 23% fewer pixels = faster BFS
+let PROC_W = 240;
 let PROC_H = 135;
 let PROC_N = PROC_W * PROC_H;
 
-// All pixel buffers allocated once; never re-allocated inside the loop.
-let _grayBuf     = null;  // Uint8Array — current grayscale frame
-let _prevGrayBuf = null;  // Uint8Array — previous grayscale frame
-let _rawMaskBuf  = null;  // Uint8Array — pre-erosion binary mask   [NEW]
-let _maskBuf     = null;  // Uint8Array — post-erosion binary mask (fed to CC)
-let _labelBuf    = null;  // Int32Array — CC label map (−1=BG, 0=unlabelled, 1..N=label)
-let _bfsQueue    = null;  // Int32Array — BFS scratch queue (length = PROC_N)
+// All pixel buffers allocated once; NEVER re-allocated inside the loop.
+let _grayBuf     = null;  // Uint8Array — current frame grayscale
+let _prevGrayBuf = null;  // Uint8Array — previous frame grayscale
+let _rawMaskBuf  = null;  // Uint8Array — pre-erosion foreground mask
+let _maskBuf     = null;  // Uint8Array — post-erosion mask (fed to CC)
+let _labelBuf    = null;  // Int32Array — CC label map
+let _bfsQueue    = null;  // Int32Array — BFS scratch queue
 
-// Per-label blob accumulators (index 0 unused; valid range 1..MAX_LABELS)
-let _bArea = null;        // Float32Array — pixel area per label
-let _bSumX = null;        // Float32Array — sum of X coords per label
-let _bSumY = null;        // Float32Array — sum of Y coords per label
-let _bMinX = null;        // Int32Array  — bounding-box min X
-let _bMinY = null;        // Int32Array  — bounding-box min Y
-let _bMaxX = null;        // Int32Array  — bounding-box max X
-let _bMaxY = null;        // Int32Array  — bounding-box max Y
+// Per-label blob accumulators (valid range 1..MAX_LABELS, index 0 unused)
+let _bArea = null;
+let _bSumX = null;
+let _bSumY = null;
+let _bMinX = null;
+let _bMinY = null;
+let _bMaxX = null;
+let _bMaxY = null;
 
-// Sorting scratch buffer: interleaved [score0, label0, score1, label1, …]
-let _sortBuf = null;      // Float32Array(MAX_LABELS * 2)
+// Sort scratch buffer [score, label, score, label, …]
+let _sortBuf = null;
 
-// Allocate (or reallocate) all typed-array buffers. Called once at camera
-// start, and again on resize if proc dimensions change.
+// Ghost style — foreground mask sample positions in canvas space
+const MAX_GHOST_PX   = 600;
+let _ghX    = null;  // Float32Array — canvas X
+let _ghY    = null;  // Float32Array — canvas Y
+let _ghG    = null;  // Uint8Array   — gray value at sample (drives radius)
+let _ghCount = 0;
+
+// Neural node pool (orbit particles, connected by bezier curves)
+const NODES_PER_BLOB       = 9;    // nodes per tracked blob
+const MAX_NN_NODES         = MAX_TRACKED * NODES_PER_BLOB; // 14*9 = 126
+const MAX_NN_CONNECTIONS   = 600;  // pre-allocated bezier pair buffer
+
+// (Populated after constants; pool objects created once)
+const _nnNodes = Array.from({ length: MAX_NN_NODES }, (_, gi) => ({
+  x:          0,
+  y:          0,
+  baseAngle:  (gi % NODES_PER_BLOB) * (Math.PI * 2 / NODES_PER_BLOB),
+  // Deterministic per-node phase: spreads nodes evenly in orbital phase
+  phase:      ((gi * 2654435761) >>> 0) / 0xFFFFFFFF * Math.PI * 2,
+  // Deterministic orbit radius scale 0.7..1.3
+  orbitScale: 0.7 + (((gi * 1234567) & 0xFF) / 255) * 0.6,
+  blobIdx:    -1,
+  active:     false,
+  labelId:    (gi * 13 + 7) % 100,
+}));
+
+// Connection pair index buffers (Int32Array — zero GC)
+const _nnConnA    = new Int32Array(MAX_NN_CONNECTIONS);
+const _nnConnB    = new Int32Array(MAX_NN_CONNECTIONS);
+const _nnConnKind = new Uint8Array(MAX_NN_CONNECTIONS); // 0=intra-ring, 1=intra-star, 2=inter
+let   _nnConnCount = 0;
+
+// Allocate / reallocate all typed buffers. Called once at camera start.
 function initBuffers(pW, pH) {
-  PROC_W = pW;
-  PROC_H = pH;
-  PROC_N = pW * pH;
+  PROC_W = pW; PROC_H = pH; PROC_N = pW * pH;
   _grayBuf     = new Uint8Array(PROC_N);
   _prevGrayBuf = new Uint8Array(PROC_N);
   _rawMaskBuf  = new Uint8Array(PROC_N);
@@ -370,42 +381,33 @@ function initBuffers(pW, pH) {
   _bMaxX = new Int32Array(mb);
   _bMaxY = new Int32Array(mb);
   _sortBuf = new Float32Array(MAX_LABELS * 2);
+  _ghX     = new Float32Array(MAX_GHOST_PX);
+  _ghY     = new Float32Array(MAX_GHOST_PX);
+  _ghG     = new Uint8Array(MAX_GHOST_PX);
 }
 
-// ── 1.2  Grayscale — BT.601 fixed-point (integer only, no float) ────────────
-// Weights: R×77, G×150, B×29  (sum=256 → right-shift 8 divides by 256)
+// ── 1.2  Grayscale — BT.601 fixed-point (zero float multiply) ───────────────
+// Weights: R×77, G×150, B×29  (sum=256 → >>8 divides by 256)
 function toGrayscale(rgba, gray, n) {
   for (let i = 0, j = 0; i < n; i++, j += 4) {
     gray[i] = (rgba[j] * 77 + rgba[j + 1] * 150 + rgba[j + 2] * 29) >> 8;
   }
 }
 
-// ── 1.3  Binary mask + 4-connected erosion (two-pass, in-place safe) ────────
-//
+// ── 1.3  Binary mask + 4-connected erosion ──────────────────────────────────
 // ROOT CAUSE FIX for vertical blob concentration:
-//   Camera noise and subtle illumination gradients produce thousands of
-//   isolated 1–2 pixel foreground regions, especially in bright/sky areas.
-//   With MAX_LABELS=64 these isolated pixels consumed all label slots before
-//   the BFS scan reached the lower half of the frame.
-//
-//   Solution (two passes, zero extra allocations beyond _rawMaskBuf):
-//     Pass 1: raw diff+brightness threshold  →  _rawMaskBuf
-//     Pass 2: 4-connected erosion            →  _maskBuf
-//             A foreground pixel survives only if ≥1 of its 4 direct
-//             neighbours is also foreground. This kills isolated single
-//             pixels while preserving solid blobs.
-//
-// After erosion, frame noise typically drops from ~400 to ~12 labels,
-// leaving ample label budget for the full vertical extent of the image.
-
+//   Camera noise generates ~400 isolated 1-px regions, exhausting the
+//   64-slot label budget before the BFS scan reaches the lower frame half.
+//   Erosion: a foreground pixel survives only if ≥1 of its 4 direct
+//   neighbours is also foreground. Reduces label count to ~10-20.
 function computeMaskEroded(cur, prev, rawOut, erodedOut, n, w, h, motThr, briThr) {
-  // Pass 1: raw mask
+  // Pass 1 — raw mask
   for (let i = 0; i < n; i++) {
     const c = cur[i];
     const d = c > prev[i] ? c - prev[i] : prev[i] - c;
     rawOut[i] = (d >= motThr || c >= briThr) ? 1 : 0;
   }
-  // Pass 2: erosion — borders always background
+  // Pass 2 — 4-connected erosion (borders always background)
   for (let x = 0; x < w; x++) {
     erodedOut[x] = 0;
     erodedOut[(h - 1) * w + x] = 0;
@@ -414,33 +416,26 @@ function computeMaskEroded(cur, prev, rawOut, erodedOut, n, w, h, motThr, briThr
     erodedOut[y * w] = 0;
     erodedOut[y * w + w - 1] = 0;
   }
-  // Interior: keep pixel only if at least one 4-connected neighbour is also set
   for (let y = 1; y < h - 1; y++) {
     const row = y * w;
     for (let x = 1; x < w - 1; x++) {
       const i = row + x;
       if (!rawOut[i]) { erodedOut[i] = 0; continue; }
-      erodedOut[i] = (rawOut[i - w] | rawOut[i + w] | rawOut[i - 1] | rawOut[i + 1]) ? 1 : 0;
+      erodedOut[i] = (rawOut[i-w] | rawOut[i+w] | rawOut[i-1] | rawOut[i+1]) ? 1 : 0;
     }
   }
 }
 
-// ── 1.4  Buffer copy — typed-array .set() (V8 lowers this to memcpy) ────────
-function copyBuf(src, dst, n) {
-  dst.set(src.subarray(0, n));
-}
+// ── 1.4  Buffer copy ─────────────────────────────────────────────────────────
+function copyBuf(src, dst, n) { dst.set(src.subarray(0, n)); }
 
-// ── 1.5  Connected components — iterative BFS, 4-connected ─────────────────
-// All writes go to pre-allocated typed arrays → zero GC inside this function.
-// Returns the count of distinct labels assigned (capped at MAX_LABELS).
+// ── 1.5  Connected components — iterative BFS, 4-connected ──────────────────
 function labelCC(mask, labels, queue, w, h) {
   const n = w * h;
-  // Init: foreground → 0 (unlabelled), background → −1
   for (let i = 0; i < n; i++) labels[i] = mask[i] ? 0 : -1;
-  // Reset per-label accumulators
   for (let k = 1; k <= MAX_LABELS; k++) {
-    _bArea[k] = 0; _bSumX[k] = 0; _bSumY[k] = 0;
-    _bMinX[k] = w; _bMinY[k] = h; _bMaxX[k] = 0; _bMaxY[k] = 0;
+    _bArea[k]=0; _bSumX[k]=0; _bSumY[k]=0;
+    _bMinX[k]=w; _bMinY[k]=h; _bMaxX[k]=0; _bMaxY[k]=0;
   }
   let nextLabel = 1;
   for (let y = 0; y < h; y++) {
@@ -454,19 +449,17 @@ function labelCC(mask, labels, queue, w, h) {
       queue[0] = start;
       while (qi < qe) {
         const idx = queue[qi++];
-        const cx  = idx % w;
-        const cy  = (idx / w) | 0;
+        const cx = idx % w, cy = (idx / w) | 0;
         _bArea[label]++;
-        _bSumX[label] += cx;
-        _bSumY[label] += cy;
+        _bSumX[label] += cx; _bSumY[label] += cy;
         if (cx < _bMinX[label]) _bMinX[label] = cx;
         if (cx > _bMaxX[label]) _bMaxX[label] = cx;
         if (cy < _bMinY[label]) _bMinY[label] = cy;
         if (cy > _bMaxY[label]) _bMaxY[label] = cy;
-        if (cx > 0)     { const ni = idx - 1; if (labels[ni] === 0) { labels[ni] = label; queue[qe++] = ni; } }
-        if (cx < w - 1) { const ni = idx + 1; if (labels[ni] === 0) { labels[ni] = label; queue[qe++] = ni; } }
-        if (cy > 0)     { const ni = idx - w; if (labels[ni] === 0) { labels[ni] = label; queue[qe++] = ni; } }
-        if (cy < h - 1) { const ni = idx + w; if (labels[ni] === 0) { labels[ni] = label; queue[qe++] = ni; } }
+        if (cx > 0)     { const ni=idx-1; if (labels[ni]===0){labels[ni]=label;queue[qe++]=ni;} }
+        if (cx < w - 1) { const ni=idx+1; if (labels[ni]===0){labels[ni]=label;queue[qe++]=ni;} }
+        if (cy > 0)     { const ni=idx-w; if (labels[ni]===0){labels[ni]=label;queue[qe++]=ni;} }
+        if (cy < h - 1) { const ni=idx+w; if (labels[ni]===0){labels[ni]=label;queue[qe++]=ni;} }
       }
     }
   }
@@ -474,276 +467,304 @@ function labelCC(mask, labels, queue, w, h) {
 }
 
 // ── 1.6  Raw blob extraction — area filter, touch-proximity sort boost ───────
-//
-// TOUCH BIAS: when the user holds a finger on the screen, blobs near the
-// touch point get their sort score multiplied by up to ×5 (falloff linear
-// with distance / TOUCH.radius). This pushes them to the top of the sorted
-// list, ensuring they are included in the first MAX_RAW slots even when
-// there are many competing blobs in the frame.
-
 const _rawBlobs = Array.from({ length: MAX_RAW }, () => ({
-  cx: 0, cy: 0, r: 0, pxS: 0, bx: 0, by: 0, bw: 0, bh: 0, area: 0
+  cx:0, cy:0, r:0, pxS:0, bx:0, by:0, bw:0, bh:0, area:0
 }));
 let _rawBlobCount = 0;
 
 function extractRawBlobs(labelCount, scaleX, scaleY, minArea, maxArea) {
   let vc = 0;
-  const touchOn = TOUCH.active;
-  const tX = TOUCH.x, tY = TOUCH.y, tR = TOUCH.radius;
-
+  const tOn = TOUCH.active, tX = TOUCH.x, tY = TOUCH.y, tR = TOUCH.radius;
   for (let k = 1; k <= labelCount; k++) {
     const a = _bArea[k];
     if (a < minArea || a > maxArea) continue;
     if (vc >= MAX_LABELS) break;
-
-    // Touch-proximity score boost (computed in canvas-space centroid)
     let boost = 1.0;
-    if (touchOn) {
-      const cx = (_bSumX[k] / a) * scaleX;
-      const cy = (_bSumY[k] / a) * scaleY;
+    if (tOn) {
+      const cx = (_bSumX[k] / a) * scaleX, cy = (_bSumY[k] / a) * scaleY;
       const dx = cx - tX, dy = cy - tY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      boost = 1.0 + 4.0 * Math.max(0.0, 1.0 - dist / tR);
+      boost = 1.0 + 4.0 * Math.max(0.0, 1.0 - Math.sqrt(dx*dx+dy*dy) / tR);
     }
-
-    _sortBuf[vc * 2]     = a * boost; // sort key
-    _sortBuf[vc * 2 + 1] = k;         // label index
-    vc++;
+    _sortBuf[vc*2] = a * boost; _sortBuf[vc*2+1] = k; vc++;
   }
-
-  // Insertion sort descending (N ≤ MAX_LABELS, insertion-sort is optimal here)
+  // Insertion sort descending by boosted area
   for (let i = 1; i < vc; i++) {
-    const keyA = _sortBuf[i * 2], keyL = _sortBuf[i * 2 + 1];
-    let j = i - 1;
-    while (j >= 0 && _sortBuf[j * 2] < keyA) {
-      _sortBuf[(j + 1) * 2]     = _sortBuf[j * 2];
-      _sortBuf[(j + 1) * 2 + 1] = _sortBuf[j * 2 + 1];
-      j--;
+    const ka = _sortBuf[i*2], kl = _sortBuf[i*2+1]; let j = i-1;
+    while (j >= 0 && _sortBuf[j*2] < ka) {
+      _sortBuf[(j+1)*2]=_sortBuf[j*2]; _sortBuf[(j+1)*2+1]=_sortBuf[j*2+1]; j--;
     }
-    _sortBuf[(j + 1) * 2]     = keyA;
-    _sortBuf[(j + 1) * 2 + 1] = keyL;
+    _sortBuf[(j+1)*2]=ka; _sortBuf[(j+1)*2+1]=kl;
   }
-
   _rawBlobCount = Math.min(vc, MAX_RAW);
   for (let i = 0; i < _rawBlobCount; i++) {
-    const k    = _sortBuf[i * 2 + 1] | 0;
-    const area = _bArea[k];
-    const cx   = (_bSumX[k] / area) * scaleX;
-    const cy   = (_bSumY[k] / area) * scaleY;
-    const r    = Math.sqrt(area / Math.PI) * ((scaleX + scaleY) * 0.5);
-    const bx   = _bMinX[k] * scaleX;
-    const by   = _bMinY[k] * scaleY;
-    const bw   = (_bMaxX[k] - _bMinX[k]) * scaleX;
-    const bh   = (_bMaxY[k] - _bMinY[k]) * scaleY;
-    const b    = _rawBlobs[i];
-    b.cx = cx; b.cy = cy; b.r = r; b.pxS = r * 2;
-    b.bx = bx; b.by = by; b.bw = bw; b.bh = bh; b.area = area;
+    const k = _sortBuf[i*2+1]|0, area = _bArea[k];
+    const cx = (_bSumX[k]/area)*scaleX, cy = (_bSumY[k]/area)*scaleY;
+    const r  = Math.sqrt(area/Math.PI) * ((scaleX+scaleY)*0.5);
+    const b  = _rawBlobs[i];
+    b.cx=cx; b.cy=cy; b.r=r; b.pxS=r*2;
+    b.bx=_bMinX[k]*scaleX; b.by=_bMinY[k]*scaleY;
+    b.bw=(_bMaxX[k]-_bMinX[k])*scaleX; b.bh=(_bMaxY[k]-_bMinY[k])*scaleY;
+    b.area=area;
   }
 }
 
-// ── 1.7  Blob tracker — nearest-centroid match, exp-smoothing, TTL ──────────
-//
-// TRACK_ALPHA raised 0.26→0.38: blobs now follow detected centres faster,
-// reducing perceived tracking latency on fast motion.
-
-const TRACK_ALPHA    = 0.38;     // smoothing weight for new measurement
-const TRACK_MATCH_D2 = 160 * 160; // max squared match distance (px²)
-const TRACK_TTL      = 10;       // frames a blob survives without detection
+// ── 1.7  Blob tracker — nearest-centroid, exp-smoothing α=0.38, TTL ─────────
+const TRACK_ALPHA    = 0.38;
+const TRACK_MATCH_D2 = 160 * 160;
+const TRACK_TTL      = 10;
 
 const _tracked = Array.from({ length: MAX_TRACKED }, (_, i) => ({
-  id: i,
-  scx: 0, scy: 0, sr: 0, spxS: 0,
-  bx: 0, by: 0, bw: 0, bh: 0,
-  age: 0, ttl: 0, active: false, matched: false
+  id:i, scx:0,scy:0,sr:0,spxS:0,
+  bx:0,by:0,bw:0,bh:0,
+  age:0,ttl:0,active:false,matched:false
 }));
 
 function updateTracked() {
-  // Mark all active blobs as unmatched for this frame
   for (let ti = 0; ti < MAX_TRACKED; ti++) {
     if (_tracked[ti].active) _tracked[ti].matched = false;
   }
-
-  // Match each raw blob to nearest active tracked blob
   for (let ri = 0; ri < _rawBlobCount; ri++) {
     const rb = _rawBlobs[ri];
     let bestI = -1, bestD = TRACK_MATCH_D2;
     for (let ti = 0; ti < MAX_TRACKED; ti++) {
       const t = _tracked[ti];
       if (!t.active || t.matched) continue;
-      const dx = rb.cx - t.scx, dy = rb.cy - t.scy;
-      const d2 = dx * dx + dy * dy;
-      if (d2 < bestD) { bestD = d2; bestI = ti; }
+      const dx = rb.cx-t.scx, dy = rb.cy-t.scy;
+      const d2 = dx*dx+dy*dy;
+      if (d2 < bestD) { bestD=d2; bestI=ti; }
     }
-
     if (bestI >= 0) {
-      // Update existing tracked blob with exponential smoothing
-      const t  = _tracked[bestI];
-      const ia = 1.0 - TRACK_ALPHA;
-      t.scx  = t.scx  * ia + rb.cx  * TRACK_ALPHA;
-      t.scy  = t.scy  * ia + rb.cy  * TRACK_ALPHA;
-      t.sr   = t.sr   * ia + rb.r   * TRACK_ALPHA;
-      t.spxS = t.spxS * ia + rb.pxS * TRACK_ALPHA;
-      t.bx = rb.bx; t.by = rb.by; t.bw = rb.bw; t.bh = rb.bh;
-      t.ttl = TRACK_TTL; t.age++; t.matched = true;
+      const t  = _tracked[bestI], ia = 1.0-TRACK_ALPHA;
+      t.scx  = t.scx*ia+rb.cx*TRACK_ALPHA; t.scy  = t.scy*ia+rb.cy*TRACK_ALPHA;
+      t.sr   = t.sr  *ia+rb.r *TRACK_ALPHA; t.spxS = t.spxS*ia+rb.pxS*TRACK_ALPHA;
+      t.bx=rb.bx; t.by=rb.by; t.bw=rb.bw; t.bh=rb.bh;
+      t.ttl=TRACK_TTL; t.age++; t.matched=true;
     } else {
-      // Spawn in first free slot
       for (let ti = 0; ti < MAX_TRACKED; ti++) {
         if (!_tracked[ti].active) {
-          const t = _tracked[ti];
-          t.scx = rb.cx; t.scy = rb.cy; t.sr = rb.r; t.spxS = rb.pxS;
-          t.bx = rb.bx; t.by = rb.by; t.bw = rb.bw; t.bh = rb.bh;
-          t.ttl = TRACK_TTL; t.age = 0; t.active = true; t.matched = true;
+          const t=_tracked[ti];
+          t.scx=rb.cx; t.scy=rb.cy; t.sr=rb.r; t.spxS=rb.pxS;
+          t.bx=rb.bx; t.by=rb.by; t.bw=rb.bw; t.bh=rb.bh;
+          t.ttl=TRACK_TTL; t.age=0; t.active=true; t.matched=true;
           break;
         }
       }
     }
   }
-
-  // Touch-proximity TTL bonus: blobs under the touch point survive longer
-  // even when momentarily undetected (e.g. partial occlusion).
-  const tOn = TOUCH.active;
-  const tR2 = TOUCH.radius * TOUCH.radius;
-
+  const tOn = TOUCH.active, tR2 = TOUCH.radius * TOUCH.radius;
   for (let ti = 0; ti < MAX_TRACKED; ti++) {
     const t = _tracked[ti];
     if (!t.active) continue;
     if (tOn && t.matched) {
-      const dx = t.scx - TOUCH.x, dy = t.scy - TOUCH.y;
-      if (dx * dx + dy * dy < tR2) {
-        t.ttl = Math.min(t.ttl + 4, TRACK_TTL * 2); // extend life near touch
-      }
+      const dx = t.scx-TOUCH.x, dy = t.scy-TOUCH.y;
+      if (dx*dx+dy*dy < tR2) t.ttl = Math.min(t.ttl+4, TRACK_TTL*2);
     }
-    if (!t.matched) {
-      if (--t.ttl <= 0) { t.active = false; t.age = 0; }
-    }
+    if (!t.matched) { if (--t.ttl <= 0) { t.active=false; t.age=0; } }
   }
 }
 
 // ── 1.8  Drawing utilities ───────────────────────────────────────────────────
 
-// Four L-shaped corner brackets around rect (x, y, w, h)
 function drawCornerBrackets(ctx, x, y, w, h, arm, color, lw) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth   = lw;
-  ctx.setLineDash([]);
+  ctx.strokeStyle=color; ctx.lineWidth=lw; ctx.setLineDash([]);
   ctx.beginPath();
-  ctx.moveTo(x,             y + arm); ctx.lineTo(x,         y); ctx.lineTo(x + arm,     y);
-  ctx.moveTo(x + w - arm,   y);       ctx.lineTo(x + w,     y); ctx.lineTo(x + w,   y + arm);
-  ctx.moveTo(x,         y + h - arm); ctx.lineTo(x,     y + h); ctx.lineTo(x + arm, y + h);
-  ctx.moveTo(x + w - arm,   y + h);   ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - arm);
+  ctx.moveTo(x,y+arm);       ctx.lineTo(x,y);           ctx.lineTo(x+arm,y);
+  ctx.moveTo(x+w-arm,y);     ctx.lineTo(x+w,y);         ctx.lineTo(x+w,y+arm);
+  ctx.moveTo(x,y+h-arm);     ctx.lineTo(x,y+h);         ctx.lineTo(x+arm,y+h);
+  ctx.moveTo(x+w-arm,y+h);   ctx.lineTo(x+w,y+h);       ctx.lineTo(x+w,y+h-arm);
   ctx.stroke();
 }
 
-// Arrowhead drawn at midpoint of the segment (x1,y1)→(x2,y2)
 function drawArrow(ctx, x1, y1, x2, y2, color) {
-  const mx    = (x1 + x2) * 0.5, my = (y1 + y2) * 0.5;
-  const angle = Math.atan2(y2 - y1, x2 - x1);
-  const as = 7;
-  const a1 = angle - 0.45, a2 = angle + 0.45;
-  ctx.strokeStyle = color;
-  ctx.lineWidth   = 1.5;
-  ctx.setLineDash([]);
+  const mx=(x1+x2)*0.5, my=(y1+y2)*0.5, angle=Math.atan2(y2-y1,x2-x1);
+  const as=7, a1=angle-0.45, a2=angle+0.45;
+  ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.setLineDash([]);
   ctx.beginPath();
-  ctx.moveTo(mx - as * Math.cos(a1), my - as * Math.sin(a1));
-  ctx.lineTo(mx, my);
-  ctx.lineTo(mx - as * Math.cos(a2), my - as * Math.sin(a2));
+  ctx.moveTo(mx-as*Math.cos(a1),my-as*Math.sin(a1));
+  ctx.lineTo(mx,my);
+  ctx.lineTo(mx-as*Math.cos(a2),my-as*Math.sin(a2));
   ctx.stroke();
 }
 
-// Vignette radial gradient — cached; recreated only on canvas resize
-let _vigGrad = null, _vigW = 0, _vigH = 0;
+let _vigGrad=null, _vigW=0, _vigH=0;
 function drawVignette(ctx, w, h) {
-  if (!_vigGrad || _vigW !== w || _vigH !== h) {
-    _vigGrad = ctx.createRadialGradient(
-      w * 0.5, h * 0.5, h * 0.22,
-      w * 0.5, h * 0.5, Math.max(w, h) * 0.74
-    );
-    _vigGrad.addColorStop(0, 'rgba(0,0,0,0)');
-    _vigGrad.addColorStop(1, 'rgba(0,0,0,0.52)');
-    _vigW = w; _vigH = h;
+  if (!_vigGrad || _vigW!==w || _vigH!==h) {
+    _vigGrad=ctx.createRadialGradient(w*.5,h*.5,h*.22,w*.5,h*.5,Math.max(w,h)*.74);
+    _vigGrad.addColorStop(0,'rgba(0,0,0,0)');
+    _vigGrad.addColorStop(1,'rgba(0,0,0,0.52)');
+    _vigW=w; _vigH=h;
   }
-  ctx.fillStyle = _vigGrad;
-  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle=_vigGrad; ctx.fillRect(0,0,w,h);
 }
 
-// Touch reticle: animated crosshair + dashed attraction-radius circle
-// Fades out in the last 1 second before TOUCH.timeout expires.
 function drawTouchReticle(ctx) {
-  if (!TOUCH.active) return;
-  const now  = performance.now();
-  const age  = now - TOUCH.lastT;
-  const fade = age > TOUCH.timeout - 1000
-    ? Math.max(0, 1.0 - (age - (TOUCH.timeout - 1000)) / 1000.0)
-    : 1.0;
-  if (fade <= 0.01) return;
-
-  const {x, y, radius} = TOUCH;
-  const pulse = 0.55 + 0.45 * Math.sin(now / 200);
-
+  if (!TOUCH.active || STATE.isRecording) return;
+  const now=performance.now(), age=now-TOUCH.lastT;
+  const fade=age>TOUCH.timeout-1000 ? Math.max(0,1.0-(age-(TOUCH.timeout-1000))/1000.0) : 1.0;
+  if (fade<=0.01) return;
+  const {x,y,radius}=TOUCH, pulse=0.55+0.45*Math.sin(now/200);
   ctx.save();
-
-  // Outer dashed attraction-radius ring
-  ctx.globalAlpha = fade * 0.32 * pulse;
-  ctx.strokeStyle = '#b4ff37';
-  ctx.lineWidth   = 1;
-  ctx.setLineDash([4, 5]);
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.stroke();
+  ctx.globalAlpha=fade*0.32*pulse; ctx.strokeStyle='#b4ff37'; ctx.lineWidth=1;
+  ctx.setLineDash([4,5]);
+  ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.stroke();
   ctx.setLineDash([]);
-
-  // Inner solid ring
-  ctx.globalAlpha = fade * 0.88 * pulse;
-  ctx.strokeStyle = '#b4ff37';
-  ctx.lineWidth   = 2;
+  ctx.globalAlpha=fade*0.88*pulse; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(x,y,14,0,Math.PI*2); ctx.stroke();
+  const cs=22, gap=17;
+  ctx.lineWidth=1.5;
   ctx.beginPath();
-  ctx.arc(x, y, 14, 0, Math.PI * 2);
+  ctx.moveTo(x-cs,y); ctx.lineTo(x-gap,y);
+  ctx.moveTo(x+gap,y); ctx.lineTo(x+cs,y);
+  ctx.moveTo(x,y-cs); ctx.lineTo(x,y-gap);
+  ctx.moveTo(x,y+gap); ctx.lineTo(x,y+cs);
   ctx.stroke();
-
-  // Broken crosshair lines (gap around centre circle)
-  ctx.lineWidth = 1.5;
-  const cs = 22, gap = 17;
-  ctx.beginPath();
-  ctx.moveTo(x - cs, y); ctx.lineTo(x - gap, y);
-  ctx.moveTo(x + gap, y); ctx.lineTo(x + cs, y);
-  ctx.moveTo(x, y - cs); ctx.lineTo(x, y - gap);
-  ctx.moveTo(x, y + gap); ctx.lineTo(x, y + cs);
-  ctx.stroke();
-
   ctx.restore();
+}
+
+// ── 1.9  Ghost particle sampler ──────────────────────────────────────────────
+// Samples the pre-erosion foreground mask (_rawMaskBuf) at proc resolution.
+// Only foreground pixels are stored; brightness drives particle size.
+// Results are written to _ghX, _ghY, _ghG and read by drawStyleC() each frame.
+// Hex-grid offset breaks the rectangular sampling lattice.
+function sampleGhostParticles(scaleX, scaleY) {
+  _ghCount = 0;
+  const step = 2;
+  for (let y = 0; y < PROC_H; y += step) {
+    const row = y * PROC_W;
+    // Hex offset: odd rows offset by 1 proc pixel
+    const xOff = ((y / step) | 0) & 1;
+    for (let x = xOff; x < PROC_W; x += step) {
+      if (!_rawMaskBuf[row + x]) continue;
+      _ghX[_ghCount] = x * scaleX;
+      _ghY[_ghCount] = y * scaleY;
+      _ghG[_ghCount] = _grayBuf[row + x];
+      if (++_ghCount >= MAX_GHOST_PX) return;
+    }
+  }
+}
+
+// ── 1.10  Neural node system ─────────────────────────────────────────────────
+//
+// Each active tracked blob owns NODES_PER_BLOB orbit nodes.
+// Nodes rotate at a slow angular speed (driven by performance.now()).
+// Connections are rebuilt every rAF frame (cheap: ~200 trig ops at 60fps):
+//   - intra-ring (kind=0): adjacent node pairs → thin red dashed beziers
+//   - intra-star (kind=1): skip-4 diagonals  → finer red beziers (star polygon)
+//   - inter-blob (kind=2): nearest node pairs between close blobs → blue beziers
+//
+// The connection pool is pre-allocated (Int32Array) → zero GC.
+
+function updateNeuralNodes(t) {
+  // Update orbit positions for all node slots
+  for (let bi = 0; bi < MAX_TRACKED; bi++) {
+    const blob = _tracked[bi];
+    for (let ni = 0; ni < NODES_PER_BLOB; ni++) {
+      const gi = bi * NODES_PER_BLOB + ni;
+      const nd = _nnNodes[gi];
+      nd.blobIdx = bi;
+      if (!blob.active) { nd.active = false; continue; }
+      nd.active = true;
+      // Slow differential rotation: baseAngle separates nodes; t-term rotates the whole ring
+      const angle = nd.baseAngle + t * 0.00022 + nd.phase * 0.1;
+      const r = Math.max(blob.sr, 20) * nd.orbitScale;
+      nd.x = blob.scx + Math.cos(angle) * r;
+      nd.y = blob.scy + Math.sin(angle) * r;
+    }
+  }
+
+  // Rebuild connection list
+  _nnConnCount = 0;
+
+  // Intra-blob — ring edges (adjacent nodes) + star diagonals (skip-4)
+  for (let bi = 0; bi < MAX_TRACKED; bi++) {
+    const blob = _tracked[bi];
+    if (!blob.active || blob.age < 2) continue;
+    // Ring: connect node ni → ni+1 (wraps)
+    for (let ni = 0; ni < NODES_PER_BLOB; ni++) {
+      const a = bi * NODES_PER_BLOB + ni;
+      const b = bi * NODES_PER_BLOB + (ni + 1) % NODES_PER_BLOB;
+      if (!_nnNodes[a].active || !_nnNodes[b].active) continue;
+      if (_nnConnCount < MAX_NN_CONNECTIONS) {
+        _nnConnA[_nnConnCount] = a;
+        _nnConnB[_nnConnCount] = b;
+        _nnConnKind[_nnConnCount] = 0; // intra-ring
+        _nnConnCount++;
+      }
+    }
+    // Star: connect node ni → ni+4 (skip 3, creates star polygon with 9 nodes)
+    for (let ni = 0; ni < NODES_PER_BLOB; ni++) {
+      const a = bi * NODES_PER_BLOB + ni;
+      const b = bi * NODES_PER_BLOB + (ni + 4) % NODES_PER_BLOB;
+      if (!_nnNodes[a].active || !_nnNodes[b].active) continue;
+      if (_nnConnCount < MAX_NN_CONNECTIONS) {
+        _nnConnA[_nnConnCount] = a;
+        _nnConnB[_nnConnCount] = b;
+        _nnConnKind[_nnConnCount] = 1; // intra-star
+        _nnConnCount++;
+      }
+    }
+  }
+
+  // Inter-blob — up to 3 cross-blob connections per blob pair within range
+  const CONN_D2 = 230 * 230;
+  for (let bi = 0; bi < MAX_TRACKED - 1; bi++) {
+    const bA = _tracked[bi];
+    if (!bA.active || bA.age < 2) continue;
+    for (let bj = bi + 1; bj < MAX_TRACKED; bj++) {
+      const bB = _tracked[bj];
+      if (!bB.active || bB.age < 2) continue;
+      const ddx = bA.scx - bB.scx, ddy = bA.scy - bB.scy;
+      if (ddx*ddx + ddy*ddy > CONN_D2) continue;
+      // Connect up to 3 nearest node pairs between blob A and blob B
+      let pairs = 0;
+      for (let na = 0; na < NODES_PER_BLOB && pairs < 3; na++) {
+        const idxA = bi * NODES_PER_BLOB + na;
+        if (!_nnNodes[idxA].active) continue;
+        let bestB = -1, bestD2 = Infinity;
+        for (let nb = 0; nb < NODES_PER_BLOB; nb++) {
+          const idxB = bj * NODES_PER_BLOB + nb;
+          if (!_nnNodes[idxB].active) continue;
+          const dx = _nnNodes[idxA].x - _nnNodes[idxB].x;
+          const dy = _nnNodes[idxA].y - _nnNodes[idxB].y;
+          const d2 = dx*dx + dy*dy;
+          if (d2 < bestD2) { bestD2=d2; bestB=idxB; }
+        }
+        if (bestB >= 0 && _nnConnCount < MAX_NN_CONNECTIONS) {
+          _nnConnA[_nnConnCount] = idxA;
+          _nnConnB[_nnConnCount] = bestB;
+          _nnConnKind[_nnConnCount] = 2; // inter-blob
+          _nnConnCount++;
+          pairs++;
+        }
+      }
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PHASE 2 — APP STATE & GLOBAL CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ── Algorithm & visual parameters (all driven by UI controls) ───────────────
 const CFG = {
   motionThresh:   20,
-  // brightThresh raised to 245 (was 220). Lower values caused sky / bright
-  // ceilings to always register as foreground blobs, flooding the top of frame.
-  brightThresh:   245,
+  brightThresh:   245,  // raised from 220; prevents sky/ceiling flooding
   minArea:        12,
   maxArea:        20000,
-  style:          'B',   // 'A' = red boxes, 'B' = white circles
+  style:          'B',  // 'A'=Boxes, 'B'=Circles, 'C'=Ghost, 'D'=Neural
   showConnectors: true,
   showLabels:     true,
   showVignette:   true,
 };
 
-// ── Touch-bias state ─────────────────────────────────────────────────────────
-// Updated by pointerdown/pointermove events on the composite canvas.
-// The TOUCH object is read in extractRawBlobs() and updateTracked().
 const TOUCH = {
   active:  false,
   x:       0,
   y:       0,
-  radius:  190,    // attraction radius in canvas pixels
+  radius:  190,
   lastT:   0,
-  timeout: 3500,   // ms of inactivity before auto-deactivation
+  timeout: 3500,
 };
 
-// ── Runtime state ────────────────────────────────────────────────────────────
 const STATE = {
   cameraOk:      false,
   camStream:     null,
@@ -757,43 +778,43 @@ const STATE = {
   fps:           0,
   fpsT:          0,
   fpsFrames:     0,
-  warmup:        0,        // skip detection while prevGray not yet primed
+  warmup:        0,
   lastDetectT:   0,
 };
 
-// Cover-crop cache — maps source video rect to canvas (object-fit: cover logic)
-const _crop = { sx: 0, sy: 0, sw: 0, sh: 0, valid: false };
-
+// Cover-crop cache (object-fit:cover arithmetic, computed once and on resize)
+const _crop = { sx:0, sy:0, sw:0, sh:0, valid:false };
 function updateCrop(videoW, videoH, cW, cH) {
-  const vr = videoW / videoH, cr = cW / cH;
+  const vr=videoW/videoH, cr=cW/cH;
   if (vr > cr) {
-    _crop.sh = videoH;
-    _crop.sw = videoH * cr;
-    _crop.sx = (videoW - _crop.sw) * 0.5;
-    _crop.sy = 0;
+    _crop.sh=videoH; _crop.sw=videoH*cr;
+    _crop.sx=(videoW-_crop.sw)*0.5; _crop.sy=0;
   } else {
-    _crop.sw = videoW;
-    _crop.sh = videoW / cr;
-    _crop.sx = 0;
-    _crop.sy = (videoH - _crop.sh) * 0.5;
+    _crop.sw=videoW; _crop.sh=videoW/cr;
+    _crop.sx=0; _crop.sy=(videoH-_crop.sh)*0.5;
   }
-  _crop.valid = true;
+  _crop.valid=true;
 }
+
+// Style metadata (order used for cycling in the main button)
+const STYLE_CYCLE = ['B','A','C','D'];
+const STYLE_NAMES = { A:'☐ Boxes', B:'⬤ Circles', C:'◌ Ghost', D:'⬡ Neural' };
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PHASE 3 — CORE RENDERING & PROCESSING ENGINE
 //
 //   3.1  Element handles
-//   3.2  drawStyleA  — BLOBZ red-box visual
-//   3.3  drawStyleB  — BLOBZ circle visual
-//   3.4  drawHUD     — branding, blob count, FPS, REC timer
-//   3.5  loop()      — main requestAnimationFrame loop
-//   3.6  startCamera / _startCameraFallback / _finaliseCamera
-//   3.7  startRecording / stopRecording  (iOS-aware MIME selection)
-//   3.8  showError
+//   3.2  drawStyleA — red nested-frame boxes (BLOBZ ref. image 1)
+//   3.3  drawStyleB — white concentric circles (BLOBZ ref. image 2)
+//   3.4  drawStyleC — Ghost: black BG + foreground-mask particle cloud
+//   3.5  drawStyleD — Neural: video + orbit nodes + bezier network
+//   3.6  drawHUD    — branding / stats / REC timer (skipped during recording)
+//   3.7  loop()     — main requestAnimationFrame loop
+//   3.8  startCamera / _startCameraFallback / _finaliseCamera
+//   3.9  startRecording / stopRecording (iOS-aware MIME selection)
+//   3.10 showError
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ── 3.1  Element handles (populated at DOMContentLoaded) ────────────────────
 let compositeCanvas = null;
 let compositeCtx    = null;
 let workCanvas      = null;
@@ -801,256 +822,371 @@ let workCtx         = null;
 let videoEl         = null;
 let rafId           = null;
 
-// Detection runs at ≈33Hz (30ms interval); rendering runs at full rAF rate.
-// Reduced from 48ms → 30ms for faster blob response.
-const DETECT_INTERVAL_MS = 30;
+const DETECT_INTERVAL_MS = 30; // ~33 detections/sec
 
-// ── 3.2  Style A — red nested-frame boxes ─────────────────────────────────--
-
+// ── 3.2  Style A — red nested-frame boxes ────────────────────────────────────
 function drawStyleA(ctx, cW, cH) {
   const blobs = [];
   for (let ti = 0; ti < MAX_TRACKED; ti++) {
-    const t = _tracked[ti];
-    if (t.active && t.age >= 2) blobs.push(t);
+    const t = _tracked[ti]; if (t.active && t.age >= 2) blobs.push(t);
   }
   if (blobs.length === 0) return;
 
-  // Dashed encompassing ellipse around all centroids (needs ≥ 3 blobs)
+  // Encompassing dashed ellipse (≥3 blobs)
   if (blobs.length >= 3) {
-    let mnX = Infinity, mnY = Infinity, mxX = -Infinity, mxY = -Infinity;
+    let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infinity;
     for (const b of blobs) {
-      if (b.scx < mnX) mnX = b.scx;
-      if (b.scy < mnY) mnY = b.scy;
-      if (b.scx > mxX) mxX = b.scx;
-      if (b.scy > mxY) mxY = b.scy;
+      if (b.scx<mnX)mnX=b.scx; if (b.scy<mnY)mnY=b.scy;
+      if (b.scx>mxX)mxX=b.scx; if (b.scy>mxY)mxY=b.scy;
     }
-    const ecx = (mnX + mxX) * 0.5, ecy = (mnY + mxY) * 0.5;
-    const erx = (mxX - mnX) * 0.5 * 1.32 + 42;
-    const ery = (mxY - mnY) * 0.5 * 1.32 + 42;
-    if (erx > 20 && ery > 20) {
+    const ecx=(mnX+mxX)*.5,ecy=(mnY+mxY)*.5;
+    const erx=(mxX-mnX)*.5*1.32+42, ery=(mxY-mnY)*.5*1.32+42;
+    if (erx>20 && ery>20) {
       ctx.save();
-      ctx.strokeStyle = 'rgba(255,60,0,0.42)';
-      ctx.lineWidth   = 1.5;
-      ctx.setLineDash([10, 8]);
-      ctx.beginPath();
-      ctx.ellipse(ecx, ecy, erx, ery, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
+      ctx.strokeStyle='rgba(255,60,0,0.42)'; ctx.lineWidth=1.5; ctx.setLineDash([10,8]);
+      ctx.beginPath(); ctx.ellipse(ecx,ecy,erx,ery,0,0,Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]); ctx.restore();
     }
   }
 
   // Nearest-neighbour connector lines
   if (CFG.showConnectors && blobs.length > 1) {
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,50,0,0.28)';
-    ctx.lineWidth   = 1;
-    ctx.setLineDash([3, 6]);
+    ctx.strokeStyle='rgba(255,50,0,0.28)'; ctx.lineWidth=1; ctx.setLineDash([3,6]);
     for (let i = 0; i < blobs.length; i++) {
-      let nearJ = -1, nearD = Infinity;
+      let nearJ=-1,nearD=Infinity;
       for (let j = 0; j < blobs.length; j++) {
-        if (j === i) continue;
-        const dx = blobs[i].scx - blobs[j].scx, dy = blobs[i].scy - blobs[j].scy;
-        const d  = dx * dx + dy * dy;
-        if (d < nearD) { nearD = d; nearJ = j; }
+        if (j===i) continue;
+        const dx=blobs[i].scx-blobs[j].scx, dy=blobs[i].scy-blobs[j].scy;
+        const d=dx*dx+dy*dy; if (d<nearD){nearD=d;nearJ=j;}
       }
-      if (nearJ > i) {
-        ctx.beginPath();
-        ctx.moveTo(blobs[i].scx, blobs[i].scy);
-        ctx.lineTo(blobs[nearJ].scx, blobs[nearJ].scy);
-        ctx.stroke();
+      if (nearJ>i) {
+        ctx.beginPath(); ctx.moveTo(blobs[i].scx,blobs[i].scy);
+        ctx.lineTo(blobs[nearJ].scx,blobs[nearJ].scy); ctx.stroke();
       }
     }
-    ctx.setLineDash([]);
-    ctx.restore();
+    ctx.setLineDash([]); ctx.restore();
   }
 
-  // Per-blob: nested dashed frames + corner brackets + label
+  // Per-blob nested frames + corner brackets + label
   for (const b of blobs) {
-    const fadeA = Math.min(1, b.age / 4) * Math.min(1, b.ttl / 3);
-    if (fadeA < 0.05) continue;
-
-    const cx = b.scx, cy = b.scy;
-    const r  = Math.max(b.sr, 14);
-    const hw = Math.max(b.bw * 0.5 + 10, r + 8);
-    const hh = Math.max(b.bh * 0.5 + 10, r + 8);
-    const x0 = cx - hw, y0 = cy - hh;
-    const w0 = hw * 2,  h0 = hh * 2;
-
-    ctx.save();
-    ctx.globalAlpha = fadeA;
-
+    const fadeA = Math.min(1,b.age/4)*Math.min(1,b.ttl/3);
+    if (fadeA<0.05) continue;
+    const cx=b.scx,cy=b.scy,r=Math.max(b.sr,14);
+    const hw=Math.max(b.bw*.5+10,r+8), hh=Math.max(b.bh*.5+10,r+8);
+    const x0=cx-hw,y0=cy-hh,w0=hw*2,h0=hh*2;
+    ctx.save(); ctx.globalAlpha=fadeA;
     // Outer dashed red frame
-    ctx.strokeStyle = '#ff2800';
-    ctx.lineWidth   = 1.5;
-    ctx.setLineDash([5, 4]);
-    ctx.strokeRect(x0, y0, w0, h0);
-    ctx.setLineDash([]);
-
-    // Middle dashed inner frame (60% size)
-    const s2 = 0.60;
-    const x2 = cx - hw * s2, y2 = cy - hh * s2;
-    const w2 = hw * s2 * 2,  h2 = hh * s2 * 2;
-    ctx.strokeStyle = 'rgba(255,80,30,0.62)';
-    ctx.lineWidth   = 1;
-    ctx.setLineDash([3, 3]);
-    ctx.strokeRect(x2, y2, w2, h2);
-    ctx.setLineDash([]);
-
-    // Tiny dot-squares at inner-frame corners
-    const ds = 5;
-    ctx.strokeStyle = 'rgba(255,255,255,0.72)';
-    ctx.lineWidth   = 1;
-    ctx.strokeRect(x2 - ds * 0.5,       y2 - ds * 0.5,       ds, ds);
-    ctx.strokeRect(x2 + w2 - ds * 0.5,  y2 - ds * 0.5,       ds, ds);
-    ctx.strokeRect(x2 - ds * 0.5,       y2 + h2 - ds * 0.5,  ds, ds);
-    ctx.strokeRect(x2 + w2 - ds * 0.5,  y2 + h2 - ds * 0.5,  ds, ds);
-
-    // Outer corner L-bracket marks
-    const arm = Math.min(16, w0 * 0.22);
-    drawCornerBrackets(ctx, x0, y0, w0, h0, arm, 'rgba(255,255,255,0.92)', 2);
-
-    // PX S label
-    if (CFG.showLabels) {
-      ctx.font      = '10px "Courier New", monospace';
-      ctx.fillStyle = 'rgba(255,255,255,0.88)';
-      ctx.fillText(b.spxS.toFixed(1) + ' PX S', x0 + 2, y0 - 6);
+    ctx.strokeStyle='#ff2800'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+    ctx.strokeRect(x0,y0,w0,h0); ctx.setLineDash([]);
+    // Middle inner frame (60%)
+    const s2=0.60,x2=cx-hw*s2,y2=cy-hh*s2,w2=hw*s2*2,h2=hh*s2*2;
+    ctx.strokeStyle='rgba(255,80,30,0.62)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.strokeRect(x2,y2,w2,h2); ctx.setLineDash([]);
+    // Tiny corner squares
+    const ds=5; ctx.strokeStyle='rgba(255,255,255,0.72)'; ctx.lineWidth=1;
+    ctx.strokeRect(x2-ds*.5,     y2-ds*.5,     ds,ds);
+    ctx.strokeRect(x2+w2-ds*.5,  y2-ds*.5,     ds,ds);
+    ctx.strokeRect(x2-ds*.5,     y2+h2-ds*.5,  ds,ds);
+    ctx.strokeRect(x2+w2-ds*.5,  y2+h2-ds*.5,  ds,ds);
+    // L-bracket corner marks
+    drawCornerBrackets(ctx,x0,y0,w0,h0,Math.min(16,w0*.22),'rgba(255,255,255,0.92)',2);
+    // Label (hidden during recording)
+    if (CFG.showLabels && !STATE.isRecording) {
+      ctx.font='10px "Courier New",monospace'; ctx.fillStyle='rgba(255,255,255,0.88)';
+      ctx.fillText(b.spxS.toFixed(1)+' PX S',x0+2,y0-6);
     }
-
     ctx.restore();
   }
 }
 
 // ── 3.3  Style B — white concentric circles + tree connectors ────────────────
-
 function drawStyleB(ctx, cW, cH) {
   const blobs = [];
   for (let ti = 0; ti < MAX_TRACKED; ti++) {
-    const t = _tracked[ti];
-    if (t.active && t.age >= 2) blobs.push(t);
+    const t = _tracked[ti]; if (t.active && t.age >= 2) blobs.push(t);
   }
   if (blobs.length === 0) return;
-  // Sort largest-first so the largest is visually the "root"
-  blobs.sort((a, b) => b.sr - a.sr);
+  blobs.sort((a,b) => b.sr-a.sr); // largest first = root
 
-  // Tree connector: each blob connects to nearest larger ancestor
   if (CFG.showConnectors && blobs.length > 1) {
     ctx.save();
     for (let i = 1; i < blobs.length; i++) {
-      let nearJ = 0, nearD = Infinity;
+      let nearJ=0,nearD=Infinity;
       for (let j = 0; j < i; j++) {
-        const dx = blobs[i].scx - blobs[j].scx, dy = blobs[i].scy - blobs[j].scy;
-        const d  = dx * dx + dy * dy;
-        if (d < nearD) { nearD = d; nearJ = j; }
+        const dx=blobs[i].scx-blobs[j].scx, dy=blobs[i].scy-blobs[j].scy;
+        const d=dx*dx+dy*dy; if (d<nearD){nearD=d;nearJ=j;}
       }
-      ctx.strokeStyle = 'rgba(255,255,255,0.38)';
-      ctx.lineWidth   = 1;
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.moveTo(blobs[i].scx, blobs[i].scy);
-      ctx.lineTo(blobs[nearJ].scx, blobs[nearJ].scy);
-      ctx.stroke();
-      drawArrow(ctx,
-        blobs[i].scx,    blobs[i].scy,
-        blobs[nearJ].scx, blobs[nearJ].scy,
-        'rgba(180,255,55,0.88)'
-      );
+      ctx.strokeStyle='rgba(255,255,255,0.38)'; ctx.lineWidth=1; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(blobs[i].scx,blobs[i].scy);
+      ctx.lineTo(blobs[nearJ].scx,blobs[nearJ].scy); ctx.stroke();
+      drawArrow(ctx,blobs[i].scx,blobs[i].scy,blobs[nearJ].scx,blobs[nearJ].scy,'rgba(180,255,55,0.88)');
     }
     ctx.restore();
   }
 
-  // Per-blob: two concentric rings + green-yellow centre square
   for (const b of blobs) {
-    const fadeA = Math.min(1, b.age / 4) * Math.min(1, b.ttl / 3);
-    if (fadeA < 0.05) continue;
-
-    const cx = b.scx, cy = b.scy;
-    const r  = Math.max(b.sr, 10);
-
-    ctx.save();
-    ctx.globalAlpha = fadeA;
-
+    const fadeA=Math.min(1,b.age/4)*Math.min(1,b.ttl/3);
+    if (fadeA<0.05) continue;
+    const cx=b.scx,cy=b.scy,r=Math.max(b.sr,10);
+    ctx.save(); ctx.globalAlpha=fadeA;
     // Outer ring
-    ctx.strokeStyle = 'rgba(255,255,255,0.84)';
-    ctx.lineWidth   = 1.5;
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Inner ring (35% radius)
-    ctx.strokeStyle = 'rgba(255,255,255,0.48)';
-    ctx.lineWidth   = 1;
-    ctx.beginPath();
-    ctx.arc(cx, cy, Math.max(r * 0.35, 5), 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Centre tracking square (accent colour)
-    const ts = 9;
-    ctx.strokeStyle = 'rgba(180,255,55,0.95)';
-    ctx.lineWidth   = 1.5;
-    ctx.strokeRect(cx - ts * 0.5, cy - ts * 0.5, ts, ts);
-
-    // PX S label to the right of outer ring
-    if (CFG.showLabels) {
-      ctx.font      = '10px "Courier New", monospace';
-      ctx.fillStyle = 'rgba(255,255,255,0.86)';
-      ctx.fillText(b.spxS.toFixed(1) + ' PX S', cx + r + 5, cy + 4);
+    ctx.strokeStyle='rgba(255,255,255,0.84)'; ctx.lineWidth=1.5; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+    // Inner ring (35% r)
+    ctx.strokeStyle='rgba(255,255,255,0.48)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(cx,cy,Math.max(r*.35,5),0,Math.PI*2); ctx.stroke();
+    // Centre tracking square
+    const ts=9; ctx.strokeStyle='rgba(180,255,55,0.95)'; ctx.lineWidth=1.5;
+    ctx.strokeRect(cx-ts*.5,cy-ts*.5,ts,ts);
+    // Label
+    if (CFG.showLabels && !STATE.isRecording) {
+      ctx.font='10px "Courier New",monospace'; ctx.fillStyle='rgba(255,255,255,0.86)';
+      ctx.fillText(b.spxS.toFixed(1)+' PX S',cx+r+5,cy+4);
     }
-
     ctx.restore();
   }
 }
 
-// ── 3.4  HUD — branding, live stats, REC indicator (all drawn on canvas) ─────
+// ── 3.4  Style C — Ghost: black background + foreground mask particle cloud ───
+//
+// Visual target (reference image 3): person rendered as thousands of small
+// white outline circles and sparkle crosses on a pure black background.
+//
+// Technique:
+//   - Canvas is cleared to black (no video draw in loop when style=C)
+//   - Ghost particles are sampled from _rawMaskBuf (pre-erosion foreground)
+//     in sampleGhostParticles(), called inside the detection throttle
+//   - Rendered in 3 batched Canvas2D passes for minimum draw-call overhead:
+//       Pass 1: outline circles (62% of particles)
+//       Pass 2: sparkle crosses at bright pixels (16%)
+//       Pass 3: filled micro-dots (22%)
+//   - Particle radius proportional to grayscale value (highlights = larger)
+//   - Slow sine-wave shimmer via time-driven radius jitter
+//
+// Zero per-frame allocation: all data lives in _ghX/_ghY/_ghG (Float32/Uint8).
 
-function drawHUD(ctx, cW, cH) {
+function drawStyleC(ctx, cW, cH, t) {
+  // ── Clear to black (replaces video draw; handled here, not in loop)
+  ctx.fillStyle = '#050508';
+  ctx.fillRect(0, 0, cW, cH);
+
+  if (_ghCount === 0) return;
+
+  const tTick = (t * 0.014) | 0; // integer; changes every ~71ms (shimmer period)
+
   ctx.save();
 
-  // Brand text
-  ctx.font      = 'bold 12px "Courier New", monospace';
+  // ── Pass 1: outline circles (pType 0..5)
+  ctx.strokeStyle = 'rgba(255,255,255,0.88)';
+  ctx.lineWidth   = 0.75;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  let drawn1 = 0;
+  for (let i = 0; i < _ghCount && drawn1 < 420; i++) {
+    const pType = (i * 7 + tTick) % 10;
+    if (pType > 5) continue;
+    const cx = _ghX[i], cy = _ghY[i];
+    const g  = _ghG[i];
+    // Sine shimmer: radius oscillates between 80-120% of base
+    const shimmer = 0.85 + 0.15 * Math.sin(cx * 0.062 + cy * 0.041 + t * 0.0028);
+    const r = (1.1 + (g / 255) * 3.2) * shimmer;
+    ctx.moveTo(cx + r, cy); // moveTo required to avoid lineTo between arcs
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    drawn1++;
+  }
+  ctx.stroke();
+
+  // ── Pass 2: sparkle crosses at bright foreground pixels (pType 8..9)
+  ctx.strokeStyle = 'rgba(255,255,255,0.78)';
+  ctx.lineWidth   = 0.65;
+  ctx.beginPath();
+  let drawn2 = 0;
+  for (let i = 0; i < _ghCount && drawn2 < 90; i++) {
+    const g = _ghG[i];
+    if (g < 160) continue;
+    const pType = (i * 7 + tTick) % 10;
+    if (pType < 8) continue;
+    const cx = _ghX[i], cy = _ghY[i];
+    const s  = (1.5 + (g / 255) * 3.8);
+    const s45 = s * 0.707;
+    ctx.moveTo(cx - s, cy); ctx.lineTo(cx + s, cy);
+    ctx.moveTo(cx, cy - s); ctx.lineTo(cx, cy + s);
+    ctx.moveTo(cx - s45, cy - s45); ctx.lineTo(cx + s45, cy + s45);
+    ctx.moveTo(cx + s45, cy - s45); ctx.lineTo(cx - s45, cy + s45);
+    drawn2++;
+  }
+  ctx.stroke();
+
+  // ── Pass 3: tiny filled micro-dots (pType 6..7)
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.beginPath();
+  let drawn3 = 0;
+  for (let i = 0; i < _ghCount && drawn3 < 160; i++) {
+    const pType = (i * 7 + tTick) % 10;
+    if (pType < 6 || pType > 7) continue;
+    const cx = _ghX[i], cy = _ghY[i];
+    ctx.moveTo(cx + 1.2, cy);
+    ctx.arc(cx, cy, 1.2, 0, Math.PI * 2);
+    drawn3++;
+  }
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ── 3.5  Style D — Neural: video + orbit node network + dashed bezier curves ──
+//
+// Visual target (reference image 1): subject visible underneath a dense web
+// of curved colored lines connecting many glowing cyan nodes (like a neural
+// network visualization).
+//
+// Architecture:
+//   - Video frame drawn by loop() before this call
+//   - A dark overlay tints the video to make nodes/curves pop
+//   - updateNeuralNodes(t) is called every rAF frame for smooth orbit motion
+//   - Connections are drawn in 3 batched Canvas2D paths:
+//       - intra-ring (red dashes): polygon edges of each node ring
+//       - intra-star (fine red): skip-4 star polygon diagonals
+//       - inter-blob (blue dashes): cross-blob connections (requires proximity)
+//   - Nodes are cyan filled dots with outer glow ring + optional "bz XX" label
+//
+// Connection curvature: perpendicular offset at midpoint, magnitude = 35% of
+// segment length. Alternates sign per connection index for visual variety.
+
+function drawStyleD(ctx, cW, cH, t) {
+  // Dark tint over video (keeps subject visible but focuses on overlay)
+  ctx.fillStyle = 'rgba(0,0,0,0.48)';
+  ctx.fillRect(0, 0, cW, cH);
+
+  ctx.save();
+  ctx.setLineDash([4, 3]);
+
+  // ── Draw intra-ring connections (red, thin dashes)
+  ctx.strokeStyle = 'rgba(255,55,25,0.7)';
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  for (let ci = 0; ci < _nnConnCount; ci++) {
+    if (_nnConnKind[ci] !== 0) continue;
+    const na = _nnNodes[_nnConnA[ci]], nb = _nnNodes[_nnConnB[ci]];
+    if (!na.active || !nb.active) continue;
+    const mx=(na.x+nb.x)*.5, my=(na.y+nb.y)*.5;
+    const dx=nb.x-na.x,      dy=nb.y-na.y;
+    const len=Math.sqrt(dx*dx+dy*dy)||1;
+    const sign = (ci&1) ? 1:-1;
+    const curv = sign * len * 0.30;
+    const cpx = mx + (-dy/len)*curv, cpy = my + (dx/len)*curv;
+    ctx.moveTo(na.x, na.y);
+    ctx.quadraticCurveTo(cpx, cpy, nb.x, nb.y);
+  }
+  ctx.stroke();
+
+  // ── Draw intra-star connections (finer red dashes)
+  ctx.strokeStyle = 'rgba(255,90,40,0.45)';
+  ctx.lineWidth   = 0.75;
+  ctx.setLineDash([3, 4]);
+  ctx.beginPath();
+  for (let ci = 0; ci < _nnConnCount; ci++) {
+    if (_nnConnKind[ci] !== 1) continue;
+    const na = _nnNodes[_nnConnA[ci]], nb = _nnNodes[_nnConnB[ci]];
+    if (!na.active || !nb.active) continue;
+    const mx=(na.x+nb.x)*.5, my=(na.y+nb.y)*.5;
+    const dx=nb.x-na.x,      dy=nb.y-na.y;
+    const len=Math.sqrt(dx*dx+dy*dy)||1;
+    const sign = (ci&1) ? -1:1;
+    const curv = sign * len * 0.42;
+    const cpx = mx + (-dy/len)*curv, cpy = my + (dx/len)*curv;
+    ctx.moveTo(na.x, na.y);
+    ctx.quadraticCurveTo(cpx, cpy, nb.x, nb.y);
+  }
+  ctx.stroke();
+
+  // ── Draw inter-blob connections (blue dashes)
+  ctx.strokeStyle = 'rgba(80,180,255,0.55)';
+  ctx.lineWidth   = 1.1;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  for (let ci = 0; ci < _nnConnCount; ci++) {
+    if (_nnConnKind[ci] !== 2) continue;
+    const na = _nnNodes[_nnConnA[ci]], nb = _nnNodes[_nnConnB[ci]];
+    if (!na.active || !nb.active) continue;
+    const mx=(na.x+nb.x)*.5, my=(na.y+nb.y)*.5;
+    const dx=nb.x-na.x,      dy=nb.y-na.y;
+    const len=Math.sqrt(dx*dx+dy*dy)||1;
+    const sign = (ci&1) ? 1:-1;
+    const curv = sign * len * 0.38;
+    const cpx = mx + (-dy/len)*curv, cpy = my + (dx/len)*curv;
+    ctx.moveTo(na.x, na.y);
+    ctx.quadraticCurveTo(cpx, cpy, nb.x, nb.y);
+  }
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+
+  // ── Draw nodes: cyan filled dot + outer glow ring
+  for (let ni = 0; ni < MAX_NN_NODES; ni++) {
+    const nd = _nnNodes[ni];
+    if (!nd.active) continue;
+    const blob = _tracked[nd.blobIdx];
+    const fadeA = Math.min(1, blob.age / 4) * Math.min(1, blob.ttl / 3);
+    if (fadeA < 0.08) continue;
+
+    const pulse = 0.55 + 0.45 * Math.sin(t * 0.005 + nd.phase);
+
+    // Filled cyan core
+    ctx.globalAlpha = fadeA * pulse;
+    ctx.fillStyle   = 'rgba(80,220,255,1)';
+    ctx.beginPath();
+    ctx.arc(nd.x, nd.y, 3.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Outer glow ring
+    ctx.strokeStyle = 'rgba(80,220,255,0.35)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.arc(nd.x, nd.y, 6.5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Node label — hidden during recording
+    if (CFG.showLabels && !STATE.isRecording) {
+      ctx.globalAlpha = fadeA * 0.72;
+      ctx.font        = '8px "Courier New",monospace';
+      ctx.fillStyle   = 'rgba(255,255,255,0.82)';
+      ctx.fillText('bz ' + String(nd.labelId).padStart(2,'0'), nd.x + 8, nd.y + 3);
+    }
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ── 3.6  HUD — branding, live stats, REC indicator ───────────────────────────
+// RECORDING POLICY: entire HUD is skipped when STATE.isRecording.
+// The recorded video contains ONLY the visual tracking overlay — no text.
+
+function drawHUD(ctx, cW, cH) {
+  if (STATE.isRecording) return; // clean output — no text overlays in recording
+
+  ctx.save();
+  ctx.font      = 'bold 12px "Courier New",monospace';
   ctx.fillStyle = 'rgba(255,255,255,0.88)';
   ctx.fillText('BLOBZ TRACKER', 14, 27);
 
   let nActive = 0;
   for (let ti = 0; ti < MAX_TRACKED; ti++) if (_tracked[ti].active) nActive++;
 
-  ctx.font      = '9px "Courier New", monospace';
+  ctx.font      = '9px "Courier New",monospace';
   ctx.fillStyle = 'rgba(255,255,255,0.38)';
   ctx.fillText(
-    'BLOBS: ' + nActive +
-    '  FPS: ' + STATE.fps +
-    '  ' + (CFG.style === 'A' ? 'BOXES' : 'CIRCLES') +
+    'BLOBS:'+nActive+'  FPS:'+STATE.fps+
+    '  '+STYLE_NAMES[CFG.style].split(' ').slice(1).join(' ').toUpperCase()+
     (TOUCH.active ? '  [FOCUS]' : ''),
     14, 41
   );
-
-  // Recording dot + elapsed timer (top-right corner)
-  if (STATE.isRecording) {
-    const elapsed = ((performance.now() - STATE.recordStartT) / 1000) | 0;
-    const mm      = String((elapsed / 60) | 0).padStart(2, '0');
-    const ss      = String(elapsed % 60).padStart(2, '0');
-    const pulse   = 0.55 + 0.45 * Math.sin(performance.now() / 270);
-
-    ctx.globalAlpha = pulse;
-    ctx.fillStyle   = '#ff2800';
-    ctx.beginPath();
-    ctx.arc(cW - 18, 21, 7, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.globalAlpha = 1;
-    ctx.font        = 'bold 10px "Courier New", monospace';
-    ctx.fillStyle   = '#fff';
-    ctx.textAlign   = 'right';
-    ctx.fillText('REC ' + mm + ':' + ss, cW - 32, 25);
-    ctx.textAlign   = 'left';
-  }
-
   ctx.restore();
 }
 
-// ── 3.5  Main animation loop ──────────────────────────────────────────────────
-
+// ── 3.7  Main animation loop ──────────────────────────────────────────────────
 function loop(now) {
   rafId = requestAnimationFrame(loop);
   if (!STATE.cameraOk || videoEl.readyState < 2) return;
@@ -1058,494 +1194,370 @@ function loop(now) {
   // FPS counter (updated once per second)
   STATE.fpsFrames++;
   if (now - STATE.fpsT >= 1000) {
-    STATE.fps       = STATE.fpsFrames;
-    STATE.fpsFrames = 0;
-    STATE.fpsT      = now;
+    STATE.fps=STATE.fpsFrames; STATE.fpsFrames=0; STATE.fpsT=now;
   }
 
-  const cW = compositeCanvas.width;
-  const cH = compositeCanvas.height;
-
-  // Ensure cover-crop coordinates are valid
+  const cW = compositeCanvas.width, cH = compositeCanvas.height;
   if (!_crop.valid) updateCrop(STATE.videoW, STATE.videoH, cW, cH);
 
-  // A. Draw video frame (cover-crop mode — identical to CSS object-fit:cover)
-  compositeCtx.drawImage(videoEl, _crop.sx, _crop.sy, _crop.sw, _crop.sh, 0, 0, cW, cH);
-
-  // B. Optional vignette (cached gradient)
-  if (CFG.showVignette) drawVignette(compositeCtx, cW, cH);
-
-  // C. Touch timeout check (auto-deactivate after TOUCH.timeout ms of stillness)
-  if (TOUCH.active && now - TOUCH.lastT > TOUCH.timeout) {
-    TOUCH.active = false;
+  // ── A. Video frame — skipped for Ghost (it draws its own black background)
+  if (CFG.style !== 'C') {
+    compositeCtx.drawImage(videoEl, _crop.sx, _crop.sy, _crop.sw, _crop.sh, 0, 0, cW, cH);
   }
 
-  // D. Blob detection — throttled to DETECT_INTERVAL_MS
+  // ── B. Vignette — skipped for Ghost (meaningless on black) and Neural (handled by dark overlay)
+  if (CFG.showVignette && CFG.style !== 'C' && CFG.style !== 'D') {
+    drawVignette(compositeCtx, cW, cH);
+  }
+
+  // ── C. Touch timeout
+  if (TOUCH.active && now - TOUCH.lastT > TOUCH.timeout) TOUCH.active = false;
+
+  // ── D. Neural node orbit update (every rAF frame for smooth motion)
+  if (CFG.style === 'D') updateNeuralNodes(now);
+
+  // ── E. Blob detection (throttled to DETECT_INTERVAL_MS)
   if (now - STATE.lastDetectT >= DETECT_INTERVAL_MS) {
     STATE.lastDetectT = now;
 
-    // Capture proc-resolution frame using the same cover-crop as composite
+    // Capture proc-resolution frame with same cover-crop
     workCtx.drawImage(videoEl, _crop.sx, _crop.sy, _crop.sw, _crop.sh, 0, 0, PROC_W, PROC_H);
     const imgData = workCtx.getImageData(0, 0, PROC_W, PROC_H);
-
-    // Grayscale conversion (BT.601, integer)
     toGrayscale(imgData.data, _grayBuf, PROC_N);
 
     if (STATE.warmup >= 2) {
-      // Mask: motion diff + brightness threshold, then erosion (kills noise)
+      // Motion + brightness mask with erosion
       computeMaskEroded(
         _grayBuf, _prevGrayBuf, _rawMaskBuf, _maskBuf,
-        PROC_N, PROC_W, PROC_H,
-        CFG.motionThresh, CFG.brightThresh
+        PROC_N, PROC_W, PROC_H, CFG.motionThresh, CFG.brightThresh
       );
 
       // Connected components
       const labelCount = labelCC(_maskBuf, _labelBuf, _bfsQueue, PROC_W, PROC_H);
 
-      // Extract raw blobs (proc coords → canvas coords, with touch boost)
-      extractRawBlobs(
-        labelCount,
-        cW / PROC_W,
-        cH / PROC_H,
-        CFG.minArea,
-        CFG.maxArea
-      );
+      // Extract raw blobs with touch-proximity boost
+      extractRawBlobs(labelCount, cW/PROC_W, cH/PROC_H, CFG.minArea, CFG.maxArea);
 
-      // Update tracked blob pool
+      // Update tracker
       updateTracked();
 
+      // Ghost style: sample foreground mask positions for particle rendering
+      if (CFG.style === 'C') {
+        sampleGhostParticles(cW / PROC_W, cH / PROC_H);
+      }
+
     } else {
-      STATE.warmup++; // prime prevGrayBuf over first 2 frames
+      STATE.warmup++;
     }
 
-    // Roll frame: current gray → previous gray
     copyBuf(_grayBuf, _prevGrayBuf, PROC_N);
   }
 
-  // E. Draw visual overlay
-  if (CFG.style === 'A') drawStyleA(compositeCtx, cW, cH);
-  else                   drawStyleB(compositeCtx, cW, cH);
+  // ── F. Draw visual overlay
+  switch (CFG.style) {
+    case 'A': drawStyleA(compositeCtx, cW, cH);       break;
+    case 'B': drawStyleB(compositeCtx, cW, cH);       break;
+    case 'C': drawStyleC(compositeCtx, cW, cH, now);  break;
+    case 'D': drawStyleD(compositeCtx, cW, cH, now);  break;
+  }
 
-  // F. Draw touch reticle (on top of overlay)
-  drawTouchReticle(compositeCtx);
+  // ── G. Touch reticle (skipped during recording)
+  if (!STATE.isRecording) drawTouchReticle(compositeCtx);
 
-  // G. Draw HUD (included in recording)
+  // ── H. HUD (skipped during recording — see drawHUD)
   drawHUD(compositeCtx, cW, cH);
 }
 
-// ── 3.6  Camera initialisation ───────────────────────────────────────────────
-
+// ── 3.8  Camera initialisation ───────────────────────────────────────────────
 async function startCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { ideal: 'environment' },
-        width:      { ideal: 1280 },
-        height:     { ideal: 720 },
-      },
+      video: { facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720} },
       audio: false,
     });
-    videoEl.srcObject = stream;
-    STATE.camStream   = stream;
-    await new Promise((resolve, reject) => {
-      videoEl.onloadedmetadata = resolve;
-      videoEl.onerror = () => reject(new Error('Video metadata load error'));
+    videoEl.srcObject = stream; STATE.camStream = stream;
+    await new Promise((res, rej) => {
+      videoEl.onloadedmetadata = res;
+      videoEl.onerror = () => rej(new Error('Video metadata load error'));
     });
     await videoEl.play();
     STATE.videoW = videoEl.videoWidth  || 1280;
     STATE.videoH = videoEl.videoHeight || 720;
     return _finaliseCamera();
-
   } catch (err) {
     let msg = 'Camera error: ' + err.message;
-    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-      msg = '⚠ Camera access denied. Allow camera permission and reload.';
-    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-      msg = '⚠ No camera found on this device.';
-    } else if (err.name === 'NotReadableError') {
-      msg = '⚠ Camera is in use by another app. Close it and reload.';
-    } else if (err.name === 'OverconstrainedError') {
+    if (err.name==='NotAllowedError'||err.name==='PermissionDeniedError')
+      msg='⚠ Camera access denied. Allow camera permission and reload.';
+    else if (err.name==='NotFoundError'||err.name==='DevicesNotFoundError')
+      msg='⚠ No camera found on this device.';
+    else if (err.name==='NotReadableError')
+      msg='⚠ Camera is in use by another app. Close it and reload.';
+    else if (err.name==='OverconstrainedError')
       return _startCameraFallback();
-    }
-    showError(msg);
-    return false;
+    showError(msg); return false;
   }
 }
 
 async function _startCameraFallback() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    videoEl.srcObject = stream;
-    STATE.camStream   = stream;
-    await new Promise(res => { videoEl.onloadedmetadata = res; });
+    const stream = await navigator.mediaDevices.getUserMedia({ video:true, audio:false });
+    videoEl.srcObject=stream; STATE.camStream=stream;
+    await new Promise(res => { videoEl.onloadedmetadata=res; });
     await videoEl.play();
-    STATE.videoW = videoEl.videoWidth  || 640;
-    STATE.videoH = videoEl.videoHeight || 480;
+    STATE.videoW=videoEl.videoWidth||640; STATE.videoH=videoEl.videoHeight||480;
     return _finaliseCamera();
-  } catch (e) {
-    showError('⚠ Could not access any camera: ' + e.message);
-    return false;
-  }
+  } catch (e) { showError('⚠ Could not access any camera: '+e.message); return false; }
 }
 
 function _finaliseCamera() {
-  const cW = window.innerWidth;
-  const cH = window.innerHeight;
-  compositeCanvas.width  = cW;
-  compositeCanvas.height = cH;
-
-  // Proc dimensions: maintain canvas AR, cap total pixel count at 150 k
-  let pW = 240;
-  let pH = Math.round(pW * cH / cW);
-  if (pW * pH > 150000) {
-    const s = Math.sqrt(150000 / (pW * pH));
-    pW = (pW * s) | 0;
-    pH = (pH * s) | 0;
-  }
-  workCanvas.width  = pW;
-  workCanvas.height = pH;
+  const cW=window.innerWidth, cH=window.innerHeight;
+  compositeCanvas.width=cW; compositeCanvas.height=cH;
+  let pW=240, pH=Math.round(pW*cH/cW);
+  if (pW*pH > 150000) { const s=Math.sqrt(150000/(pW*pH)); pW=(pW*s)|0; pH=(pH*s)|0; }
+  workCanvas.width=pW; workCanvas.height=pH;
   initBuffers(pW, pH);
   updateCrop(STATE.videoW, STATE.videoH, cW, cH);
-
-  STATE.fpsT    = performance.now();
-  STATE.cameraOk = true;
-
-  // Show touch-focus hint briefly
-  const hint = document.getElementById('touch-hint');
+  STATE.fpsT=performance.now(); STATE.cameraOk=true;
+  const hint=document.getElementById('touch-hint');
   hint.classList.add('show');
-  setTimeout(() => { hint.style.display = 'none'; }, 6000);
-
+  setTimeout(() => { hint.style.opacity='0'; setTimeout(()=>{hint.style.display='none';},400); }, 3500);
   return true;
 }
 
-// ── 3.7  Recording — iOS-aware MIME type selection ───────────────────────────
+// ── 3.9  Recording — iOS-aware MIME, NO text in video ────────────────────────
 //
-// iOS SAFARI FIX:
-//   Safari and iOS Safari support MediaRecorder (since iOS 15.1) but only
-//   with 'video/mp4' (AVC/H.264). WebM is unsupported and produces files
-//   that cannot be played back on iPhone/iPad.
-//   Chrome, Firefox, and Android prefer WebM/VP9 for best quality.
+// KEY CHANGE: HUD is already suppressed via drawHUD() returning early when
+// STATE.isRecording=true. All label drawing checks STATE.isRecording.
+// The canvas captureStream gives the clean overlay-only video.
 //
-//   Strategy: detect iOS first and try mp4 types before webm types.
-//   Always use MediaRecorder.isTypeSupported() — never assume.
+// iOS SAFARI FIX: video/mp4;codecs=avc1 is the only format iOS MediaRecorder
+// supports. Chrome/Android prefers webm/vp9. Detection via _isIOS.
 
 const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  (navigator.platform==='MacIntel' && navigator.maxTouchPoints > 1);
 
 const _mimeTypeCandidates = _isIOS
-  ? [
-      'video/mp4;codecs=avc1',   // iOS Safari 15.1+ preferred
-      'video/mp4',               // iOS Safari generic
-      'video/webm;codecs=vp9',   // fallback (unlikely to work on iOS)
-      'video/webm;codecs=vp8',
-      'video/webm',
-    ]
-  : [
-      'video/webm;codecs=vp9',   // Chrome/Android best quality
-      'video/webm;codecs=vp8',
-      'video/webm',
-      'video/mp4;codecs=avc1',   // macOS Safari / Edge
-      'video/mp4',
-    ];
+  ? ['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']
+  : ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4;codecs=avc1','video/mp4'];
 
 function startRecording() {
   if (STATE.isRecording) return;
-
   if (typeof compositeCanvas.captureStream !== 'function') {
-    showError('⚠ Canvas capture not supported. Use Chrome or Firefox.');
-    return;
+    showError('⚠ Canvas capture not supported. Use Chrome or Firefox.'); return;
   }
-
-  // Pick first supported MIME type
   let mimeType = '';
   if (typeof MediaRecorder !== 'undefined') {
     for (const mt of _mimeTypeCandidates) {
-      if (MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+      if (MediaRecorder.isTypeSupported(mt)) { mimeType=mt; break; }
     }
   }
-
   try {
     const stream  = compositeCanvas.captureStream(30);
-    const options = mimeType ? { mimeType, videoBitsPerSecond: 4_000_000 } : {};
-
+    const options = mimeType ? { mimeType, videoBitsPerSecond:4_000_000 } : {};
     STATE.mediaRecorder = new MediaRecorder(stream, options);
-    STATE.chunks        = [];
-
-    STATE.mediaRecorder.ondataavailable = (e) => {
+    STATE.chunks = [];
+    STATE.mediaRecorder.ondataavailable = e => {
       if (e.data && e.data.size > 0) STATE.chunks.push(e.data);
     };
-
     STATE.mediaRecorder.onstop = () => {
-      const effectiveMime = mimeType || 'video/webm';
-      const blob = new Blob(STATE.chunks, { type: effectiveMime });
+      const eff  = mimeType || 'video/webm';
+      const blob = new Blob(STATE.chunks, { type:eff });
       if (STATE.lastDlUrl) URL.revokeObjectURL(STATE.lastDlUrl);
       STATE.lastDlUrl = URL.createObjectURL(blob);
-      // Extension derived from MIME type for native playback on all platforms
-      const ext    = effectiveMime.includes('mp4') ? 'mp4' : 'webm';
-      const dlBtn  = document.getElementById('btn-download');
-      dlBtn.href     = STATE.lastDlUrl;
-      dlBtn.download = 'blobz_' + Date.now() + '.' + ext;
-      dlBtn.style.display = 'inline-flex';
+      const ext   = eff.includes('mp4') ? 'mp4' : 'webm';
+      const dlBtn = document.getElementById('btn-download');
+      dlBtn.href=STATE.lastDlUrl; dlBtn.download='blobz_'+Date.now()+'.'+ext;
+      dlBtn.style.display='inline-flex';
     };
-
-    STATE.mediaRecorder.onerror = (e) => {
-      showError('Recording error: ' + (e.error ? e.error.message : 'unknown'));
+    STATE.mediaRecorder.onerror = e => {
+      showError('Recording error: '+(e.error?e.error.message:'unknown'));
       stopRecording();
     };
-
-    STATE.mediaRecorder.start(100); // emit chunk every 100 ms
-    STATE.isRecording  = true;
-    STATE.recordStartT = performance.now();
-
-    document.getElementById('btn-record').textContent = '⏹';
+    STATE.mediaRecorder.start(100);
+    STATE.isRecording=true; STATE.recordStartT=performance.now();
+    document.getElementById('btn-record').textContent='⏹';
     document.getElementById('btn-record').classList.add('recording');
-
-  } catch (err) {
-    showError('⚠ Could not start recording: ' + err.message);
-  }
+  } catch (err) { showError('⚠ Could not start recording: '+err.message); }
 }
 
 function stopRecording() {
   if (!STATE.isRecording || !STATE.mediaRecorder) return;
   try { STATE.mediaRecorder.stop(); } catch (_) {}
-  STATE.isRecording   = false;
-  STATE.mediaRecorder = null;
-  document.getElementById('btn-record').textContent = '⏺';
+  STATE.isRecording=false; STATE.mediaRecorder=null;
+  document.getElementById('btn-record').textContent='⏺';
   document.getElementById('btn-record').classList.remove('recording');
 }
 
-// ── 3.8  Error display ───────────────────────────────────────────────────────
 function showError(msg) {
-  const el = document.getElementById('error-banner');
-  el.textContent   = msg;
-  el.style.display = 'block';
-  setTimeout(() => { el.style.display = 'none'; }, 9000);
+  const el=document.getElementById('error-banner');
+  el.textContent=msg; el.style.display='block';
+  setTimeout(() => { el.style.display='none'; }, 9000);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PHASE 4 — DOM EVENT LISTENERS & HARDWARE LIFECYCLE HOOKS
-//
-//   4.1  DOMContentLoaded — element wiring, context creation
-//   4.2  Splash controls  — style toggle, sliders (synced to CFG)
-//   4.3  Touch-bias handlers on compositeCanvas (pointer events)
-//   4.4  Main controls    — style, record, settings, toggle buttons
-//   4.5  Live settings panel sliders (synced back to splash display)
-//   4.6  Splash → main transition (btn-start → startCamera → loop)
-//   4.7  Canvas context loss / restore
-//   4.8  Window resize
-//   4.9  Page visibility (pause rAF when tab hidden)
 // ═══════════════════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  // ── 4.1  Element references ──────────────────────────────────────────────
-
   compositeCanvas = document.getElementById('composite');
-  compositeCtx    = compositeCanvas.getContext('2d', {
-    willReadFrequently: false,
-    alpha: false,
-  });
+  compositeCtx    = compositeCanvas.getContext('2d', { willReadFrequently:false, alpha:false });
+  workCanvas      = document.createElement('canvas');
+  workCtx         = workCanvas.getContext('2d', { willReadFrequently:true });
+  videoEl         = document.getElementById('cam');
 
-  // Off-screen processing canvas (never attached to DOM)
-  workCanvas = document.createElement('canvas');
-  workCtx    = workCanvas.getContext('2d', { willReadFrequently: true });
+  // ── Splash — 4-style selector ──────────────────────────────────────────
 
-  videoEl = document.getElementById('cam');
+  const splBtns = {
+    A: document.getElementById('spl-a'),
+    B: document.getElementById('spl-b'),
+    C: document.getElementById('spl-c'),
+    D: document.getElementById('spl-d'),
+  };
 
-  // ── 4.2  Splash controls ──────────────────────────────────────────────────
+  function setSplashStyle(s) {
+    CFG.style = s;
+    Object.keys(splBtns).forEach(k => splBtns[k].classList.toggle('active', k===s));
+    document.getElementById('btn-style').textContent = STYLE_NAMES[s];
+  }
 
-  const splBtnB = document.getElementById('spl-style-b');
-  const splBtnA = document.getElementById('spl-style-a');
+  Object.keys(splBtns).forEach(k =>
+    splBtns[k].addEventListener('click', () => setSplashStyle(k))
+  );
 
-  splBtnB.addEventListener('click', () => {
-    CFG.style = 'B';
-    splBtnB.classList.add('active'); splBtnA.classList.remove('active');
-    document.getElementById('btn-style').textContent = 'STYLE: CIRCLES';
-  });
-  splBtnA.addEventListener('click', () => {
-    CFG.style = 'A';
-    splBtnA.classList.add('active'); splBtnB.classList.remove('active');
-    document.getElementById('btn-style').textContent = 'STYLE: BOXES';
-  });
+  // ── Splash sliders ←→ live settings panel (bidirectional sync) ─────────
 
-  // Synchronise a pair of slider inputs (splash ↔ live settings panel)
-  function syncSlider(splashId, splashValId, liveId, liveValId, setter) {
-    const sRng = document.getElementById(splashId);
-    const lRng = document.getElementById(liveId);
-    const sVal = document.getElementById(splashValId);
-    const lVal = document.getElementById(liveValId);
-    sRng.addEventListener('input', function () {
-      setter(parseInt(this.value, 10));
-      sVal.textContent = this.value;
-      lRng.value       = this.value;
-      lVal.textContent = this.value;
+  function syncSlider(splId, splValId, liveId, liveValId, setter) {
+    const sR=document.getElementById(splId),   lR=document.getElementById(liveId);
+    const sV=document.getElementById(splValId), lV=document.getElementById(liveValId);
+    sR.addEventListener('input', function() {
+      setter(parseInt(this.value,10));
+      sV.textContent=this.value; lR.value=this.value; lV.textContent=this.value;
     });
-    lRng.addEventListener('input', function () {
-      setter(parseInt(this.value, 10));
-      lVal.textContent = this.value;
-      sRng.value       = this.value;
-      sVal.textContent = this.value;
+    lR.addEventListener('input', function() {
+      setter(parseInt(this.value,10));
+      lV.textContent=this.value; sR.value=this.value; sV.textContent=this.value;
     });
   }
 
-  syncSlider('rng-mot', 'val-mot', 'lr-mot', 'lv-mot', v => { CFG.motionThresh = v; });
-  syncSlider('rng-bri', 'val-bri', 'lr-bri', 'lv-bri', v => { CFG.brightThresh = v; });
-  syncSlider('rng-min', 'val-min', 'lr-min', 'lv-min', v => { CFG.minArea      = v; });
+  syncSlider('rng-mot','val-mot','lr-mot','lv-mot', v=>{CFG.motionThresh=v;});
+  syncSlider('rng-bri','val-bri','lr-bri','lv-bri', v=>{CFG.brightThresh=v;});
+  syncSlider('rng-min','val-min','lr-min','lv-min', v=>{CFG.minArea=v;});
 
-  // ── 4.3  Touch-bias pointer events on composite canvas ────────────────────
-  //
-  // DESIGN: The composite canvas sits at z-index 0 (bottom).
-  // The ctrl-bar is z-index 20 and the settings-panel is z-index 19, so taps
-  // on those elements never reach the canvas. Only taps on the video area do.
-  //
-  // pointerdown / pointermove (while held) → activate focus zone
-  // pointerup   / pointercancel            → start the inactivity timer
-  //   (TOUCH.active remains true; it auto-deactivates after TOUCH.timeout ms)
-  //
-  // Multi-touch: we only track the primary pointer (first finger) to avoid
-  // accidental multi-finger gestures interfering with the settings panel.
+  // ── Touch-bias pointer events on composite canvas ──────────────────────
+  // Tapping/holding the live camera area activates the focus zone.
+  // The ctrl-bar (z-index 20) intercepts taps on the buttons, so only
+  // genuine camera-area touches reach the canvas.
 
-  let _settingsOpen = false; // mirror of settings-panel state (needed here)
+  let _settingsOpen = false;
 
-  compositeCanvas.addEventListener('pointerdown', (e) => {
-    if (_settingsOpen) return;        // don't track if settings panel is visible
-    if (!STATE.cameraOk)  return;
+  compositeCanvas.addEventListener('pointerdown', e => {
+    if (_settingsOpen || !STATE.cameraOk) return;
     e.preventDefault();
-    TOUCH.x      = e.clientX;
-    TOUCH.y      = e.clientY;
-    TOUCH.active = true;
-    TOUCH.lastT  = performance.now();
+    TOUCH.x=e.clientX; TOUCH.y=e.clientY;
+    TOUCH.active=true; TOUCH.lastT=performance.now();
     compositeCanvas.setPointerCapture(e.pointerId);
-  }, { passive: false });
+  }, { passive:false });
 
-  compositeCanvas.addEventListener('pointermove', (e) => {
-    if (!TOUCH.active || e.buttons === 0) return;
+  compositeCanvas.addEventListener('pointermove', e => {
+    if (!TOUCH.active || e.buttons===0) return;
     e.preventDefault();
-    TOUCH.x     = e.clientX;
-    TOUCH.y     = e.clientY;
-    TOUCH.lastT = performance.now();
-  }, { passive: false });
+    TOUCH.x=e.clientX; TOUCH.y=e.clientY; TOUCH.lastT=performance.now();
+  }, { passive:false });
 
-  compositeCanvas.addEventListener('pointerup',     (e) => { e.preventDefault(); }, { passive: false });
-  compositeCanvas.addEventListener('pointercancel', (e) => { TOUCH.lastT = performance.now() - TOUCH.timeout + 500; }, { passive: false });
+  compositeCanvas.addEventListener('pointerup',     e => { e.preventDefault(); }, { passive:false });
+  compositeCanvas.addEventListener('pointercancel', () => { TOUCH.lastT=performance.now()-TOUCH.timeout+500; }, { passive:false });
 
-  // ── 4.4  Main controls ────────────────────────────────────────────────────
+  // ── Main style cycle button — A→B→C→D→A ───────────────────────────────
 
-  // In-session style toggle button
-  document.getElementById('btn-style').addEventListener('click', () => {
-    CFG.style = CFG.style === 'A' ? 'B' : 'A';
-    document.getElementById('btn-style').textContent =
-      CFG.style === 'A' ? 'STYLE: BOXES' : 'STYLE: CIRCLES';
-    if (CFG.style === 'A') {
-      splBtnA.classList.add('active'); splBtnB.classList.remove('active');
-    } else {
-      splBtnB.classList.add('active'); splBtnA.classList.remove('active');
-    }
+  const styleBtn = document.getElementById('btn-style');
+  styleBtn.addEventListener('click', () => {
+    const curIdx = STYLE_CYCLE.indexOf(CFG.style);
+    const next   = STYLE_CYCLE[(curIdx + 1) % STYLE_CYCLE.length];
+    setSplashStyle(next);
   });
 
-  // Record / stop
+  // ── Record / stop ──────────────────────────────────────────────────────
+
   document.getElementById('btn-record').addEventListener('click', () => {
     if (!STATE.cameraOk) { showError('Camera not ready yet.'); return; }
     STATE.isRecording ? stopRecording() : startRecording();
   });
 
-  // Settings panel toggle
+  // ── Settings panel ─────────────────────────────────────────────────────
+
   document.getElementById('btn-settings').addEventListener('click', () => {
     _settingsOpen = !_settingsOpen;
     document.getElementById('settings-panel').classList.toggle('open', _settingsOpen);
     document.getElementById('btn-settings').classList.toggle('active', _settingsOpen);
-    // Deactivate touch-focus when settings are opened (avoids confusion)
     if (_settingsOpen) TOUCH.active = false;
   });
 
-  // Toggle buttons inside settings panel
-  document.getElementById('btn-conn').addEventListener('click', function () {
-    CFG.showConnectors = !CFG.showConnectors;
-    this.classList.toggle('on', CFG.showConnectors);
+  document.getElementById('btn-conn').addEventListener('click', function() {
+    CFG.showConnectors=!CFG.showConnectors; this.classList.toggle('on',CFG.showConnectors);
   });
-  document.getElementById('btn-lbl').addEventListener('click', function () {
-    CFG.showLabels = !CFG.showLabels;
-    this.classList.toggle('on', CFG.showLabels);
+  document.getElementById('btn-lbl').addEventListener('click', function() {
+    CFG.showLabels=!CFG.showLabels; this.classList.toggle('on',CFG.showLabels);
   });
-  document.getElementById('btn-vig').addEventListener('click', function () {
-    CFG.showVignette = !CFG.showVignette;
-    this.classList.toggle('on', CFG.showVignette);
+  document.getElementById('btn-vig').addEventListener('click', function() {
+    CFG.showVignette=!CFG.showVignette; this.classList.toggle('on',CFG.showVignette);
   });
 
-  // ── 4.6  Splash → main transition ─────────────────────────────────────────
+  // ── Splash → main transition ───────────────────────────────────────────
 
   document.getElementById('btn-start').addEventListener('click', async () => {
     const splash = document.getElementById('splash');
-    splash.style.opacity    = '0';
-    splash.style.transition = 'opacity 0.4s ease';
-    setTimeout(() => { splash.style.display = 'none'; }, 400);
-
+    splash.style.opacity='0'; splash.style.transition='opacity 0.4s ease';
+    setTimeout(() => { splash.style.display='none'; }, 400);
     const ok = await startCamera();
     if (!ok) {
-      splash.style.display  = 'flex';
-      splash.style.opacity  = '1';
-      splash.style.transition = 'none';
+      splash.style.display='flex'; splash.style.opacity='1'; splash.style.transition='none';
       return;
     }
-
-    STATE.lastDetectT = performance.now();
-    STATE.fpsT        = performance.now();
+    STATE.lastDetectT=performance.now(); STATE.fpsT=performance.now();
     rafId = requestAnimationFrame(loop);
   });
 
-  // ── 4.7  Canvas context loss / restore ────────────────────────────────────
+  // ── Canvas context loss / restore ──────────────────────────────────────
 
-  compositeCanvas.addEventListener('contextlost', (e) => {
+  compositeCanvas.addEventListener('contextlost', e => {
     e.preventDefault();
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    if (rafId) { cancelAnimationFrame(rafId); rafId=null; }
     showError('⚠ Canvas context lost — please reload the page.');
-    STATE.cameraOk = false;
+    STATE.cameraOk=false;
   });
 
   compositeCanvas.addEventListener('contextrestored', () => {
     if (STATE.cameraOk) {
-      STATE.lastDetectT = performance.now();
-      rafId = requestAnimationFrame(loop);
+      STATE.lastDetectT=performance.now(); rafId=requestAnimationFrame(loop);
     }
   });
 
-  // ── 4.8  Window resize ─────────────────────────────────────────────────────
+  // ── Window resize ──────────────────────────────────────────────────────
 
   window.addEventListener('resize', () => {
     if (!STATE.cameraOk) return;
-    const cW = window.innerWidth, cH = window.innerHeight;
-    compositeCanvas.width  = cW;
-    compositeCanvas.height = cH;
+    const cW=window.innerWidth, cH=window.innerHeight;
+    compositeCanvas.width=cW; compositeCanvas.height=cH;
     updateCrop(STATE.videoW, STATE.videoH, cW, cH);
-    // Invalidate vignette gradient cache
-    _vigGrad = null; _vigW = 0; _vigH = 0;
-    // Recompute proc canvas if aspect ratio changed
-    let pW = 240;
-    let pH = Math.round(pW * cH / cW);
-    if (pW * pH > 150000) {
-      const s = Math.sqrt(150000 / (pW * pH));
-      pW = (pW * s) | 0;
-      pH = (pH * s) | 0;
-    }
-    if (pW !== workCanvas.width || pH !== workCanvas.height) {
-      workCanvas.width  = pW;
-      workCanvas.height = pH;
-      initBuffers(pW, pH);
-      STATE.warmup = 0;
+    _vigGrad=null; _vigW=0; _vigH=0;
+    let pW=240, pH=Math.round(pW*cH/cW);
+    if (pW*pH > 150000) { const s=Math.sqrt(150000/(pW*pH)); pW=(pW*s)|0; pH=(pH*s)|0; }
+    if (pW!==workCanvas.width || pH!==workCanvas.height) {
+      workCanvas.width=pW; workCanvas.height=pH;
+      initBuffers(pW, pH); STATE.warmup=0;
     }
   });
 
-  // ── 4.9  Page visibility — pause rAF when tab is hidden ───────────────────
+  // ── Page visibility — pause rAF when tab hidden ────────────────────────
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
-      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+      if (rafId) { cancelAnimationFrame(rafId); rafId=null; }
     } else if (STATE.cameraOk && !rafId) {
-      STATE.warmup      = 0;
-      STATE.fpsT        = performance.now();
-      STATE.fpsFrames   = 0;
-      STATE.lastDetectT = performance.now();
-      rafId = requestAnimationFrame(loop);
+      STATE.warmup=0; STATE.fpsT=performance.now();
+      STATE.fpsFrames=0; STATE.lastDetectT=performance.now();
+      rafId=requestAnimationFrame(loop);
     }
   });
 
