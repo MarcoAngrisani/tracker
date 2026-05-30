@@ -11,7 +11,7 @@
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 html{height:-webkit-fill-available;}
 body{
-  font-family:'Courier New',Courier,monospace;
+  font-family:"Helvetica Neue",Helvetica,"Arial Black",Arial,sans-serif;
   background:#050508;color:#fff;
   width:100vw;height:100dvh;overflow:hidden;
   -webkit-user-select:none;user-select:none;
@@ -96,18 +96,19 @@ input[type="range"]::-moz-range-thumb{
 .sc-g{border-left:3px solid #50dcff!important;}
 .sc-h{border-left:3px solid #78d450!important;}
 .sc-i{border-left:3px solid #ff8c00!important;}
+.sc-j{border-left:3px solid #2b4cff!important;}
 /* Active: lime fill, black text */
 .style-grid button.active{background:#b4ff37!important;border-color:#b4ff37!important;color:#050508!important;font-weight:900!important;}
 .style-grid button{
   padding:.45rem .2rem;background:transparent;
   border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.42);
-  font-family:'Courier New',monospace;font-size:.57rem;letter-spacing:.08em;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-size:.57rem;letter-spacing:.08em;
   text-transform:uppercase;cursor:pointer;transition:all .15s;
 }
 .style-grid button.active{background:#ff2800;border-color:#ff2800;color:#fff;}
 #btn-start{
   width:100%;max-width:360px;padding:1rem;background:#b4ff37;color:#050508;
-  border:none;font-family:'Courier New',monospace;
+  border:none;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
   font-size:.9rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
   cursor:pointer;position:relative;z-index:1;
   transition:opacity .15s,transform .15s;-webkit-tap-highlight-color:transparent;
@@ -122,7 +123,7 @@ input[type="range"]::-moz-range-thumb{
 }
 .ctrl-btn{
   background:rgba(5,5,8,.72);border:1px solid rgba(255,255,255,.18);
-  color:rgba(255,255,255,.78);font-family:'Courier New',monospace;
+  color:rgba(255,255,255,.78);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
   font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
   padding:.52rem .9rem;cursor:pointer;
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
@@ -167,7 +168,7 @@ input[type="range"]::-moz-range-thumb{
   to{opacity:1;transform:translateX(-50%) translateY(0);}
 }
 #btn-download{
-  color:rgba(30,220,90,1);font-family:'Courier New',monospace;
+  color:rgba(30,220,90,1);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
   font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
   text-decoration:none;cursor:pointer;
 }
@@ -193,7 +194,7 @@ input[type="range"]::-moz-range-thumb{
 .toggle-btn{
   flex:1;padding:.4rem;background:transparent;
   border:1px solid rgba(255,255,255,.13);color:rgba(255,255,255,.3);
-  font-family:'Courier New',monospace;font-size:.55rem;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-size:.55rem;
   letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .15s;
 }
 .toggle-btn.on{border-color:#ff2800;color:#ff2800;background:rgba(255,40,0,.08);}
@@ -209,14 +210,6 @@ input[type="range"]::-moz-range-thumb{
 @keyframes hint-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
 .hint-txt{font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);}
 /* ── ERROR BANNER ──────────────────────────────────────────────────────── */
-/* Audio indicator bar (shown in HUD when audio is on) */
-#audio-bar{
-  position:fixed;top:.7rem;right:1rem;z-index:18;
-  display:flex;align-items:flex-end;gap:2px;height:22px;pointer-events:none;
-}
-.ab{width:3px;background:#b4ff37;border-radius:1px;min-height:2px;
-  transition:height .06s linear;box-shadow:0 0 4px #b4ff37;}
-#audio-bar.hidden{display:none;}
 #error-banner{
   display:none;position:fixed;top:1rem;left:1rem;right:1rem;z-index:60;
   background:rgba(160,15,0,.92);backdrop-filter:blur(10px);
@@ -243,11 +236,10 @@ input[type="range"]::-moz-range-thumb{
         <button id="spl-a" class="sc-a">SCAN</button>
         <button id="spl-c" class="sc-c">GHOST</button>
         <button id="spl-d" class="sc-d">NEURAL</button>
-        <button id="spl-e" class="sc-e">DATABEND</button>
         <button id="spl-f" class="sc-f">PXSORT</button>
-        <button id="spl-g" class="sc-g">DATA</button>
         <button id="spl-h" class="sc-h">GRAIN</button>
         <button id="spl-i" class="sc-i">EVAP</button>
+        <button id="spl-j" class="sc-j">ASCII</button>
       </div>
     </div>
     <div class="ctrl-row">
@@ -271,9 +263,10 @@ input[type="range"]::-moz-range-thumb{
 
 <!-- ── MAIN CONTROLS ───────────────────────────────────────────────────── -->
 <div id="ctrl-bar">
-  <button class="ctrl-btn" id="btn-style">&#9711; ORBIT</button>
+  <button class="ctrl-btn" id="btn-style">ORBIT</button>
+  <button class="ctrl-btn" id="btn-photo">PHOTO</button>
   <button id="btn-record">&#9210;</button>
-  <button class="ctrl-btn" id="btn-settings">&#9881; TUNE</button>
+  <button class="ctrl-btn" id="btn-settings">TUNE</button>
 </div>
 
 <!-- Download toast: fixed above ctrl-bar, never inside it (layout fix) -->
@@ -295,11 +288,13 @@ input[type="range"]::-moz-range-thumb{
     <div class="ctrl-label">Min Blob Size <span id="lv-min">12</span></div>
     <input type="range" id="lr-min" min="4" max="120" value="12" step="1">
   </div>
+  <div class="ctrl-row">
+    <div class="ctrl-label">Noise <span id="lv-noise">0</span></div>
+    <input type="range" id="lr-noise" min="0" max="40" value="0" step="1">
+  </div>
   <div class="toggle-row">
-    <button class="toggle-btn on" id="btn-conn">Connect</button>
-    <button class="toggle-btn on" id="btn-lbl">Labels</button>
-    <button class="toggle-btn on" id="btn-vig">Vignette</button>
-    <button class="toggle-btn on" id="btn-audio">&#9834; Audio</button>
+    <button class="toggle-btn on" id="btn-audio">AUDIO</button>
+    <button class="toggle-btn on" id="btn-vig">VIGNETTE</button>
   </div>
 </div>
 
@@ -307,8 +302,7 @@ input[type="range"]::-moz-range-thumb{
   <div class="hint-icon">&#128070;</div>
   <div class="hint-txt">Touch to focus tracking</div>
 </div>
-<div id="audio-bar" class="hidden">
-  <div class="ab" id="ab0"></div><div class="ab" id="ab1"></div>
+<div class="ab" id="ab1"></div>
   <div class="ab" id="ab2"></div><div class="ab" id="ab3"></div>
   <div class="ab" id="ab4"></div><div class="ab" id="ab5"></div>
   <div class="ab" id="ab6"></div><div class="ab" id="ab7"></div>
@@ -458,6 +452,7 @@ const AUDIO = {
   noiseBuffer:null,   // pre-baked 1s white noise — reused by all noise drums
   ready:      false,
   active:     true,
+  userMuted:  false,   // toggled by AUDIO button in TUNE panel
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -486,6 +481,7 @@ const DRUM = {
   stutterPos:   0,
   pendingCrash: false,  // crash cymbal on first beat after BREAK
   active:       false,
+  _wantState:   null,   // motion-requested next state
   // Live 16-step pattern (recomputed each bar — typed arrays, no GC)
   live: {
     kick:   new Uint8Array(16),
@@ -630,7 +626,14 @@ function generatePattern(state) {
 // ── State transition ──────────────────────────────────────────────────────────
 function transitionState() {
   const prev = DRUM.state;
-  const next = _weightedPick(_TRANSITIONS[prev] || [['GROOVE',100]]);
+  // Motion-driven override: if scene motion wants a specific state, honor it 70% of the time
+  let next;
+  if (DRUM._wantState && Math.random() < 0.70) {
+    next = DRUM._wantState;
+    DRUM._wantState = null;
+  } else {
+    next = _weightedPick(_TRANSITIONS[prev] || [['GROOVE',100]]);
+  }
   DRUM.state = next;
 
   // Section length: random within state range
@@ -660,17 +663,64 @@ function transitionState() {
   generatePattern(next);
 }
 
-// ── Scene energy influence (gentle — does NOT control BPM directly) ───────────
-function influenceDrumState(energy, nBlobs) {
-  // Slide targetBpm → bpm for non-instant transitions
-  if (Math.abs(DRUM.targetBpm - DRUM.bpm) > 0.8) {
-    DRUM.bpm = DRUM.bpm * 0.97 + DRUM.targetBpm * 0.03;
+// ── Blob motion tracking for audio link ──────────────────────────────────────
+// Stores previous centroids to compute average blob speed each audio frame.
+const _prevBlobX = new Float32Array(MAX_TRACKED);
+const _prevBlobY = new Float32Array(MAX_TRACKED);
+const _prevBlobOn = new Uint8Array(MAX_TRACKED);  // was-active last frame
+let   _avgBlobSpeed = 0;   // smoothed average speed (px/frame)
+
+// Returns {nBlobs, speed, spawned} and triggers snare on new spawns.
+function sampleBlobMotion() {
+  let n = 0, speedSum = 0, spawned = 0;
+  for (let ti = 0; ti < MAX_TRACKED; ti++) {
+    const t = _tracked[ti];
+    if (t.active && t.age >= 2) {
+      n++;
+      if (_prevBlobOn[ti]) {
+        const dx = t.scx - _prevBlobX[ti], dy = t.scy - _prevBlobY[ti];
+        speedSum += Math.sqrt(dx*dx + dy*dy);
+      } else {
+        spawned++;  // newly confirmed blob
+      }
+      _prevBlobX[ti] = t.scx; _prevBlobY[ti] = t.scy; _prevBlobOn[ti] = 1;
+    } else {
+      _prevBlobOn[ti] = 0;
+    }
   }
-  // High motion: occasionally shorten the current section
-  if (energy > 0.65 && DRUM.barsLeft > 1 && Math.random() < 0.06) DRUM.barsLeft--;
-  // Dead still: extend chill sections
-  if (energy < 0.08 && (DRUM.state==='CHILL'||DRUM.state==='HALF') && Math.random()<0.04) {
-    DRUM.barsLeft = Math.min(DRUM.barsLeft + 1, 20);
+  const rawSpeed = n > 0 ? speedSum / n : 0;
+  _avgBlobSpeed = _avgBlobSpeed * 0.7 + rawSpeed * 0.3;  // smooth
+  return { nBlobs: n, speed: _avgBlobSpeed, spawned };
+}
+
+// ── Scene energy influence — DIRECTLY driven by blob motion ───────────────────
+function influenceDrumState(energy, nBlobs, speed, spawned) {
+  // ── SPAWN → instant snare crack (audible "blob appeared") ──
+  if (spawned > 0 && AUDIO.ready) {
+    drumSnare(AUDIO.ctx.currentTime + 0.01, 0.5 + Math.min(spawned*0.15, 0.4));
+  }
+
+  // ── BLOB SPEED → target BPM (the core link) ──
+  // speed 0 (still) → 60 BPM ; speed 25+ px/frame (fast) → 175 BPM
+  const speedBpm = 60 + Math.min(speed / 25, 1) * 115;
+  // Blend with blob-count contribution (more blobs = more energetic)
+  const targetBpm = speedBpm + Math.min(nBlobs * 3, 18);
+  // Slew toward target — fast enough to FEEL the link, smooth enough to stay musical
+  DRUM.bpm = DRUM.bpm * 0.90 + targetBpm * 0.10;
+  DRUM.bpm = Math.max(52, Math.min(195, DRUM.bpm));
+
+  // ── BLOB SPEED → state selection (drives pattern density) ──
+  // Force state to match motion level (overrides random walk when motion is clear)
+  let wantState;
+  if (nBlobs === 0)        wantState = 'CHILL';
+  else if (speed < 2.0)    wantState = 'HALF';
+  else if (speed < 6.0)    wantState = 'GROOVE';
+  else if (speed < 13.0)   wantState = 'PEAK';
+  else                     wantState = 'CHAOS';
+  // Switch at bar boundary feel: nudge barsLeft down so transition happens soon
+  if (wantState !== DRUM.state && DRUM.state !== 'BREAK' && DRUM.state !== 'ROLL') {
+    DRUM._wantState = wantState;
+    if (DRUM.barsLeft > 1 && Math.random() < 0.5) DRUM.barsLeft = 1;
   }
 }
 
@@ -945,27 +995,25 @@ function scheduleDrums() {
 }
 
 
+let _audioFrame = 0;
 function updateAudio(cW, cH, nowMs) {
   if (!AUDIO.ready || !AUDIO.active) return;
   if (AUDIO.ctx.state === 'suspended') AUDIO.ctx.resume().catch(()=>{});
-  // Compute motion energy from depth map (sampled every 6th pixel for speed)
-  let depthSum = 0;
-  const dpStep = 6, dpCount = Math.floor(PROC_N / dpStep);
-  for (let i = 0; i < PROC_N; i += dpStep) depthSum += _depthBuf[i];
-  const energy = dpCount > 0 ? depthSum / dpCount : 0;
-  // Count active blobs
-  let nBlobs = 0;
-  for (let ti = 0; ti < MAX_TRACKED; ti++) if (_tracked[ti].active) nBlobs++;
-  // Influence drum state machine + schedule hits
-  influenceDrumState(energy, nBlobs);
-  scheduleDrums();
-  // Update HUD frequency bars (FFT analyser)
-  if (!STATE.isRecording && AUDIO.analyser && AUDIO.barEls) {
-    AUDIO.analyser.getByteFrequencyData(AUDIO.freqBuf);
-    for (let b = 0; b < 8; b++) {
-      AUDIO.barEls[b].style.height = (2 + (AUDIO.freqBuf[b * 4] / 255) * 18) + 'px';
-    }
+
+  // Sample blob motion every 3rd frame (~20Hz — enough for tempo control)
+  if ((_audioFrame++ % 3) === 0) {
+    const m = sampleBlobMotion();
+
+    // ── BLOB COUNT → MASTER VOLUME (the most obvious link) ──
+    // 0 blobs → near silence (0.06); many blobs → full (0.82)
+    const targetVol = m.nBlobs === 0 ? 0.05 : 0.30 + Math.min(m.nBlobs / 6, 1) * 0.52;
+    AUDIO.masterGain.gain.setTargetAtTime(
+      AUDIO.userMuted ? 0.0 : targetVol, AUDIO.ctx.currentTime, 0.25);
+
+    // Drive tempo + state from motion
+    influenceDrumState(0, m.nBlobs, m.speed, m.spawned);
   }
+  scheduleDrums();
 }
 
 // ── Data particle pool (Style G) ──────────────────────────────────────────
@@ -1365,6 +1413,7 @@ const CFG = {
   showConnectors: true,
   showLabels:     true,
   showVignette:   true,
+  noise:          0,        // 0-40 analog grain intensity
 };
 
 const TOUCH = {
@@ -1387,12 +1436,11 @@ function updateCrop(videoW, videoH, cW, cH) {
   _crop.valid=true;
 }
 
-const STYLE_CYCLE = ['B','A','C','D','E','F','G','H','I'];
+const STYLE_CYCLE = ['B','A','C','D','F','H','I','J'];
 const STYLE_NAMES = {
-  A:'&#9650; SCAN', B:'&#9711; ORBIT', C:'&#9676; GHOST',
-  D:'&#11041; NEURAL', E:'&#9889; DATABEND', F:'&#9619; PXSORT',
-  G:'&#9835; DATA', H:'&#9632; GRAIN', I:'&#9679; EVAP'
-};
+  A:'SCAN', B:'ORBIT', C:'GHOST',
+  D:'NEURAL', F:'PXSORT', H:'GRAIN', I:'EVAP', J:'ASCII'
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PHASE 3 — CORE RENDERING & PROCESSING ENGINE
@@ -1472,7 +1520,7 @@ function drawStyleA(ctx, cW, cH) {
     ctx.strokeRect(x2-ds*.5,y2+h2-ds*.5,ds,ds); ctx.strokeRect(x2+w2-ds*.5,y2+h2-ds*.5,ds,ds);
     drawCornerBrackets(ctx,x0,y0,w0,h0,Math.min(16,w0*.22),'rgba(255,255,255,0.92)',2);
     if (CFG.showLabels&&!STATE.isRecording) {
-      ctx.font='10px "Courier New",monospace'; ctx.fillStyle='rgba(255,255,255,0.88)';
+      ctx.font='10px Helvetica,Arial,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.88)';
       ctx.fillText(b.spxS.toFixed(1)+' PX S',x0+2,y0-6);
     }
     ctx.restore();
@@ -1510,7 +1558,7 @@ function drawStyleB(ctx, cW, cH) {
     const ts=9; ctx.strokeStyle='rgba(180,255,55,0.95)'; ctx.lineWidth=1.5;
     ctx.strokeRect(cx-ts*.5,cy-ts*.5,ts,ts);
     if (CFG.showLabels&&!STATE.isRecording) {
-      ctx.font='10px "Courier New",monospace'; ctx.fillStyle='rgba(255,255,255,0.86)';
+      ctx.font='10px Helvetica,Arial,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.86)';
       ctx.fillText(b.spxS.toFixed(1)+' PX S',cx+r+5,cy+4);
     }
     ctx.restore();
@@ -1594,7 +1642,7 @@ function drawStyleD(ctx, cW, cH, t) {
     ctx.strokeStyle='rgba(80,220,255,0.35)'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.arc(nd.x,nd.y,6.5,0,Math.PI*2); ctx.stroke();
     if (CFG.showLabels&&!STATE.isRecording) {
-      ctx.globalAlpha=fadeA*.72; ctx.font='8px "Courier New",monospace';
+      ctx.globalAlpha=fadeA*.72; ctx.font='8px Helvetica,Arial,sans-serif';
       ctx.fillStyle='rgba(255,255,255,0.82)';
       ctx.fillText('bz'+String(nd.labelId).padStart(2,'0'),nd.x+8,nd.y+3);
     }
@@ -1775,7 +1823,7 @@ function drawStyleG(ctx, cW, cH) {
   ctx.fillStyle='rgba(0,0,0,0.30)'; ctx.fillRect(0,0,cW,cH);
 
   ctx.save();
-  ctx.font='10px "Courier New",monospace';
+  ctx.font='10px Helvetica,Arial,sans-serif';
   ctx.textBaseline='top';
 
   // Update physics and draw — two color passes to minimize fillStyle changes
@@ -1875,7 +1923,7 @@ function drawStyleH(ctx, cW, cH) {
   ctx.stroke();
 
   // Number each blob in black monospace
-  ctx.font = 'bold 20px "Courier New",monospace';
+  ctx.font = 'bold 20px Helvetica,Arial,sans-serif';
   ctx.fillStyle = '#050508';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -1951,68 +1999,117 @@ function drawStyleI(ctx, cW, cH) {
 }
 
 // ── 3.8  HUD — Gen-Z beat/glitch aesthetic; skipped during recording ─────────
-function drawHUD(ctx, cW, cH) {
-  if (STATE.isRecording) return;
+// ── 3.8e  Style J — ASCII Chromakey (ref: blue glitch silhouette) ─────────────
+// Electric-blue flat background. Foreground mask rendered as a grid of ASCII
+// glyphs whose density/character is chosen by local brightness. Bright pixels
+// → dense glyphs (#, @, M); mid → (=, +, *); dark → (., :, -). Occasional red
+// accent glyphs scattered on high-motion pixels for the glitch-art look.
+const _ASCII_RAMP = " .:-=+*#%@MW";  // 12 levels dark→bright
+function drawStyleJ(ctx, cW, cH) {
+  // Flat electric-blue field
+  ctx.fillStyle = '#1a16e6';
+  ctx.fillRect(0, 0, cW, cH);
+
+  const cell = 9;                     // glyph cell size in screen px
+  const cols = (cW / cell) | 0;
+  const rows = (cH / cell) | 0;
+  const sx = PROC_W / cW, sy = PROC_H / cH;
+
   ctx.save();
+  ctx.font = 'bold ' + (cell + 1) + 'px Helvetica,Arial,sans-serif';
+  ctx.textBaseline = 'top';
 
-  // Brand
-  ctx.font = 'bold 11px "Courier New",monospace';
-  ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.fillText('BLOBZ', 14, 23);
-
-  // BPM — prominent, lime green
-  const bpm = DRUM.active ? Math.round(DRUM.bpm) : '--';
-  const zone = DRUM.active ? DRUM.state : 'OFF';
-  ctx.font = 'bold 22px "Courier New",monospace';
-  ctx.fillStyle = '#b4ff37';
-  ctx.fillText(bpm, 14, 48);
-  ctx.font = '8px "Courier New",monospace';
-  ctx.fillStyle = 'rgba(180,255,55,0.55)';
-  ctx.fillText(Math.round(DRUM.bpm) + 'bpm · ' + zone, 14, 58);
-
-  // Blob + FPS secondary
-  let nActive = 0;
-  for (let ti = 0; ti < MAX_TRACKED; ti++) if (_tracked[ti].active) nActive++;
-  ctx.font = '8px "Courier New",monospace';
-  ctx.fillStyle = 'rgba(255,255,255,0.28)';
-  ctx.fillText('B:' + nActive + '  ' + STATE.fps + 'fps' + (TOUCH.active ? '  FOCUS' : ''), 14, 70);
-
-  // ── 16-step sequencer dots (bottom of screen) ──────────────────────
-  // Shows current pattern + playhead position — music production aesthetic
-  if (DRUM.active) {
-    const pat  = DRUM.live;   // live pattern updated each bar by generatePattern
-    const dW   = Math.floor((cW - 28) / 18); // dot width
-    const dH   = 5;
-    const dY   = cH - 16;
-    for (let i = 0; i < 16; i++) {
-      const x     = 14 + i * (dW + 2);
-      const isCur = (DRUM.step === i);
-      if (isCur) {
-        ctx.fillStyle = '#b4ff37';           // playhead: lime
-      } else if (pat.kick[i]) {
-        ctx.fillStyle = 'rgba(255,40,0,0.80)'; // kick: red
-      } else if (pat.snare[i]) {
-        ctx.fillStyle = 'rgba(255,255,255,0.65)'; // snare: white
-      } else if (pat.hh[i] || pat.hho[i]) {
-        ctx.fillStyle = 'rgba(80,220,255,0.45)'; // hihat: cyan
-      } else if (pat.glitch[i]) {
-        ctx.fillStyle = 'rgba(255,40,200,0.6)'; // glitch: pink
-      } else {
-        ctx.fillStyle = 'rgba(255,255,255,0.10)'; // empty
-      }
-      ctx.fillRect(x, dY, dW, dH);
-    }
-    // Bar dividers (every 4 steps)
-    ctx.fillStyle = 'rgba(255,255,255,0.20)';
-    for (let i = 4; i < 16; i += 4) {
-      ctx.fillRect(14 + i * (dW + 2) - 2, dY - 2, 1, dH + 4);
+  // Pass 1: white ASCII glyphs (batched — same fillStyle)
+  ctx.fillStyle = '#ffffff';
+  for (let r = 0; r < rows; r++) {
+    const py = (r * cell * sy) | 0;
+    if (py >= PROC_H) break;
+    const prow = py * PROC_W;
+    for (let c = 0; c < cols; c++) {
+      const px = (c * cell * sx) | 0;
+      if (px >= PROC_W) continue;
+      const idx = prow + px;
+      if (!_maskBuf[idx]) continue;
+      const g = _grayBuf[idx];
+      const lvl = (g / 255 * (_ASCII_RAMP.length - 1)) | 0;
+      const ch = _ASCII_RAMP[lvl];
+      if (ch === ' ') continue;
+      ctx.fillText(ch, c * cell, r * cell);
     }
   }
 
-  // Show/hide audio bar DOM element
-  const audioBarEl = document.getElementById('audio-bar');
-  if (audioBarEl) audioBarEl.classList.toggle('hidden', !AUDIO.active || !AUDIO.ready);
+  // Pass 2: red accent glyphs on high-motion / high-depth pixels
+  ctx.fillStyle = '#ff2030';
+  for (let r = 0; r < rows; r++) {
+    const py = (r * cell * sy) | 0;
+    if (py >= PROC_H) break;
+    const prow = py * PROC_W;
+    for (let c = 0; c < cols; c++) {
+      const px = (c * cell * sx) | 0;
+      if (px >= PROC_W) continue;
+      const idx = prow + px;
+      if (!_maskBuf[idx]) continue;
+      if (_depthBuf[idx] < 0.55) continue;          // only near/moving
+      if (((r * 13 + c * 7 + _noiseFrame) & 7) !== 0) continue; // sparse
+      ctx.fillText('+', c * cell, r * cell);
+    }
+  }
+  ctx.textBaseline = 'alphabetic';
   ctx.restore();
+}
+
+// ── Noise overlay — animated analog grain, drawn on top of everything ─────────
+// Pre-allocated ImageData reused each frame; XOR-shift hash for speed.
+let _noiseImg = null, _noiseW = 0, _noiseH = 0, _noiseFrame = 0;
+function drawNoise(ctx, cW, cH, amount) {
+  if (amount <= 0) return;
+  // Noise rendered at quarter-res for performance, scaled up.
+  const nw = (cW * 0.5) | 0, nh = (cH * 0.5) | 0;
+  if (!_noiseImg || _noiseW !== nw || _noiseH !== nh) {
+    _noiseImg = ctx.createImageData(nw, nh);
+    _noiseW = nw; _noiseH = nh;
+  }
+  const d = _noiseImg.data;
+  const f = ++_noiseFrame;
+  const alpha = (amount / 40) * 90;   // 0-40 → 0-90 alpha
+  for (let i = 0; i < d.length; i += 4) {
+    // Fast XOR-shift hash per pixel per frame
+    let h = ((i * 0x9E3779B9) ^ (f * 0x85EBCA6B)) >>> 0;
+    h ^= h >>> 13; h = (h * 0x5BD1E995) >>> 0; h ^= h >>> 15;
+    const v = h & 0xFF;
+    d[i] = d[i+1] = d[i+2] = v;
+    d[i+3] = (v > 128 ? alpha : 0);   // sparse grain, not full coverage
+  }
+  // Blit scaled up with no smoothing (chunky grain)
+  // Use a temp canvas path: putImageData can't scale, so draw via effect canvas
+  if (_effectCtx) {
+    if (_effectCanvas.width !== nw || _effectCanvas.height !== nh) {
+      // effectCanvas is normally PROC-sized; temporarily resize for noise
+    }
+  }
+  // Simpler: create pattern at native size by putting directly then scaling
+  // We draw to an offscreen then scale. Reuse workCanvas (proc) is too small,
+  // so just putImageData at native scale on a 1:1 region tiled — instead,
+  // overlay at half-res stretched via drawImage from a scratch canvas.
+  _noiseScratch = _noiseScratch || document.createElement('canvas');
+  if (_noiseScratch.width !== nw || _noiseScratch.height !== nh) {
+    _noiseScratch.width = nw; _noiseScratch.height = nh;
+    _noiseScratchCtx = _noiseScratch.getContext('2d');
+  }
+  _noiseScratchCtx.putImageData(_noiseImg, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.globalAlpha = 1;
+  ctx.drawImage(_noiseScratch, 0, 0, cW, cH);
+  ctx.imageSmoothingEnabled = true;
+}
+let _noiseScratch = null, _noiseScratchCtx = null;
+
+function drawHUD(ctx, cW, cH) {
+  // Minimal UX: no on-canvas text, no meters, no step dots.
+  // (Style overlays already include any diegetic labels they need.)
+  // REC indicator dot only — small, top-right, never during the actual frame capture
+  // is fine to show since user wants clean recordings handled elsewhere.
+  return;
 }
 
 // ── 3.9  Main animation loop ──────────────────────────────────────────────────
@@ -2061,14 +2158,16 @@ function loop(now) {
     case 'B': drawStyleB(compositeCtx,cW,cH);       break;
     case 'C': drawStyleC(compositeCtx,cW,cH,now);   break;
     case 'D': drawStyleD(compositeCtx,cW,cH,now);   break;
-    case 'E': drawStyleE(compositeCtx,cW,cH,now);   break;
     case 'F': drawStyleF(compositeCtx,cW,cH);       break;
-    case 'G': drawStyleG(compositeCtx,cW,cH);       break;
     case 'H': drawStyleH(compositeCtx,cW,cH);       break;
     case 'I': drawStyleI(compositeCtx,cW,cH);       break;
+    case 'J': drawStyleJ(compositeCtx,cW,cH);       break;
   }
 
-  // G. Audio engine update (every rAF for responsive theremin response)
+  // Noise overlay (on top of style, under HUD)
+  if (CFG.noise > 0) drawNoise(compositeCtx, cW, cH, CFG.noise);
+
+  // Audio engine update — drives drums from blob motion
   updateAudio(cW,cH,now);
 
   // H. Touch reticle + HUD (both suppressed when recording)
@@ -2134,6 +2233,127 @@ const _mimeTypeCandidates=_isIOS
 
 let _dlAutoHide = 0;   // clearTimeout handle for download-toast auto-dismiss
 
+// ─────────────────────────────────────────────────────────────────────────────
+// WEBM DURATION FIX
+// Chrome's MediaRecorder writes WebM files with no Segment duration, so players
+// report an infinite / absurd length. This injects the real duration (ms) into
+// the EBML Info→Duration field. Compact parser — only touches what it needs.
+// Based on the well-known ts-ebml duration-fix technique, reimplemented inline.
+// ─────────────────────────────────────────────────────────────────────────────
+function fixWebmDuration(blob, durationMs) {
+  return new Promise((resolve) => {
+    try {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        try {
+          const buf = new Uint8Array(reader.result);
+          const out = _injectWebmDuration(buf, durationMs);
+          resolve(out ? new Blob([out], { type: blob.type }) : blob);
+        } catch(e) { resolve(blob); }   // any failure → return original
+      };
+      reader.onerror = () => resolve(blob);
+      reader.readAsArrayBuffer(blob);
+    } catch(e) { resolve(blob); }
+  });
+}
+
+// Minimal EBML walker: find Segment(0x18538067) → Info(0x1549A966) →
+// existing Duration(0x4489) or inject one. Returns new Uint8Array or null.
+function _injectWebmDuration(buf, durationMs) {
+  // Helper: read variable-length EBML id/size at offset
+  function readVInt(arr, pos) {
+    const first = arr[pos];
+    if (first === undefined) return null;
+    let len = 1, mask = 0x80;
+    while (len <= 8 && !(first & mask)) { mask >>= 1; len++; }
+    if (len > 8) return null;
+    let val = first & (mask - 1);
+    for (let i = 1; i < len; i++) val = val * 256 + arr[pos + i];
+    return { value: val, length: len };
+  }
+  function readId(arr, pos) {
+    const first = arr[pos];
+    if (first === undefined) return null;
+    let len = 1, mask = 0x80;
+    while (len <= 4 && !(first & mask)) { mask >>= 1; len++; }
+    if (len > 4) return null;
+    let id = 0;
+    for (let i = 0; i < len; i++) id = id * 256 + arr[pos + i];
+    return { id, length: len };
+  }
+
+  let pos = 0;
+  // Top level: find Segment
+  while (pos < buf.length) {
+    const idR = readId(buf, pos); if (!idR) break;
+    const szR = readVInt(buf, pos + idR.length); if (!szR) break;
+    const headerLen = idR.length + szR.length;
+    if (idR.id === 0x18538067) {           // Segment
+      const segStart = pos + headerLen;
+      // Walk inside Segment to find Info
+      let p = segStart;
+      const segEnd = (szR.value === Math.pow(2, 7*szR.length)-1)
+        ? buf.length : segStart + szR.value;
+      while (p < segEnd && p < buf.length) {
+        const cid = readId(buf, p); if (!cid) break;
+        const csz = readVInt(buf, p + cid.length); if (!csz) break;
+        const chL = cid.length + csz.length;
+        if (cid.id === 0x1549A966) {        // Info
+          const infoStart = p + chL;
+          const infoEnd = infoStart + csz.value;
+          // Look for existing Duration (0x4489) inside Info
+          let q = infoStart;
+          while (q < infoEnd && q < buf.length) {
+            const did = readId(buf, q); if (!did) break;
+            const dsz = readVInt(buf, q + did.length); if (!dsz) break;
+            const dhL = did.length + dsz.length;
+            if (did.id === 0x4489) {        // Duration already present → patch it
+              // Write durationMs as 8-byte float64 (WebM duration is in TimecodeScale units;
+              // default scale 1e6 ns = 1ms, so duration value = ms)
+              const dv = new DataView(buf.buffer, buf.byteOffset + q + dhL, dsz.value >= 8 ? 8 : 4);
+              if (dsz.value >= 8) dv.setFloat64(0, durationMs);
+              else dv.setFloat32(0, durationMs);
+              return buf;  // patched in place
+            }
+            q += dhL + dsz.value;
+          }
+          // No Duration element → inject one (id 0x4489 + size 0x88 + 8-byte f64)
+          const dur = new Uint8Array(11);
+          dur[0] = 0x44; dur[1] = 0x89; dur[2] = 0x88;  // id + size(8)
+          new DataView(dur.buffer).setFloat64(3, durationMs);
+          // Build new buffer: insert dur at infoStart, and grow Info size field
+          // Simplest robust approach: insert and rewrite Info size as 8-byte vint
+          const before = buf.subarray(0, p);                 // up to Info id
+          const infoBody = buf.subarray(infoStart, infoEnd);
+          const after = buf.subarray(infoEnd);
+          // New Info size = old body + dur length, as 8-byte vint (0x01 + 7 bytes)
+          const newInfoLen = infoBody.length + dur.length;
+          const newSize = new Uint8Array(8);
+          newSize[0] = 0x01;
+          let v = newInfoLen;
+          for (let i = 7; i >= 1; i--) { newSize[i] = v & 0xFF; v = Math.floor(v/256); }
+          const infoId = buf.subarray(p, p + cid.length);
+          const out = new Uint8Array(before.length - 0 + 0); // placeholder
+          // Concatenate: before(up to & incl Info id) + newSize + dur + infoBody + after
+          const head = buf.subarray(0, p + cid.length);
+          const total = head.length + newSize.length + dur.length + infoBody.length + after.length;
+          const res = new Uint8Array(total);
+          let o = 0;
+          res.set(head, o); o += head.length;
+          res.set(newSize, o); o += newSize.length;
+          res.set(dur, o); o += dur.length;
+          res.set(infoBody, o); o += infoBody.length;
+          res.set(after, o);
+          return res;
+        }
+        p += chL + csz.value;
+      }
+    }
+    pos += headerLen + szR.value;
+  }
+  return null;  // couldn't find structure → caller keeps original blob
+}
+
 function startRecording() {
   if (STATE.isRecording) return;
   if (typeof compositeCanvas.captureStream !== 'function') {
@@ -2169,18 +2389,24 @@ function startRecording() {
     STATE.mediaRecorder=new MediaRecorder(stream,opts);
     STATE.chunks=[];
     STATE.mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size>0)STATE.chunks.push(e.data);};
-    STATE.mediaRecorder.onstop=()=>{
+    STATE.mediaRecorder.onstop=async ()=>{
       const eff=mimeType||'video/webm';
-      const blob=new Blob(STATE.chunks,{type:eff});
+      let blob=new Blob(STATE.chunks,{type:eff});
+      const durMs = performance.now() - STATE.recordStartT;
+      // Fix the infinite-duration bug for WebM (Chrome muxer omits duration)
+      if (eff.includes('webm')) {
+        try { blob = await fixWebmDuration(blob, durMs); } catch(_) {}
+      }
       if(STATE.lastDlUrl)URL.revokeObjectURL(STATE.lastDlUrl);
       STATE.lastDlUrl=URL.createObjectURL(blob);
       const ext=eff.includes('mp4')?'mp4':'webm';
       const dlLink=document.getElementById('btn-download');
       dlLink.href=STATE.lastDlUrl; dlLink.download='blobz_'+Date.now()+'.'+ext;
+      dlLink.textContent='\u2b07 SAVE VIDEO';
       const toast=document.getElementById('download-toast');
       toast.style.display='flex';
       clearTimeout(_dlAutoHide);
-      _dlAutoHide=setTimeout(()=>{toast.style.display='none';},15000);
+      _dlAutoHide=setTimeout(()=>{toast.style.display='none';},20000);
     };
     STATE.mediaRecorder.onerror=e=>{showError('Recording error: '+(e.error?e.error.message:'unknown'));stopRecording();};
     STATE.mediaRecorder.start(100);
@@ -2225,7 +2451,7 @@ document.addEventListener('DOMContentLoaded', () => {
   videoEl=document.getElementById('cam');
 
   // ── Splash — 6-style grid ──────────────────────────────────────────────
-  const splBtns={A:'spl-a',B:'spl-b',C:'spl-c',D:'spl-d',E:'spl-e',F:'spl-f',G:'spl-g',H:'spl-h',I:'spl-i'};
+  const splBtns={A:'spl-a',B:'spl-b',C:'spl-c',D:'spl-d',F:'spl-f',H:'spl-h',I:'spl-i',J:'spl-j'};
   function setSplashStyle(s) {
     CFG.style=s;
     Object.keys(splBtns).forEach(k=>
@@ -2289,26 +2515,39 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-settings').classList.toggle('active',_settingsOpen);
     if(_settingsOpen) TOUCH.active=false;
   });
-  document.getElementById('btn-conn').addEventListener('click',function(){
-    CFG.showConnectors=!CFG.showConnectors;this.classList.toggle('on',CFG.showConnectors);
-  });
-  document.getElementById('btn-lbl').addEventListener('click',function(){
-    CFG.showLabels=!CFG.showLabels;this.classList.toggle('on',CFG.showLabels);
-  });
   document.getElementById('btn-vig').addEventListener('click',function(){
     CFG.showVignette=!CFG.showVignette;this.classList.toggle('on',CFG.showVignette);
   });
   document.getElementById('btn-audio').addEventListener('click',function(){
-    AUDIO.active=!AUDIO.active;
-    DRUM.active=AUDIO.active;   // drums follow audio toggle
-    this.classList.toggle('on',AUDIO.active);
-    if(AUDIO.ready){
-      AUDIO.masterGain.gain.setTargetAtTime(AUDIO.active?0.78:0.0,AUDIO.ctx.currentTime,0.15);
-      // On re-enable: re-anchor step time so drums restart cleanly
-      if(AUDIO.active){DRUM.stepTime=AUDIO.ctx.currentTime+0.05;}
+    AUDIO.userMuted=!AUDIO.userMuted;
+    this.classList.toggle('on',!AUDIO.userMuted);
+    if(AUDIO.ready && AUDIO.userMuted){
+      AUDIO.masterGain.gain.setTargetAtTime(0.0,AUDIO.ctx.currentTime,0.15);
     }
-    const barEl=document.getElementById('audio-bar');
-    if(barEl) barEl.classList.toggle('hidden',!AUDIO.active);
+    // When unmuted, updateAudio's volume link takes over automatically
+  });
+  // Noise slider (settings panel only — no splash twin)
+  (function(){
+    const lr=document.getElementById('lr-noise'), lv=document.getElementById('lv-noise');
+    lr.addEventListener('input',function(){CFG.noise=parseInt(this.value,10);lv.textContent=this.value;});
+  })();
+  // Photo capture — grabs the composite canvas as PNG
+  document.getElementById('btn-photo').addEventListener('click',()=>{
+    if(!STATE.cameraOk){showError('Camera not ready yet.');return;}
+    try{
+      compositeCanvas.toBlob((blob)=>{
+        if(!blob){showError('Photo capture failed.');return;}
+        if(STATE.lastDlUrl)URL.revokeObjectURL(STATE.lastDlUrl);
+        STATE.lastDlUrl=URL.createObjectURL(blob);
+        const dlLink=document.getElementById('btn-download');
+        dlLink.href=STATE.lastDlUrl; dlLink.download='blobz_'+Date.now()+'.png';
+        dlLink.textContent='\u2b07 SAVE PHOTO';
+        const toast=document.getElementById('download-toast');
+        toast.style.display='flex';
+        clearTimeout(_dlAutoHide);
+        _dlAutoHide=setTimeout(()=>{toast.style.display='none';},20000);
+      },'image/png');
+    }catch(e){showError('Photo capture failed: '+e.message);}
   });
   // Resume AudioContext on any touch (required by iOS Safari).
   // Belt + suspenders: both the canvas and document level.
