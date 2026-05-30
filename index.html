@@ -83,7 +83,7 @@ input[type="range"]::-moz-range-thumb{
   width:14px;height:14px;background:#ff2800;border:none;border-radius:50%;cursor:pointer;
 }
 /* 6-style 2x3 grid */
-.style-grid{display:grid;grid-template-columns:1fr 1fr;gap:.35rem;}
+.style-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.35rem;}
 .style-grid button{
   padding:.45rem .2rem;background:transparent;
   border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.42);
@@ -195,6 +195,14 @@ input[type="range"]::-moz-range-thumb{
 @keyframes hint-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
 .hint-txt{font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);}
 /* ── ERROR BANNER ──────────────────────────────────────────────────────── */
+/* Audio indicator bar (shown in HUD when audio is on) */
+#audio-bar{
+  position:fixed;top:.7rem;right:1rem;z-index:18;
+  display:flex;align-items:flex-end;gap:2px;height:22px;pointer-events:none;
+}
+.ab{width:3px;background:#b4ff37;border-radius:1px;min-height:2px;
+  transition:height .08s linear;}
+#audio-bar.hidden{display:none;}
 #error-banner{
   display:none;position:fixed;top:1rem;left:1rem;right:1rem;z-index:60;
   background:rgba(160,15,0,.92);backdrop-filter:blur(10px);
@@ -242,6 +250,7 @@ input[type="range"]::-moz-range-thumb{
         <button id="spl-d">&#11041; Neural</button>
         <button id="spl-e">&#9889; Glitch</button>
         <button id="spl-f">&#9619; PxSort</button>
+        <button id="spl-g">&#9835; Music</button>
       </div>
     </div>
     <div class="ctrl-row">
@@ -293,12 +302,19 @@ input[type="range"]::-moz-range-thumb{
     <button class="toggle-btn on" id="btn-conn">Connect</button>
     <button class="toggle-btn on" id="btn-lbl">Labels</button>
     <button class="toggle-btn on" id="btn-vig">Vignette</button>
+    <button class="toggle-btn on" id="btn-audio">&#9834; Audio</button>
   </div>
 </div>
 
 <div id="touch-hint">
   <div class="hint-icon">&#128070;</div>
   <div class="hint-txt">Touch to focus tracking</div>
+</div>
+<div id="audio-bar" class="hidden">
+  <div class="ab" id="ab0"></div><div class="ab" id="ab1"></div>
+  <div class="ab" id="ab2"></div><div class="ab" id="ab3"></div>
+  <div class="ab" id="ab4"></div><div class="ab" id="ab5"></div>
+  <div class="ab" id="ab6"></div><div class="ab" id="ab7"></div>
 </div>
 <div id="error-banner"></div>
 
@@ -384,6 +400,267 @@ const _nnConnA    = new Int32Array(MAX_NN_CONNECTIONS);
 const _nnConnB    = new Int32Array(MAX_NN_CONNECTIONS);
 const _nnConnKind = new Uint8Array(MAX_NN_CONNECTIONS);
 let   _nnConnCount = 0;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PHASE 1.5 — WEB AUDIO ENGINE
+//
+//  Architecture (all nodes pre-allocated; zero GC in rAF loop):
+//    AudioContext
+//    ├── masterGain ──────────────────────────────► MediaStreamDestination
+//    │     │                                         (mixed into recording)
+//    │     ├── padSection   Ambient drone pad
+//    │     │   Two detuned sawtooth osc (G2) → lowpass → LFO sweep → gain
+//    │     │   Gain breathes with total motion energy (depth map integral)
+//    │     │
+//    │     └── thereSection  One oscillator per tracked blob (MAX_TRACKED)
+//    │           Pre-allocated pool: OscillatorNode + GainNode + StereoPannerNode
+//    │           Y position → pitch (C minor pentatonic, 3 octaves)
+//    │           X position → stereo pan
+//    │           Blob size  → filter cutoff (bigger = brighter timbre)
+//    │           All gains start at 0, ramp up/down smoothly (no clicks)
+//    │
+//    └── analyserNode → 32-bin FFT → CSS bars in #audio-bar (HUD only)
+//
+//  Percussion: synthesized on demand (new AudioBufferSourceNode per hit,
+//  auto-GC'd after stop(). Frequency max: ~4 kicks/sec — GC impact minimal)
+//    Kick:  decaying sine 150→40 Hz on motion threshold
+//    Hihat: white noise burst through highpass on new blob spawn
+//
+//  Recording: masterGain → streamDest → MediaStream merged with canvas video.
+//  Fallback: if MediaRecorder.addTrack fails (some iOS builds), video-only.
+
+const C_MINOR_PENTA = [
+  65.41, 77.78, 87.31, 98.00, 116.54,    // C2 Eb2 F2 G2 Bb2
+  130.81,155.56,174.61,196.00,233.08,    // C3 Eb3 F3 G3 Bb3
+  261.63,311.13,349.23,392.00,466.16     // C4 Eb4 F4 G4 Bb4
+]; // 15 notes, C minor pentatonic across 3 octaves
+
+const AUDIO = {
+  ctx:        null,
+  masterGain: null,
+  padGain:    null,
+  padFilter:  null,
+  thereOscs:  null,   // OscillatorNode[MAX_TRACKED]
+  thereGains: null,   // GainNode[MAX_TRACKED]
+  therePans:  null,   // StereoPannerNode[MAX_TRACKED]
+  thereFilts: null,   // BiquadFilterNode[MAX_TRACKED]
+  analyser:   null,
+  freqBuf:    null,   // Uint8Array(32) — FFT data
+  barEls:     null,   // HTMLElement[8] — audio-bar divs
+  streamDest: null,   // MediaStreamDestination
+  ready:      false,
+  active:     true,   // default ON
+  kickLastMs: 0,
+  kickCoolMs: 240,
+};
+
+function initAudio() {
+  if (AUDIO.ready) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    AUDIO.ctx = ctx;
+    AUDIO.masterGain = ctx.createGain();
+    AUDIO.masterGain.gain.value = 0.55;
+
+    // ── Analyser for HUD visualizer ────────────────────────────────────
+    AUDIO.analyser = ctx.createAnalyser();
+    AUDIO.analyser.fftSize = 64;
+    AUDIO.freqBuf = new Uint8Array(32);
+    AUDIO.masterGain.connect(AUDIO.analyser);
+
+    // ── MediaStream destination (for recording) ────────────────────────
+    AUDIO.streamDest = ctx.createMediaStreamDestination();
+    AUDIO.masterGain.connect(AUDIO.streamDest);
+
+    // ── Ambient pad: two detuned sawtooth osc → filter → LFO → gain ──
+    const o1 = ctx.createOscillator();
+    const o2 = ctx.createOscillator();
+    const pFilt = ctx.createBiquadFilter();
+    const pGain = ctx.createGain();
+    const lfo   = ctx.createOscillator();
+    const lfoG  = ctx.createGain();
+    o1.type = 'sawtooth'; o1.frequency.value = 98.0;   // G2
+    o2.type = 'sawtooth'; o2.frequency.value = 98.62;  // G2 + 11 cents
+    pFilt.type = 'lowpass'; pFilt.frequency.value = 550; pFilt.Q.value = 2.8;
+    lfo.type = 'sine'; lfo.frequency.value = 0.055;    // ~18s per sweep cycle
+    lfoG.gain.value = 320;
+    lfo.connect(lfoG); lfoG.connect(pFilt.frequency);
+    o1.connect(pFilt); o2.connect(pFilt);
+    pFilt.connect(pGain); pGain.connect(AUDIO.masterGain);
+    pGain.gain.value = 0.0; // starts silent, fades in via updateAudio
+    o1.start(); o2.start(); lfo.start();
+    AUDIO.padGain = pGain; AUDIO.padFilter = pFilt;
+
+    // ── Theremin oscillator pool: one set per blob slot ────────────────
+    AUDIO.thereOscs  = [];
+    AUDIO.thereGains = [];
+    AUDIO.therePans  = [];
+    AUDIO.thereFilts = [];
+    for (let i = 0; i < MAX_TRACKED; i++) {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const pan  = ctx.createStereoPanner();
+      const filt = ctx.createBiquadFilter();
+      osc.type = 'triangle';  // warmer than sine
+      filt.type = 'lowpass'; filt.frequency.value = 1200; filt.Q.value = 1.4;
+      osc.connect(filt); filt.connect(gain); gain.connect(pan);
+      pan.connect(AUDIO.masterGain);
+      osc.frequency.value = C_MINOR_PENTA[4]; // G2 default (silent)
+      gain.gain.value = 0.0;
+      osc.start();
+      AUDIO.thereOscs.push(osc);
+      AUDIO.thereGains.push(gain);
+      AUDIO.therePans.push(pan);
+      AUDIO.thereFilts.push(filt);
+    }
+
+    // Cache bar DOM elements for fast HUD updates
+    AUDIO.barEls = Array.from({length:8},(_,i)=>document.getElementById('ab'+i));
+
+    AUDIO.ready = true;
+    if (ctx.state === 'suspended') ctx.resume();
+  } catch(e) {
+    console.warn('Audio init failed:', e);
+    AUDIO.active = false;
+  }
+}
+
+function synthesizeKick(t) {
+  // Exponentially decaying sine: 150 Hz → 40 Hz in 90ms
+  const ctx = AUDIO.ctx;
+  const osc  = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain); gain.connect(AUDIO.masterGain);
+  osc.frequency.setValueAtTime(150, t);
+  osc.frequency.exponentialRampToValueAtTime(40, t + 0.09);
+  gain.gain.setValueAtTime(0.85, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+  osc.start(t); osc.stop(t + 0.32);
+}
+
+function synthesizeHihat(t) {
+  // White noise through highpass — very short click
+  const ctx = AUDIO.ctx;
+  const buf  = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  const src  = ctx.createBufferSource();
+  const filt = ctx.createBiquadFilter();
+  const gain = ctx.createGain();
+  src.buffer = buf;
+  filt.type = 'highpass'; filt.frequency.value = 7000;
+  src.connect(filt); filt.connect(gain); gain.connect(AUDIO.masterGain);
+  gain.gain.setValueAtTime(0.28, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.055);
+  src.start(t);
+}
+
+// Called every rAF frame. Updates theremin frequencies/gains, triggers
+// percussion from motion energy. All param changes use setTargetAtTime
+// to schedule smooth transitions (no audio-thread zipper noise).
+let _prevBlobActive = new Uint8Array(MAX_TRACKED); // 0/1 — for hihat on spawn
+
+function updateAudio(cW, cH, nowMs) {
+  if (!AUDIO.ready || !AUDIO.active) return;
+  if (AUDIO.ctx.state === 'suspended') AUDIO.ctx.resume();
+  const now = AUDIO.ctx.currentTime;
+
+  // ── Theremin: update per-blob oscillators ─────────────────────────────
+  for (let ti = 0; ti < MAX_TRACKED; ti++) {
+    const blob  = _tracked[ti];
+    const osc   = AUDIO.thereOscs[ti];
+    const gain  = AUDIO.thereGains[ti];
+    const pan   = AUDIO.therePans[ti];
+    const filt  = AUDIO.thereFilts[ti];
+    const wasOn = _prevBlobActive[ti];
+
+    if (!blob.active || blob.age < 2) {
+      gain.gain.setTargetAtTime(0.0, now, 0.12);
+      _prevBlobActive[ti] = 0;
+      continue;
+    }
+
+    // Hihat on new blob spawn
+    if (!wasOn && blob.active) {
+      synthesizeHihat(now + 0.01);
+    }
+    _prevBlobActive[ti] = 1;
+
+    // Y → pitch (bottom=low, top=high; inverted so blob rising = pitch rising)
+    const yNorm   = 1.0 - blob.scy / cH;
+    const noteIdx = Math.max(0, Math.min(14, Math.round(yNorm * 14)));
+    osc.frequency.setTargetAtTime(C_MINOR_PENTA[noteIdx], now, 0.06);
+
+    // X → stereo pan
+    pan.pan.setTargetAtTime((blob.scx / cW) * 2 - 1, now, 0.06);
+
+    // Blob radius → filter brightness (bigger = brighter)
+    const cutoff = 400 + Math.min(blob.sr / 80, 1) * 3200;
+    filt.frequency.setTargetAtTime(cutoff, now, 0.10);
+
+    // Volume: age fade-in + TTL fade-out, capped at 0.18
+    const vol = 0.18 * Math.min(1, blob.age / 6) * Math.min(1, blob.ttl / 4);
+    gain.gain.setTargetAtTime(vol, now, 0.08);
+  }
+
+  // ── Pad breathes with average motion energy ────────────────────────────
+  let depthSum = 0;
+  const dpStep = 6;
+  const dpCount = Math.floor(PROC_N / dpStep);
+  for (let i = 0; i < PROC_N; i += dpStep) depthSum += _depthBuf[i];
+  const energy = dpCount > 0 ? depthSum / dpCount : 0;
+  AUDIO.padGain.gain.setTargetAtTime(0.04 + energy * 0.14, now, 0.5);
+
+  // ── Kick on motion energy spike (with cooldown) ────────────────────────
+  if (energy > 0.32 && nowMs - AUDIO.kickLastMs > AUDIO.kickCoolMs) {
+    synthesizeKick(now + 0.005);
+    AUDIO.kickLastMs = nowMs;
+    AUDIO.kickCoolMs = 220 + ((nowMs * 0.37) % 180 | 0); // slight variation
+  }
+
+  // ── Update HUD frequency bars (8 of the 32 FFT bins) ─────────────────
+  if (!STATE.isRecording && AUDIO.analyser && AUDIO.barEls) {
+    AUDIO.analyser.getByteFrequencyData(AUDIO.freqBuf);
+    const barEl = AUDIO.barEls;
+    for (let b = 0; b < 8; b++) {
+      // Sample every 4th bin for spread across spectrum
+      const v = AUDIO.freqBuf[b * 4] / 255;
+      barEl[b].style.height = (2 + v * 18) + 'px';
+    }
+  }
+}
+
+// ── Data particle pool (Style G) ──────────────────────────────────────────
+const MAX_DP  = 220;
+const DP_TEXTS = [
+  'bz00','bz01','bz11','bz22','bz07',
+  '0xFF','0x1A','dead','cafe','ff3c',
+  '0101','1010','1100','0011',
+  'freq','gain','scan','flow','data',
+  'core','node','pos ','vel ','mass'
+];
+const _dp = Array.from({length:MAX_DP}, () => ({
+  x:0, y:0, vx:0, vy:0, alpha:0, text:'', color:0, active:false
+}));
+// Seed for deterministic particle text selection (avoids Math.random in spawn)
+let _dpSeed = 17;
+function _dpRand() { _dpSeed=(_dpSeed*1664525+1013904223)&0xFFFFFFFF; return (_dpSeed>>>0)/0xFFFFFFFF; }
+
+function spawnDataParticle(blob, ti) {
+  for (let i = 0; i < MAX_DP; i++) {
+    if (_dp[i].active) continue;
+    _dp[i].x     = blob.scx + (_dpRand() - 0.5) * blob.sr * 1.4;
+    _dp[i].y     = blob.scy + (_dpRand() - 0.5) * blob.sr * 0.6;
+    _dp[i].vx    = (_dpRand() - 0.5) * 1.4;
+    _dp[i].vy    = 0.9 + _dpRand() * 1.6;
+    _dp[i].alpha = 0.85 + _dpRand() * 0.15;
+    _dp[i].text  = DP_TEXTS[((ti * 7 + ((_dpSeed >>> 8) & 0xFF))) % DP_TEXTS.length];
+    _dp[i].color = ti & 1;   // 0=green-yellow, 1=cyan
+    _dp[i].active = true;
+    return;
+  }
+}
+
 
 // Allocate (or reallocate) all typed-array buffers.
 // effectCtx must be valid when called so _dstImgData can be created.
@@ -741,10 +1018,10 @@ function updateCrop(videoW, videoH, cW, cH) {
   _crop.valid=true;
 }
 
-const STYLE_CYCLE = ['B','A','C','D','E','F'];
+const STYLE_CYCLE = ['B','A','C','D','E','F','G'];
 const STYLE_NAMES = {
   A:'&#9634; BOXES', B:'&#9899; CIRCLES', C:'&#9676; GHOST',
-  D:'&#11041; NEURAL', E:'&#9889; GLITCH', F:'&#9619; PXSORT'
+  D:'&#11041; NEURAL', E:'&#9889; GLITCH', F:'&#9619; PXSORT', G:'&#9835; DATA'
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1113,6 +1390,56 @@ function drawStyleF(ctx, cW, cH) {
   ctx.imageSmoothingEnabled = true;
 }
 
+
+// ── 3.8b  Style G — Data Cascade ─────────────────────────────────────────
+// Live video with a dark tint, text "data particles" spawning from blob
+// centroids and falling with gravity. Font: monospace, small (9-11px).
+// Colors: yellow-green (#b4ff37) and cyan (#50dcff) alternating by blob ID.
+// Particle pool pre-allocated (_dp); spawn logic uses LCG pseudo-random
+// to avoid Math.random() allocation patterns in the hot path.
+// Style B tracking circles drawn on top for reference.
+
+function drawStyleG(ctx, cW, cH) {
+  // Base: video + subtle dark overlay
+  ctx.drawImage(videoEl, _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,cW,cH);
+  ctx.fillStyle='rgba(0,0,0,0.30)'; ctx.fillRect(0,0,cW,cH);
+
+  ctx.save();
+  ctx.font='10px "Courier New",monospace';
+  ctx.textBaseline='top';
+
+  // Update physics and draw — two color passes to minimize fillStyle changes
+  // Pass 1: yellow-green
+  ctx.fillStyle='#b4ff37';
+  for (let i = 0; i < MAX_DP; i++) {
+    const p = _dp[i]; if (!p.active || p.color !== 0) continue;
+    p.x += p.vx; p.y += p.vy; p.alpha -= 0.011;
+    if (p.alpha <= 0 || p.y > cH + 16) { p.active=false; continue; }
+    ctx.globalAlpha = p.alpha;
+    ctx.fillText(p.text, p.x, p.y);
+  }
+  // Pass 2: cyan
+  ctx.fillStyle='#50dcff';
+  for (let i = 0; i < MAX_DP; i++) {
+    const p = _dp[i]; if (!p.active || p.color !== 1) continue;
+    p.x += p.vx; p.y += p.vy; p.alpha -= 0.011;
+    if (p.alpha <= 0 || p.y > cH + 16) { p.active=false; continue; }
+    ctx.globalAlpha = p.alpha;
+    ctx.fillText(p.text, p.x, p.y);
+  }
+  ctx.globalAlpha = 1; ctx.textBaseline='alphabetic'; ctx.restore();
+
+  // Spawn new particles from active blobs (probabilistic, ~18% per frame per blob)
+  for (let ti = 0; ti < MAX_TRACKED; ti++) {
+    const blob = _tracked[ti];
+    if (!blob.active || blob.age < 3) continue;
+    if (_dpRand() < 0.18) spawnDataParticle(blob, ti);
+  }
+
+  // Tracking circles on top
+  drawStyleB(ctx, cW, cH);
+}
+
 // ── 3.8  HUD — skipped during recording (clean video output) ─────────────────
 function drawHUD(ctx, cW, cH) {
   if (STATE.isRecording) return;   // recording = no text in output
@@ -1121,7 +1448,11 @@ function drawHUD(ctx, cW, cH) {
   ctx.fillText('BLOBZ TRACKER',14,27);
   let nActive=0; for(let ti=0;ti<MAX_TRACKED;ti++) if(_tracked[ti].active) nActive++;
   ctx.font='9px "Courier New",monospace'; ctx.fillStyle='rgba(255,255,255,0.38)';
-  ctx.fillText('BLOBS:'+nActive+'  FPS:'+STATE.fps+(TOUCH.active?'  [FOCUS]':''),14,41);
+  ctx.fillText('BLOBS:'+nActive+'  FPS:'+STATE.fps+
+    (TOUCH.active?'  [FOCUS]':'')+(AUDIO.active&&AUDIO.ready?'  ♫':''),14,41);
+  // Show/hide audio bar DOM element
+  const audioBarEl=document.getElementById('audio-bar');
+  if(audioBarEl){audioBarEl.classList.toggle('hidden',!AUDIO.active||!AUDIO.ready);}
   ctx.restore();
 }
 
@@ -1173,9 +1504,13 @@ function loop(now) {
     case 'D': drawStyleD(compositeCtx,cW,cH,now);   break;
     case 'E': drawStyleE(compositeCtx,cW,cH,now);   break;
     case 'F': drawStyleF(compositeCtx,cW,cH);       break;
+    case 'G': drawStyleG(compositeCtx,cW,cH);       break;
   }
 
-  // G. Touch reticle + HUD (both suppressed when recording)
+  // G. Audio engine update (every rAF for responsive theremin response)
+  updateAudio(cW,cH,now);
+
+  // H. Touch reticle + HUD (both suppressed when recording)
   if (!STATE.isRecording) drawTouchReticle(compositeCtx);
   drawHUD(compositeCtx,cW,cH);
 }
@@ -1221,6 +1556,7 @@ function _finaliseCamera() {
   initBuffers(pW,pH);
   updateCrop(STATE.videoW,STATE.videoH,cW,cH);
   STATE.fpsT=performance.now(); STATE.cameraOk=true;
+  initAudio();   // start audio engine after camera stream is live
   const hint=document.getElementById('touch-hint');
   hint.classList.add('show');
   setTimeout(()=>{hint.style.opacity='0';setTimeout(()=>{hint.style.display='none';},400);},3500);
@@ -1247,7 +1583,27 @@ function startRecording() {
     for (const mt of _mimeTypeCandidates) if(MediaRecorder.isTypeSupported(mt)){mimeType=mt;break;}
   }
   try {
-    const stream=compositeCanvas.captureStream(30);
+    const videoStream=compositeCanvas.captureStream(30);
+    // Mix video + synthesized audio into a single combined stream.
+    // If audio is unavailable (initAudio failed or inactive), record video-only.
+    let combinedStream = videoStream;
+    if (AUDIO.ready && AUDIO.streamDest) {
+      try {
+        combinedStream = new MediaStream([
+          ...videoStream.getVideoTracks(),
+          ...AUDIO.streamDest.stream.getAudioTracks()
+        ]);
+      } catch(_) { combinedStream = videoStream; /* audio mix failed, video only */ }
+    }
+    const stream=combinedStream;
+    // Select MIME type that supports audio where possible
+    const audioMimes = _isIOS
+      ? ['video/mp4;codecs=avc1','video/mp4']
+      : ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm;codecs=vp9','video/webm','video/mp4'];
+    if (AUDIO.ready) {
+      mimeType='';
+      for(const mt of audioMimes){if(MediaRecorder.isTypeSupported(mt)){mimeType=mt;break;}}
+    }
     const opts=mimeType?{mimeType,videoBitsPerSecond:4_000_000}:{};
     STATE.mediaRecorder=new MediaRecorder(stream,opts);
     STATE.chunks=[];
@@ -1308,7 +1664,7 @@ document.addEventListener('DOMContentLoaded', () => {
   videoEl=document.getElementById('cam');
 
   // ── Splash — 6-style grid ──────────────────────────────────────────────
-  const splBtns={A:'spl-a',B:'spl-b',C:'spl-c',D:'spl-d',E:'spl-e',F:'spl-f'};
+  const splBtns={A:'spl-a',B:'spl-b',C:'spl-c',D:'spl-d',E:'spl-e',F:'spl-f',G:'spl-g'};
   function setSplashStyle(s) {
     CFG.style=s;
     Object.keys(splBtns).forEach(k=>
@@ -1381,6 +1737,20 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-vig').addEventListener('click',function(){
     CFG.showVignette=!CFG.showVignette;this.classList.toggle('on',CFG.showVignette);
   });
+  document.getElementById('btn-audio').addEventListener('click',function(){
+    AUDIO.active=!AUDIO.active;
+    this.classList.toggle('on',AUDIO.active);
+    if(AUDIO.ready){
+      // Fade master gain to zero when muted, restore when unmuted
+      AUDIO.masterGain.gain.setTargetAtTime(AUDIO.active?0.55:0.0,AUDIO.ctx.currentTime,0.15);
+    }
+    const barEl=document.getElementById('audio-bar');
+    if(barEl) barEl.classList.toggle('hidden',!AUDIO.active);
+  });
+  // Resume AudioContext on any touch (required by iOS Safari)
+  compositeCanvas.addEventListener('touchstart',()=>{
+    if(AUDIO.ready&&AUDIO.ctx.state==='suspended') AUDIO.ctx.resume();
+  },{passive:true});
 
   // ── Splash → main transition ───────────────────────────────────────────
   document.getElementById('btn-start').addEventListener('click',async()=>{
