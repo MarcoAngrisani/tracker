@@ -430,10 +430,10 @@ let   _nnConnCount = 0;
 //  Fallback: if MediaRecorder.addTrack fails (some iOS builds), video-only.
 
 const C_MINOR_PENTA = [
-  65.41, 77.78, 87.31, 98.00, 116.54,    // C2 Eb2 F2 G2 Bb2
-  130.81,155.56,174.61,196.00,233.08,    // C3 Eb3 F3 G3 Bb3
-  261.63,311.13,349.23,392.00,466.16     // C4 Eb4 F4 G4 Bb4
-]; // 15 notes, C minor pentatonic across 3 octaves
+  130.81,155.56,174.61,196.00,233.08,    // C3 Eb3 F3 G3 Bb3  ← starts one octave higher
+  261.63,311.13,349.23,392.00,466.16,    // C4 Eb4 F4 G4 Bb4
+  523.25,622.25,698.46,783.99,932.33     // C5 Eb5 F5 G5 Bb5
+]; // 15 notes — all above 130 Hz, clearly audible on iPhone/Android speakers
 
 const AUDIO = {
   ctx:        null,
@@ -465,7 +465,12 @@ function initAudio() {
     const ctx = AUDIO.ctx;
     if (ctx.state === 'suspended') ctx.resume().catch(()=>{});
     AUDIO.masterGain = ctx.createGain();
-    AUDIO.masterGain.gain.value = 0.70;   // raised: 0.55→0.70
+    AUDIO.masterGain.gain.value = 0.70;
+
+    // ── THE CRITICAL CONNECTION: masterGain → speakers ─────────────────
+    // Without this line all audio only goes to the recording stream,
+    // never to the physical output — causing complete silence.
+    AUDIO.masterGain.connect(ctx.destination);
 
     // ── Analyser for HUD visualizer ────────────────────────────────────
     AUDIO.analyser = ctx.createAnalyser();
@@ -484,9 +489,9 @@ function initAudio() {
     const pGain = ctx.createGain();
     const lfo   = ctx.createOscillator();
     const lfoG  = ctx.createGain();
-    o1.type = 'sawtooth'; o1.frequency.value = 98.0;   // G2
-    o2.type = 'sawtooth'; o2.frequency.value = 98.62;  // G2 + 11 cents
-    pFilt.type = 'lowpass'; pFilt.frequency.value = 550; pFilt.Q.value = 2.8;
+    o1.type = 'sawtooth'; o1.frequency.value = 196.0;  // G3 — clearly audible on iPhone speakers
+    o2.type = 'sawtooth'; o2.frequency.value = 197.2;  // G3 + 11 cents detuned
+    pFilt.type = 'lowpass'; pFilt.frequency.value = 1400; pFilt.Q.value = 2.4;
     lfo.type = 'sine'; lfo.frequency.value = 0.055;    // ~18s per sweep cycle
     lfoG.gain.value = 320;
     lfo.connect(lfoG); lfoG.connect(pFilt.frequency);
@@ -510,7 +515,7 @@ function initAudio() {
       filt.type = 'lowpass'; filt.frequency.value = 1200; filt.Q.value = 1.4;
       osc.connect(filt); filt.connect(gain); gain.connect(pan);
       pan.connect(AUDIO.masterGain);
-      osc.frequency.value = C_MINOR_PENTA[4]; // G2 default (silent)
+      osc.frequency.value = C_MINOR_PENTA[3]; // G3=196Hz default (silent until blob activates)
       gain.gain.value = 0.0;
       osc.start();
       AUDIO.thereOscs.push(osc);
