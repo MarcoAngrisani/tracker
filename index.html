@@ -39,13 +39,14 @@ body{
   pointer-events:none;
 }
 .spl-brand{
-  display:flex;flex-direction:column;align-items:center;gap:.3rem;
-  margin-bottom:1.2rem;position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:flex-start;
+  gap:.18rem;margin-bottom:1.4rem;position:relative;z-index:1;width:100%;
 }
+.sub-hi{color:#b4ff37;font-weight:900;}
 .spl-title{
-  font-size:4.6rem;font-weight:900;letter-spacing:-.05em;line-height:1;
-  color:#fff;animation:glitch 3.5s infinite;
-  text-shadow:1px 0 rgba(255,40,0,.4),-1px 0 rgba(0,170,255,.3);
+  font-size:5.8rem;font-weight:900;letter-spacing:-.07em;line-height:.88;
+  color:#fff;animation:glitch 3s infinite;
+  text-shadow:2px 0 rgba(255,40,0,.35),-2px 0 rgba(0,170,255,.25);
 }
 .spl-title::after{
   content:'';display:block;height:3px;background:#ff2800;
@@ -61,7 +62,7 @@ body{
   97%{text-shadow:none;transform:none;}
 }
 .spl-sub{font-size:.6rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.35);}
-.spl-ver{font-size:.54rem;letter-spacing:.1em;color:rgba(255,255,255,.18);}
+.spl-ver{font-size:.46rem;letter-spacing:.18em;color:rgba(255,255,255,.18);text-transform:uppercase;}
 .spl-preview{width:200px;height:90px;margin-bottom:1.2rem;position:relative;z-index:1;}
 .spl-settings{
   width:100%;max-width:360px;display:flex;flex-direction:column;gap:.9rem;
@@ -84,7 +85,19 @@ input[type="range"]::-moz-range-thumb{
   width:14px;height:14px;background:#ff2800;border:none;border-radius:50%;cursor:pointer;
 }
 /* 6-style 2x3 grid */
-.style-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.35rem;}
+.style-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;}
+/* Per-effect color accent on left border */
+.sc-b{border-left:3px solid rgba(255,255,255,.75)!important;}
+.sc-a{border-left:3px solid #ff2800!important;}
+.sc-c{border-left:3px solid rgba(150,150,150,.7)!important;}
+.sc-d{border-left:3px solid #50dcff!important;}
+.sc-e{border-left:3px solid #ff5500!important;}
+.sc-f{border-left:3px solid #b4ff37!important;}
+.sc-g{border-left:3px solid #50dcff!important;}
+.sc-h{border-left:3px solid #78d450!important;}
+.sc-i{border-left:3px solid #ff8c00!important;}
+/* Active: lime fill, black text */
+.style-grid button.active{background:#b4ff37!important;border-color:#b4ff37!important;color:#050508!important;font-weight:900!important;}
 .style-grid button{
   padding:.45rem .2rem;background:transparent;
   border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.42);
@@ -93,7 +106,7 @@ input[type="range"]::-moz-range-thumb{
 }
 .style-grid button.active{background:#ff2800;border-color:#ff2800;color:#fff;}
 #btn-start{
-  width:100%;max-width:360px;padding:.9rem;background:#ff2800;color:#fff;
+  width:100%;max-width:360px;padding:1rem;background:#b4ff37;color:#050508;
   border:none;font-family:'Courier New',monospace;
   font-size:.9rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
   cursor:pointer;position:relative;z-index:1;
@@ -218,40 +231,23 @@ input[type="range"]::-moz-range-thumb{
 <div id="splash">
   <div class="spl-brand">
     <div class="spl-title">BLOBZ</div>
-    <div class="spl-sub">Motion Tracking Overlay</div>
-    <div class="spl-ver">Browser Edition · v4.0</div>
-  </div>
-  <div class="spl-preview">
-    <svg width="200" height="90" viewBox="0 0 200 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="100" cy="38" r="34" stroke="rgba(255,255,255,0.5)" stroke-width="1.5">
-        <animate attributeName="r" values="34;38;34" dur="2.8s" repeatCount="indefinite"/>
-      </circle>
-      <circle cx="100" cy="38" r="12" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
-      <rect x="96" y="34" width="8" height="8" stroke="#b4ff3c" stroke-width="1.5"/>
-      <circle cx="50" cy="70" r="17" stroke="rgba(255,255,255,0.45)" stroke-width="1.5">
-        <animate attributeName="r" values="17;20;17" dur="2.1s" repeatCount="indefinite"/>
-      </circle>
-      <circle cx="154" cy="68" r="13" stroke="rgba(255,255,255,0.4)" stroke-width="1.5">
-        <animate attributeName="r" values="13;16;13" dur="2.5s" repeatCount="indefinite"/>
-      </circle>
-      <line x1="100" y1="38" x2="50" y2="70" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
-      <line x1="100" y1="38" x2="154" y2="68" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
-      <polygon points="72,56 68,61 76,60" fill="rgba(180,255,60,0.85)"/>
-      <polygon points="130,55 126,60 134,58" fill="rgba(180,255,60,0.85)"/>
-    </svg>
+    <div class="spl-sub"><span class="sub-hi">MOTION</span>&nbsp;TRACKER</div>
+    <div class="spl-ver">Camera · AR · Beat · v5</div>
   </div>
   <div class="spl-settings">
-    <!-- 6-style 2x3 grid -->
+    <!-- 9-effect 3x3 grid — color-coded by aesthetic -->
     <div class="ctrl-row">
-      <div class="ctrl-label">Detection Style</div>
+      <div class="ctrl-label">EFFECT</div>
       <div class="style-grid">
-        <button id="spl-b" class="active">&#9899; Circles</button>
-        <button id="spl-a">&#9634; Boxes</button>
-        <button id="spl-c">&#9676; Ghost</button>
-        <button id="spl-d">&#11041; Neural</button>
-        <button id="spl-e">&#9889; Glitch</button>
-        <button id="spl-f">&#9619; PxSort</button>
-        <button id="spl-g">&#9835; Music</button>
+        <button id="spl-b" class="active sc-b">ORBIT</button>
+        <button id="spl-a" class="sc-a">SCAN</button>
+        <button id="spl-c" class="sc-c">GHOST</button>
+        <button id="spl-d" class="sc-d">NEURAL</button>
+        <button id="spl-e" class="sc-e">DATABEND</button>
+        <button id="spl-f" class="sc-f">PXSORT</button>
+        <button id="spl-g" class="sc-g">DATA</button>
+        <button id="spl-h" class="sc-h">GRAIN</button>
+        <button id="spl-i" class="sc-i">EVAP</button>
       </div>
     </div>
     <div class="ctrl-row">
@@ -267,7 +263,7 @@ input[type="range"]::-moz-range-thumb{
       <input type="range" id="rng-min" min="4" max="120" value="12" step="1">
     </div>
   </div>
-  <button id="btn-start">START TRACKING</button>
+  <button id="btn-start">&#9654; ENTER</button>
 </div>
 
 <video id="cam" autoplay playsinline muted></video>
@@ -275,7 +271,7 @@ input[type="range"]::-moz-range-thumb{
 
 <!-- ── MAIN CONTROLS ───────────────────────────────────────────────────── -->
 <div id="ctrl-bar">
-  <button class="ctrl-btn" id="btn-style">&#9899; CIRCLES</button>
+  <button class="ctrl-btn" id="btn-style">&#9711; ORBIT</button>
   <button id="btn-record">&#9210;</button>
   <button class="ctrl-btn" id="btn-settings">&#9881; TUNE</button>
 </div>
@@ -1105,10 +1101,11 @@ function updateCrop(videoW, videoH, cW, cH) {
   _crop.valid=true;
 }
 
-const STYLE_CYCLE = ['B','A','C','D','E','F','G'];
+const STYLE_CYCLE = ['B','A','C','D','E','F','G','H','I'];
 const STYLE_NAMES = {
-  A:'&#9634; BOXES', B:'&#9899; CIRCLES', C:'&#9676; GHOST',
-  D:'&#11041; NEURAL', E:'&#9889; GLITCH', F:'&#9619; PXSORT', G:'&#9835; DATA'
+  A:'&#9650; SCAN', B:'&#9711; ORBIT', C:'&#9676; GHOST',
+  D:'&#11041; NEURAL', E:'&#9889; DATABEND', F:'&#9619; PXSORT',
+  G:'&#9835; DATA', H:'&#9632; GRAIN', I:'&#9679; EVAP'
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1527,6 +1524,146 @@ function drawStyleG(ctx, cW, cH) {
   drawStyleB(ctx, cW, cH);
 }
 
+
+// ── 3.8c  Style H — Grain Silhouette (ref: segmented depth silhouette) ────────
+//
+// Visual: pitch-black background, foreground mask filled with lime-green grain.
+// The grain uses a per-frame XOR-shift hash (no Math.random() in pixel loop)
+// to create film-grain texture that changes each frame.
+// Blob regions are numbered in black on the silhouette.
+// A crosshair reticle marks the centroid of the largest active blob.
+// Rendered at proc resolution → nearest-neighbor scale → chunky grain aesthetic.
+
+function drawStyleH(ctx, cW, cH) {
+  if (!_effectCtx || !_dstImgData) return;
+  const d   = _dstImgData.data;
+  const frm = STATE.fpsFrames;   // changes every rAF frame → grain animates
+
+  for (let y = 0; y < PROC_H; y++) {
+    const row = y * PROC_W;
+    for (let x = 0; x < PROC_W; x++) {
+      const i  = row + x;
+      const di = i * 4;
+      if (_maskBuf[i]) {
+        // XOR-shift hash: fast deterministic noise, different every frame
+        const h     = (((i * 0x9E3779B9) ^ (frm * 0x6C62272E)) >>> 0) & 0xFF;
+        const noise = h / 255;
+        // Lime-green grain: G channel dominant, slight R/B variation
+        d[di]   = (100 + (noise * 60) | 0);
+        d[di+1] = (185 + (noise * 55) | 0);
+        d[di+2] = (45  + (noise * 38) | 0);
+        d[di+3] = 255;
+      } else {
+        d[di]=0; d[di+1]=0; d[di+2]=0; d[di+3]=255;  // black background
+      }
+    }
+  }
+
+  _effectCtx.putImageData(_dstImgData, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(_effectCanvas, 0, 0, cW, cH);
+  ctx.imageSmoothingEnabled = true;
+
+  // Collect active blobs sorted by radius (largest = primary target)
+  const blobs = [];
+  for (let ti = 0; ti < MAX_TRACKED; ti++) {
+    const t = _tracked[ti]; if (t.active && t.age >= 2) blobs.push(t);
+  }
+  blobs.sort((a, b) => b.sr - a.sr);
+  if (blobs.length === 0) return;
+
+  ctx.save();
+
+  // Crosshair reticle on the largest blob (like Image 2 reference)
+  const bx = blobs[0].scx, by = blobs[0].scy;
+  const ri = 13, arm = 24;
+  ctx.strokeStyle = '#050508';
+  ctx.lineWidth   = 2.5;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(bx, by, ri, 0, Math.PI * 2);
+  ctx.moveTo(bx - arm, by); ctx.lineTo(bx - ri - 3, by);
+  ctx.moveTo(bx + ri + 3, by); ctx.lineTo(bx + arm, by);
+  ctx.moveTo(bx, by - arm); ctx.lineTo(bx, by - ri - 3);
+  ctx.moveTo(bx, by + ri + 3); ctx.lineTo(bx, by + arm);
+  ctx.stroke();
+
+  // Number each blob in black monospace
+  ctx.font = 'bold 20px "Courier New",monospace';
+  ctx.fillStyle = '#050508';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  blobs.forEach((b, idx) => {
+    if (idx >= 9) return;
+    // Offset label from crosshair centre so it's readable
+    const lx = idx === 0 ? b.scx + b.sr * 0.5 : b.scx;
+    const ly = idx === 0 ? b.scy - b.sr * 0.4 : b.scy;
+    ctx.fillText(String(idx + 1), lx, ly);
+  });
+
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.restore();
+}
+
+// ── 3.8d  Style I — Dot Heatmap · EVAP (ref: codymarian_ "evaporator") ────────
+//
+// Visual: black background, foreground pixels sampled on hex-grid and rendered
+// as small filled circles. Color encodes depth/motion:
+//   Low depth (still/background): lime-yellow (#c8d400)
+//   High depth (moving/foreground): orange-red (#ff3800)
+// Dot radius scales with depth (near objects = larger dots).
+// Uses two batched beginPath+fill passes to minimize fillStyle changes.
+// Draws directly on composite canvas at screen resolution for crisp circles.
+
+function drawStyleI(ctx, cW, cH) {
+  ctx.fillStyle = '#050508';
+  ctx.fillRect(0, 0, cW, cH);
+
+  const scaleX = cW / PROC_W, scaleY = cH / PROC_H;
+  const step   = 3;  // sample every 3rd proc pixel (hex-offset)
+  const baseR  = Math.max(3.0, (scaleX + scaleY) * 0.5 * 0.85);
+
+  ctx.save();
+
+  // Pass 1: lime-yellow dots (still / low depth)
+  ctx.fillStyle = '#c8d400';
+  ctx.beginPath();
+  for (let y = 0; y < PROC_H; y += step) {
+    const row  = y * PROC_W;
+    const xOff = ((y / step) | 0) & 1;
+    for (let x = xOff; x < PROC_W; x += step) {
+      if (!_maskBuf[row + x]) continue;
+      const depth = _depthBuf[row + x];
+      if (depth > 0.40) continue;
+      const cx = x * scaleX, cy = y * scaleY;
+      const r  = baseR * (0.65 + depth * 0.9);
+      ctx.moveTo(cx + r, cy);
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    }
+  }
+  ctx.fill();
+
+  // Pass 2: orange-red dots (moving / high depth)
+  ctx.fillStyle = '#ff3800';
+  ctx.beginPath();
+  for (let y = 0; y < PROC_H; y += step) {
+    const row  = y * PROC_W;
+    const xOff = ((y / step) | 0) & 1;
+    for (let x = xOff; x < PROC_W; x += step) {
+      if (!_maskBuf[row + x]) continue;
+      const depth = _depthBuf[row + x];
+      if (depth <= 0.40) continue;
+      const cx = x * scaleX, cy = y * scaleY;
+      const r  = baseR * (0.65 + depth * 0.9);
+      ctx.moveTo(cx + r, cy);
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    }
+  }
+  ctx.fill();
+
+  ctx.restore();
+}
+
 // ── 3.8  HUD — Gen-Z beat/glitch aesthetic; skipped during recording ─────────
 function drawHUD(ctx, cW, cH) {
   if (STATE.isRecording) return;
@@ -1641,6 +1778,8 @@ function loop(now) {
     case 'E': drawStyleE(compositeCtx,cW,cH,now);   break;
     case 'F': drawStyleF(compositeCtx,cW,cH);       break;
     case 'G': drawStyleG(compositeCtx,cW,cH);       break;
+    case 'H': drawStyleH(compositeCtx,cW,cH);       break;
+    case 'I': drawStyleI(compositeCtx,cW,cH);       break;
   }
 
   // G. Audio engine update (every rAF for responsive theremin response)
@@ -1800,7 +1939,7 @@ document.addEventListener('DOMContentLoaded', () => {
   videoEl=document.getElementById('cam');
 
   // ── Splash — 6-style grid ──────────────────────────────────────────────
-  const splBtns={A:'spl-a',B:'spl-b',C:'spl-c',D:'spl-d',E:'spl-e',F:'spl-f',G:'spl-g'};
+  const splBtns={A:'spl-a',B:'spl-b',C:'spl-c',D:'spl-d',E:'spl-e',F:'spl-f',G:'spl-g',H:'spl-h',I:'spl-i'};
   function setSplashStyle(s) {
     CFG.style=s;
     Object.keys(splBtns).forEach(k=>
