@@ -13,47 +13,42 @@ html{height:-webkit-fill-available;}
 body{
   font-family:'Courier New',Courier,monospace;
   background:#050508;color:#fff;
-  width:100vw;height:100dvh;
-  overflow:hidden;
+  width:100vw;height:100dvh;overflow:hidden;
   -webkit-user-select:none;user-select:none;
-  -webkit-tap-highlight-color:transparent;
-  touch-action:none;
+  -webkit-tap-highlight-color:transparent;touch-action:none;
 }
 #cam{display:none;}
 #composite{
   position:fixed;inset:0;width:100%;height:100%;
   display:block;touch-action:none;cursor:crosshair;
 }
-/* ── SPLASH ────────────────────────────────────────────────────────────── */
+/* ── SPLASH ─────────────────────────────────────────────────────────────── */
 #splash{
   position:fixed;inset:0;z-index:300;
   background:
     linear-gradient(rgba(255,40,0,.025) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(255,40,0,.025) 1px,transparent 1px),
-    #050508;
+    linear-gradient(90deg,rgba(255,40,0,.025) 1px,transparent 1px),#050508;
   background-size:32px 32px,32px 32px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:0;overflow-y:auto;padding:2rem 2rem 2.5rem;
-  transition:opacity .4s ease;
+  overflow-y:auto;padding:1.8rem 2rem 2rem;transition:opacity .4s ease;
 }
 #splash::before{
   content:'';position:absolute;inset:0;
   background:repeating-linear-gradient(0deg,
-    rgba(0,0,0,.07) 0px,rgba(0,0,0,.07) 1px,
-    transparent 1px,transparent 3px);
+    rgba(0,0,0,.07) 0px,rgba(0,0,0,.07) 1px,transparent 1px,transparent 3px);
   pointer-events:none;
 }
 .spl-brand{
-  display:flex;flex-direction:column;align-items:center;gap:.35rem;
-  margin-bottom:1.6rem;position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:center;gap:.3rem;
+  margin-bottom:1.2rem;position:relative;z-index:1;
 }
 .spl-title{
-  font-size:4.2rem;font-weight:900;letter-spacing:-.04em;line-height:1;color:#fff;
-  animation:glitch 5s infinite;
+  font-size:4rem;font-weight:900;letter-spacing:-.04em;line-height:1;
+  color:#fff;animation:glitch 5s infinite;
 }
 .spl-title::after{
   content:'';display:block;height:3px;background:#ff2800;
-  width:55%;margin:.3rem auto 0;animation:bar-pulse 2s ease-in-out infinite;
+  width:55%;margin:.25rem auto 0;animation:bar-pulse 2s ease-in-out infinite;
 }
 @keyframes bar-pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
 @keyframes glitch{
@@ -64,16 +59,16 @@ body{
   96%{text-shadow:1px 0 #ff2800;transform:translate(-1px,0);}
   97%{text-shadow:none;transform:none;}
 }
-.spl-sub{font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.35);}
-.spl-ver{font-size:.56rem;letter-spacing:.1em;color:rgba(255,255,255,.18);}
-.spl-preview{width:220px;height:110px;margin-bottom:1.4rem;position:relative;z-index:1;}
+.spl-sub{font-size:.6rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.35);}
+.spl-ver{font-size:.54rem;letter-spacing:.1em;color:rgba(255,255,255,.18);}
+.spl-preview{width:200px;height:90px;margin-bottom:1.2rem;position:relative;z-index:1;}
 .spl-settings{
-  width:100%;max-width:360px;display:flex;flex-direction:column;gap:1rem;
-  margin-bottom:1.5rem;position:relative;z-index:1;
+  width:100%;max-width:360px;display:flex;flex-direction:column;gap:.9rem;
+  margin-bottom:1.2rem;position:relative;z-index:1;
 }
-.ctrl-row{display:flex;flex-direction:column;gap:.4rem;}
+.ctrl-row{display:flex;flex-direction:column;gap:.35rem;}
 .ctrl-label{
-  font-size:.59rem;letter-spacing:.15em;text-transform:uppercase;
+  font-size:.57rem;letter-spacing:.15em;text-transform:uppercase;
   color:rgba(255,255,255,.4);display:flex;justify-content:space-between;
 }
 .ctrl-label span{color:#ff2800;font-weight:700;}
@@ -87,41 +82,35 @@ input[type="range"]::-webkit-slider-thumb{
 input[type="range"]::-moz-range-thumb{
   width:14px;height:14px;background:#ff2800;border:none;border-radius:50%;cursor:pointer;
 }
-/* 5-style selector grid */
-.style-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;}
-.style-grid button,.style-toggle button,#btn-start{
-  border:none;cursor:pointer;font-family:'Courier New',monospace;
-  letter-spacing:.1em;text-transform:uppercase;-webkit-tap-highlight-color:transparent;
-}
+/* 6-style 2x3 grid */
+.style-grid{display:grid;grid-template-columns:1fr 1fr;gap:.35rem;}
 .style-grid button{
-  padding:.5rem .3rem;background:transparent;
-  border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.45);
-  font-size:.59rem;transition:all .2s;
+  padding:.45rem .2rem;background:transparent;
+  border:1px solid rgba(255,255,255,.18);color:rgba(255,255,255,.42);
+  font-family:'Courier New',monospace;font-size:.57rem;letter-spacing:.08em;
+  text-transform:uppercase;cursor:pointer;transition:all .15s;
 }
 .style-grid button.active{background:#ff2800;border-color:#ff2800;color:#fff;}
 #btn-start{
-  width:100%;max-width:360px;padding:1rem;background:#ff2800;color:#fff;
-  font-size:.95rem;font-weight:700;letter-spacing:.18em;
-  position:relative;z-index:1;transition:opacity .15s,transform .15s;
+  width:100%;max-width:360px;padding:.9rem;background:#ff2800;color:#fff;
+  border:none;font-family:'Courier New',monospace;
+  font-size:.9rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  cursor:pointer;position:relative;z-index:1;
+  transition:opacity .15s,transform .15s;-webkit-tap-highlight-color:transparent;
 }
 #btn-start:active{opacity:.8;transform:scale(.98);}
 /* ── MAIN CONTROLS ─────────────────────────────────────────────────────── */
 #ctrl-bar{
   position:fixed;bottom:0;left:0;right:0;z-index:20;
   display:flex;align-items:center;justify-content:space-between;
-  padding:1rem 1.4rem;
-  padding-bottom:calc(1rem + env(safe-area-inset-bottom));
+  padding:1rem 1.4rem;padding-bottom:calc(1rem + env(safe-area-inset-bottom));
   background:linear-gradient(to top,rgba(5,5,8,.88) 0%,transparent 100%);
-  pointer-events: none; /* Evita blocchi accidentali da parte dei container figli */
-}
-#ctrl-bar * {
-  pointer-events: auto; /* Consente il tocco selettivo solo sui bottoni effettivi */
 }
 .ctrl-btn{
   background:rgba(5,5,8,.72);border:1px solid rgba(255,255,255,.18);
   color:rgba(255,255,255,.78);font-family:'Courier New',monospace;
-  font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;
-  padding:.55rem .9rem;cursor:pointer;
+  font-size:.57rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:.5rem .85rem;cursor:pointer;
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   transition:all .15s;touch-action:manipulation;
 }
@@ -143,17 +132,35 @@ input[type="range"]::-moz-range-thumb{
   0%,100%{box-shadow:0 0 0 0 rgba(255,40,0,0);}
   50%{box-shadow:0 0 0 10px rgba(255,40,0,.18);}
 }
-#rec-area{display:flex;flex-direction:column;align-items:center;gap:.5rem; position:relative;}
+/* ── DOWNLOAD TOAST — floats above ctrl-bar, does NOT affect layout ─────── */
+/* FIX: moved out of #ctrl-bar to prevent layout inflation that blocked       */
+/* the style/settings buttons after the first recording save.                 */
+#download-toast{
+  position:fixed;
+  bottom:calc(5.8rem + env(safe-area-inset-bottom));
+  left:50%;transform:translateX(-50%);
+  z-index:25;
+  display:none;align-items:center;gap:.5rem;
+  background:rgba(5,5,8,.92);
+  border:1px solid rgba(30,220,90,.6);
+  padding:.5rem .9rem;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  white-space:nowrap;
+  animation:toast-in .25s ease;
+}
+@keyframes toast-in{
+  from{opacity:0;transform:translateX(-50%) translateY(8px);}
+  to{opacity:1;transform:translateX(-50%) translateY(0);}
+}
 #btn-download{
-  display:none;position:absolute;bottom:75px;z-index:25;
-  align-items:center;justify-content:center;gap:.3rem;
-  background:rgba(20,200,80,.85);border:1px solid rgba(20,200,80,1);
-  color:#fff;font-family:'Courier New',monospace;
-  font-size:.58rem;font-weight:bold;letter-spacing:.1em;text-transform:uppercase;
-  padding:.6rem 1.1rem;text-decoration:none;cursor:pointer;
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.5);
-  touch-action:manipulation;white-space:nowrap;
+  color:rgba(30,220,90,1);font-family:'Courier New',monospace;
+  font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
+  text-decoration:none;cursor:pointer;
+}
+#btn-dismiss-dl{
+  background:transparent;border:none;color:rgba(255,255,255,.35);
+  font-size:.9rem;line-height:1;cursor:pointer;padding:0 .1rem;
+  touch-action:manipulation;
 }
 /* ── SETTINGS PANEL ────────────────────────────────────────────────────── */
 #settings-panel{
@@ -161,18 +168,18 @@ input[type="range"]::-moz-range-thumb{
   background:rgba(5,5,8,.95);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border-top:1px solid rgba(255,255,255,.09);
-  padding:1.4rem 1.4rem;
+  padding:1.3rem 1.4rem;
   padding-bottom:calc(5.8rem + env(safe-area-inset-bottom));
   transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
   pointer-events:none;
 }
 #settings-panel.open{transform:translateY(0);pointer-events:auto;}
-#settings-panel .ctrl-row{margin-bottom:.9rem;}
-.toggle-row{display:flex;gap:.5rem;margin-top:.6rem;}
+#settings-panel .ctrl-row{margin-bottom:.8rem;}
+.toggle-row{display:flex;gap:.5rem;margin-top:.5rem;}
 .toggle-btn{
-  flex:1;padding:.42rem;background:transparent;
+  flex:1;padding:.4rem;background:transparent;
   border:1px solid rgba(255,255,255,.13);color:rgba(255,255,255,.3);
-  font-family:'Courier New',monospace;font-size:.56rem;
+  font-family:'Courier New',monospace;font-size:.55rem;
   letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .15s;
 }
 .toggle-btn.on{border-color:#ff2800;color:#ff2800;background:rgba(255,40,0,.08);}
@@ -180,59 +187,61 @@ input[type="range"]::-moz-range-thumb{
 #touch-hint{
   position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
   z-index:15;pointer-events:none;
-  display:flex;flex-direction:column;align-items:center;gap:.5rem;
+  display:flex;flex-direction:column;align-items:center;gap:.45rem;
   opacity:0;transition:opacity .4s;
 }
 #touch-hint.show{opacity:1;}
-.hint-icon{font-size:2rem;animation:hint-pulse 1s ease-in-out infinite;}
+.hint-icon{font-size:1.8rem;animation:hint-pulse 1s ease-in-out infinite;}
 @keyframes hint-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
-.hint-txt{font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);}
+.hint-txt{font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);}
 /* ── ERROR BANNER ──────────────────────────────────────────────────────── */
 #error-banner{
   display:none;position:fixed;top:1rem;left:1rem;right:1rem;z-index:60;
   background:rgba(160,15,0,.92);backdrop-filter:blur(10px);
-  padding:.75rem 1rem;font-size:.68rem;line-height:1.55;
+  padding:.7rem 1rem;font-size:.65rem;line-height:1.55;
   border-left:3px solid #ff2800;pointer-events:none;
 }
 </style>
 </head>
 <body>
 
+<!-- ── SPLASH ──────────────────────────────────────────────────────────── -->
 <div id="splash">
   <div class="spl-brand">
     <div class="spl-title">BLOBZ</div>
     <div class="spl-sub">Motion Tracking Overlay</div>
-    <div class="spl-ver">Browser Edition · v3.1</div>
+    <div class="spl-ver">Browser Edition · v4.0</div>
   </div>
   <div class="spl-preview">
-    <svg width="220" height="110" viewBox="0 0 220 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="110" cy="46" r="40" stroke="rgba(255,255,255,0.5)" stroke-width="1.5">
-        <animate attributeName="r" values="40;44;40" dur="2.8s" repeatCount="indefinite"/>
+    <svg width="200" height="90" viewBox="0 0 200 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="38" r="34" stroke="rgba(255,255,255,0.5)" stroke-width="1.5">
+        <animate attributeName="r" values="34;38;34" dur="2.8s" repeatCount="indefinite"/>
       </circle>
-      <circle cx="110" cy="46" r="14" stroke="rgba(255,255,255,0.32)" stroke-width="1"/>
-      <rect x="106" y="42" width="8" height="8" stroke="#b4ff3c" stroke-width="1.5"/>
-      <circle cx="56" cy="82" r="20" stroke="rgba(255,255,255,0.45)" stroke-width="1.5">
-        <animate attributeName="r" values="20;23;20" dur="2.1s" repeatCount="indefinite"/>
+      <circle cx="100" cy="38" r="12" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+      <rect x="96" y="34" width="8" height="8" stroke="#b4ff3c" stroke-width="1.5"/>
+      <circle cx="50" cy="70" r="17" stroke="rgba(255,255,255,0.45)" stroke-width="1.5">
+        <animate attributeName="r" values="17;20;17" dur="2.1s" repeatCount="indefinite"/>
       </circle>
-      <circle cx="164" cy="80" r="15" stroke="rgba(255,255,255,0.4)" stroke-width="1.5">
-        <animate attributeName="r" values="15;18;15" dur="2.5s" repeatCount="indefinite"/>
+      <circle cx="154" cy="68" r="13" stroke="rgba(255,255,255,0.4)" stroke-width="1.5">
+        <animate attributeName="r" values="13;16;13" dur="2.5s" repeatCount="indefinite"/>
       </circle>
-      <line x1="110" y1="46" x2="56" y2="82" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
-      <line x1="110" y1="46" x2="164" y2="80" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
-      <polygon points="79,66 75,71 83,70" fill="rgba(180,255,60,0.85)"/>
-      <polygon points="140,65 136,70 144,68" fill="rgba(180,255,60,0.85)"/>
-      <text x="116" y="53" fill="rgba(255,255,255,0.7)" font-family="Courier New" font-size="7">096 PX S</text>
+      <line x1="100" y1="38" x2="50" y2="70" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
+      <line x1="100" y1="38" x2="154" y2="68" stroke="rgba(255,255,255,0.28)" stroke-width="1"/>
+      <polygon points="72,56 68,61 76,60" fill="rgba(180,255,60,0.85)"/>
+      <polygon points="130,55 126,60 134,58" fill="rgba(180,255,60,0.85)"/>
     </svg>
   </div>
   <div class="spl-settings">
+    <!-- 6-style 2x3 grid -->
     <div class="ctrl-row">
       <div class="ctrl-label">Detection Style</div>
       <div class="style-grid">
-        <button id="spl-b" class="active">⬤ Circles</button>
-        <button id="spl-a">☐ Boxes</button>
-        <button id="spl-c">◌ Ghost</button>
-        <button id="spl-d">⬡ Neural</button>
-        <button id="spl-e" style="grid-column: span 2;">⧉ Sorting Cascades</button>
+        <button id="spl-b" class="active">&#9899; Circles</button>
+        <button id="spl-a">&#9634; Boxes</button>
+        <button id="spl-c">&#9676; Ghost</button>
+        <button id="spl-d">&#11041; Neural</button>
+        <button id="spl-e">&#9889; Glitch</button>
+        <button id="spl-f">&#9619; PxSort</button>
       </div>
     </div>
     <div class="ctrl-row">
@@ -254,13 +263,17 @@ input[type="range"]::-moz-range-thumb{
 <video id="cam" autoplay playsinline muted></video>
 <canvas id="composite"></canvas>
 
+<!-- ── MAIN CONTROLS ───────────────────────────────────────────────────── -->
 <div id="ctrl-bar">
-  <button class="ctrl-btn" id="btn-style">⬤ CIRCLES</button>
-  <div id="rec-area">
-    <a id="btn-download" target="_blank">⬇ DOWNLOAD</a>
-    <button id="btn-record">⏺</button>
-  </div>
-  <button class="ctrl-btn" id="btn-settings">⚙ TUNE</button>
+  <button class="ctrl-btn" id="btn-style">&#9899; CIRCLES</button>
+  <button id="btn-record">&#9210;</button>
+  <button class="ctrl-btn" id="btn-settings">&#9881; TUNE</button>
+</div>
+
+<!-- Download toast: fixed above ctrl-bar, never inside it (layout fix) -->
+<div id="download-toast">
+  <a id="btn-download">&#11015; SAVE</a>
+  <button id="btn-dismiss-dl">&#215;</button>
 </div>
 
 <div id="settings-panel">
@@ -277,7 +290,7 @@ input[type="range"]::-moz-range-thumb{
     <input type="range" id="lr-min" min="4" max="120" value="12" step="1">
   </div>
   <div class="toggle-row">
-    <button class="toggle-btn on" id="btn-conn">Connectors</button>
+    <button class="toggle-btn on" id="btn-conn">Connect</button>
     <button class="toggle-btn on" id="btn-lbl">Labels</button>
     <button class="toggle-btn on" id="btn-vig">Vignette</button>
   </div>
@@ -294,118 +307,166 @@ input[type="range"]::-moz-range-thumb{
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PHASE 1 — MATH ENGINES & CORE UTILITY ALGORITHMS
+//
+//  Note on LiDAR: The iOS LiDAR sensor is NOT accessible from mobile
+//  browsers. WebKit/Safari does not implement the WebXR Depth Sensing API
+//  (the only browser path to hardware depth). Instead we compute a multi-cue
+//  pseudo-depth map from:
+//    (a) vertical position  — lower in frame = closer (perspective geometry)
+//    (b) motion magnitude   — high |Δgray| = moving = typically closer
+//    (c) brightness         — specular highlights near surfaces
+//  This drives real depth-proportional effects (glitch cascade, pixel sort)
+//  without LiDAR hardware.
+//
+//  1.1  Constants & typed-array buffer pool
+//  1.2  Grayscale (BT.601 fixed-point, zero float multiply)
+//  1.3  Binary mask + 4-connected erosion
+//  1.4  Pseudo-depth map (multi-cue, Float32)
+//  1.5  Buffer copy (V8 memcpy)
+//  1.6  Connected components BFS 4-connected
+//  1.7  Raw blob extraction (area filter, touch-proximity boost)
+//  1.8  Blob tracker (nearest-centroid, exp-smoothing α=0.38, TTL pool)
+//  1.9  Drawing utilities (brackets, arrow, vignette, touch reticle)
+//  1.10 Ghost particle sampler
+//  1.11 Neural node system (orbit particles + bezier connections)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const MAX_LABELS  = 256;   
-const MAX_RAW     = 16;    
-const MAX_TRACKED = 14;    
+// ── 1.1  Constants & buffer declarations ────────────────────────────────────
+const MAX_LABELS  = 256;
+const MAX_RAW     = 16;
+const MAX_TRACKED = 14;
 
 let PROC_W = 240;
 let PROC_H = 135;
 let PROC_N = PROC_W * PROC_H;
 
-let _grayBuf     = null;  
-let _prevGrayBuf = null;  
-let _rawMaskBuf  = null;  
-let _maskBuf     = null;  
-let _labelBuf    = null;  
-let _bfsQueue    = null;  
+// Detection pipeline buffers (zero GC — allocated once, never inside loop)
+let _grayBuf     = null;  // Uint8Array  — current frame grayscale
+let _prevGrayBuf = null;  // Uint8Array  — previous frame grayscale
+let _rawMaskBuf  = null;  // Uint8Array  — pre-erosion foreground mask
+let _maskBuf     = null;  // Uint8Array  — post-erosion mask (fed to CC)
+let _depthBuf    = null;  // Float32Array — pseudo-depth [0..1] per proc pixel
+let _labelBuf    = null;  // Int32Array  — CC label map
+let _bfsQueue    = null;  // Int32Array  — BFS scratch queue
 
-let _bArea = null;
-let _bSumX = null;
-let _bSumY = null;
-let _bMinX = null;
-let _bMinY = null;
-let _bMaxX = null;
-let _bMaxY = null;
+// Per-label blob accumulators (index 0 unused; valid range 1..MAX_LABELS)
+let _bArea = null, _bSumX = null, _bSumY = null;
+let _bMinX = null, _bMinY = null, _bMaxX = null, _bMaxY = null;
+
+// Sort scratch: interleaved [score, label, score, label, …]
 let _sortBuf = null;
 
-const MAX_GHOST_PX   = 600;
-let _ghX    = null;  
-let _ghY    = null;  
-let _ghG    = null;  
+// Ghost style particle buffers
+const MAX_GHOST_PX = 600;
+let _ghX = null, _ghY = null, _ghG = null;
 let _ghCount = 0;
 
-const NODES_PER_BLOB       = 9;    
-const MAX_NN_NODES         = MAX_TRACKED * NODES_PER_BLOB; 
-const MAX_NN_CONNECTIONS   = 600;  
+// Effect-style pixel manipulation buffers (Styles E and F)
+// All allocated in initBuffers to avoid GC inside rAF loop.
+let _rowShifts  = null;  // Int16Array(PROC_H)    — per-row scan displacement (Style E)
+let _segColBuf  = null;  // Uint8Array(PROC_H*4)  — single column RGBA temp (Style F)
+let _segLuma    = null;  // Float32Array(PROC_H)  — luminance per row for sort (Style F)
+let _dstImgData = null;  // ImageData(PROC_W,PROC_H) — output for Style E pixel pass
 
+// Neural node constants
+const NODES_PER_BLOB     = 9;
+const MAX_NN_NODES       = MAX_TRACKED * NODES_PER_BLOB;
+const MAX_NN_CONNECTIONS = 600;
 const _nnNodes = Array.from({ length: MAX_NN_NODES }, (_, gi) => ({
-  x:          0,
-  y:          0,
+  x: 0, y: 0,
   baseAngle:  (gi % NODES_PER_BLOB) * (Math.PI * 2 / NODES_PER_BLOB),
   phase:      ((gi * 2654435761) >>> 0) / 0xFFFFFFFF * Math.PI * 2,
   orbitScale: 0.7 + (((gi * 1234567) & 0xFF) / 255) * 0.6,
-  blobIdx:    -1,
-  active:     false,
-  labelId:    (gi * 13 + 7) % 100,
+  blobIdx: -1, active: false,
+  labelId: (gi * 13 + 7) % 100,
 }));
-
 const _nnConnA    = new Int32Array(MAX_NN_CONNECTIONS);
 const _nnConnB    = new Int32Array(MAX_NN_CONNECTIONS);
-const _nnConnKind = new Uint8Array(MAX_NN_CONNECTIONS); 
+const _nnConnKind = new Uint8Array(MAX_NN_CONNECTIONS);
 let   _nnConnCount = 0;
 
-// Pixel Sorting Memory Allocations (Zero GC Pipeline)
-let _sortColumnBuf = null;
-
+// Allocate (or reallocate) all typed-array buffers.
+// effectCtx must be valid when called so _dstImgData can be created.
 function initBuffers(pW, pH) {
   PROC_W = pW; PROC_H = pH; PROC_N = pW * pH;
   _grayBuf     = new Uint8Array(PROC_N);
   _prevGrayBuf = new Uint8Array(PROC_N);
   _rawMaskBuf  = new Uint8Array(PROC_N);
   _maskBuf     = new Uint8Array(PROC_N);
+  _depthBuf    = new Float32Array(PROC_N);
   _labelBuf    = new Int32Array(PROC_N);
   _bfsQueue    = new Int32Array(PROC_N);
   const mb = MAX_LABELS + 1;
-  _bArea = new Float32Array(mb);
-  _bSumX = new Float32Array(mb);
-  _bSumY = new Float32Array(mb);
-  _bMinX = new Int32Array(mb);
-  _bMinY = new Int32Array(mb);
-  _bMaxX = new Int32Array(mb);
-  _bMaxY = new Int32Array(mb);
-  _sortBuf = new Float32Array(MAX_LABELS * 2);
-  _ghX     = new Float32Array(MAX_GHOST_PX);
-  _ghY     = new Float32Array(MAX_GHOST_PX);
-  _ghG     = new Uint8Array(MAX_GHOST_PX);
-  
-  // Array bidimensionale strutturato per l'ordinamento colonne senza allocazioni instabili
-  _sortColumnBuf = Array.from({ length: 2160 }, () => ({ r: 0, g: 0, b: 0, depth: 0 }));
+  _bArea = new Float32Array(mb); _bSumX = new Float32Array(mb); _bSumY = new Float32Array(mb);
+  _bMinX = new Int32Array(mb);   _bMinY = new Int32Array(mb);
+  _bMaxX = new Int32Array(mb);   _bMaxY = new Int32Array(mb);
+  _sortBuf    = new Float32Array(MAX_LABELS * 2);
+  _ghX        = new Float32Array(MAX_GHOST_PX);
+  _ghY        = new Float32Array(MAX_GHOST_PX);
+  _ghG        = new Uint8Array(MAX_GHOST_PX);
+  _rowShifts  = new Int16Array(pH);
+  _segColBuf  = new Uint8Array(pH * 4);
+  _segLuma    = new Float32Array(pH);
+  // _dstImgData requires an active 2d context; created after effectCanvas exists
+  if (_effectCtx) {
+    _effectCanvas.width  = pW;
+    _effectCanvas.height = pH;
+    _dstImgData = _effectCtx.createImageData(pW, pH);
+  }
 }
 
+// ── 1.2  Grayscale — BT.601 fixed-point (R×77 + G×150 + B×29) >> 8 ─────────
 function toGrayscale(rgba, gray, n) {
   for (let i = 0, j = 0; i < n; i++, j += 4) {
-    gray[i] = (rgba[j] * 77 + rgba[j + 1] * 150 + rgba[j + 2] * 29) >> 8;
+    gray[i] = (rgba[j] * 77 + rgba[j+1] * 150 + rgba[j+2] * 29) >> 8;
   }
 }
 
-function computeMaskEroded(cur, prev, rawOut, erodedOut, n, w, h, motThr, briThr) {
+// ── 1.3  Binary mask + 4-connected erosion ──────────────────────────────────
+// Erosion kills isolated 1-px noise → prevents MAX_LABELS exhaustion in
+// the top-of-frame region (previously caused blob-tracking bias).
+function computeMaskEroded(cur, prev, raw, eroded, n, w, h, motThr, briThr) {
   for (let i = 0; i < n; i++) {
-    const c = cur[i];
-    const d = c > prev[i] ? c - prev[i] : prev[i] - c;
-    rawOut[i] = (d >= motThr || c >= briThr) ? 1 : 0;
+    const c = cur[i], d = c > prev[i] ? c-prev[i] : prev[i]-c;
+    raw[i] = (d >= motThr || c >= briThr) ? 1 : 0;
   }
-  for (let x = 0; x < w; x++) {
-    erodedOut[x] = 0;
-    erodedOut[(h - 1) * w + x] = 0;
-  }
-  for (let y = 0; y < h; y++) {
-    erodedOut[y * w] = 0;
-    erodedOut[y * w + w - 1] = 0;
-  }
-  for (let y = 1; y < h - 1; y++) {
-    const row = y * w;
-    for (let x = 1; x < w - 1; x++) {
-      const i = row + x;
-      if (!rawOut[i]) { erodedOut[i] = 0; continue; }
-      erodedOut[i] = (rawOut[i-w] | rawOut[i+w] | rawOut[i-1] | rawOut[i+1]) ? 1 : 0;
+  for (let x = 0; x < w; x++) { eroded[x] = 0; eroded[(h-1)*w+x] = 0; }
+  for (let y = 0; y < h; y++) { eroded[y*w] = 0; eroded[y*w+w-1] = 0; }
+  for (let y = 1; y < h-1; y++) {
+    const row = y*w;
+    for (let x = 1; x < w-1; x++) {
+      const i = row+x;
+      eroded[i] = raw[i] ? (raw[i-w]|raw[i+w]|raw[i-1]|raw[i+1]) ? 1 : 0 : 0;
     }
   }
 }
 
+// ── 1.4  Pseudo-depth map — multi-cue estimation ─────────────────────────────
+// Combines three depth cues into _depthBuf[i] in [0..1]:
+//   (a) Vertical position: y/H → 0.35  (lower = closer, perspective heuristic)
+//   (b) Motion magnitude:  |Δgray|/50 → 0.45  (moving objects = near surface)
+//   (c) Brightness:  (g-160)/95 → 0.20  (specular highlights = near surface)
+// Result drives per-pixel chromatic shift (Style E) and sort threshold (Style F).
+function computeDepthMap() {
+  const invH = 1.0 / PROC_H;
+  for (let y = 0; y < PROC_H; y++) {
+    const row = y * PROC_W;
+    const vFactor = y * invH * 0.35;
+    for (let x = 0; x < PROC_W; x++) {
+      const i = row + x, g = _grayBuf[i];
+      const dg = g > _prevGrayBuf[i] ? g-_prevGrayBuf[i] : _prevGrayBuf[i]-g;
+      const mFactor = (dg > 50 ? 1.0 : dg / 50.0) * 0.45;
+      const bFactor = g > 160 ? ((g-160) / 95.0) * 0.20 : 0.0;
+      let d = vFactor + mFactor + bFactor;
+      _depthBuf[i] = d > 1.0 ? 1.0 : d;
+    }
+  }
+}
+
+// ── 1.5  Buffer copy ─────────────────────────────────────────────────────────
 function copyBuf(src, dst, n) { dst.set(src.subarray(0, n)); }
 
+// ── 1.6  Connected components — iterative BFS, 4-connected ──────────────────
 function labelCC(mask, labels, queue, w, h) {
   const n = w * h;
   for (let i = 0; i < n; i++) labels[i] = mask[i] ? 0 : -1;
@@ -416,105 +477,95 @@ function labelCC(mask, labels, queue, w, h) {
   let nextLabel = 1;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      const start = y * w + x;
+      const start = y*w+x;
       if (labels[start] !== 0) continue;
-      if (nextLabel > MAX_LABELS) { labels[start] = -1; continue; }
+      if (nextLabel > MAX_LABELS) { labels[start]=-1; continue; }
       const label = nextLabel++;
       labels[start] = label;
-      let qi = 0, qe = 1;
-      queue[0] = start;
+      let qi=0, qe=1; queue[0]=start;
       while (qi < qe) {
-        const idx = queue[qi++];
-        const cx = idx % w, cy = (idx / w) | 0;
-        _bArea[label]++;
-        _bSumX[label] += cx; _bSumY[label] += cy;
-        if (cx < _bMinX[label]) _bMinX[label] = cx;
-        if (cx > _bMaxX[label]) _bMaxX[label] = cx;
-        if (cy < _bMinY[label]) _bMinY[label] = cy;
-        if (cy > _bMaxY[label]) _bMaxY[label] = cy;
-        if (cx > 0)     { const ni=idx-1; if (labels[ni]===0){labels[ni]=label;queue[qe++]=ni;} }
-        if (cx < w - 1) { const ni=idx+1; if (labels[ni]===0){labels[ni]=label;queue[qe++]=ni;} }
-        if (cy > 0)     { const ni=idx-w; if (labels[ni]===0){labels[ni]=label;queue[qe++]=ni;} }
-        if (cy < h - 1) { const ni=idx+w; if (labels[ni]===0){labels[ni]=label;queue[qe++]=ni;} }
+        const idx=queue[qi++], cx=idx%w, cy=(idx/w)|0;
+        _bArea[label]++; _bSumX[label]+=cx; _bSumY[label]+=cy;
+        if (cx<_bMinX[label])_bMinX[label]=cx; if (cx>_bMaxX[label])_bMaxX[label]=cx;
+        if (cy<_bMinY[label])_bMinY[label]=cy; if (cy>_bMaxY[label])_bMaxY[label]=cy;
+        if (cx>0){const ni=idx-1;if(labels[ni]===0){labels[ni]=label;queue[qe++]=ni;}}
+        if (cx<w-1){const ni=idx+1;if(labels[ni]===0){labels[ni]=label;queue[qe++]=ni;}}
+        if (cy>0){const ni=idx-w;if(labels[ni]===0){labels[ni]=label;queue[qe++]=ni;}}
+        if (cy<h-1){const ni=idx+w;if(labels[ni]===0){labels[ni]=label;queue[qe++]=ni;}}
       }
     }
   }
   return nextLabel - 1;
 }
 
+// ── 1.7  Raw blob extraction (area filter + touch-proximity sort boost) ───────
 const _rawBlobs = Array.from({ length: MAX_RAW }, () => ({
-  cx:0, cy:0, r:0, pxS:0, bx:0, by:0, bw:0, bh:0, area:0
+  cx:0,cy:0,r:0,pxS:0,bx:0,by:0,bw:0,bh:0,area:0
 }));
 let _rawBlobCount = 0;
 
 function extractRawBlobs(labelCount, scaleX, scaleY, minArea, maxArea) {
   let vc = 0;
-  const tOn = TOUCH.active, tX = TOUCH.x, tY = TOUCH.y, tR = TOUCH.radius;
+  const tOn=TOUCH.active, tX=TOUCH.x, tY=TOUCH.y, tR=TOUCH.radius;
   for (let k = 1; k <= labelCount; k++) {
     const a = _bArea[k];
     if (a < minArea || a > maxArea) continue;
     if (vc >= MAX_LABELS) break;
     let boost = 1.0;
     if (tOn) {
-      const cx = (_bSumX[k] / a) * scaleX, cy = (_bSumY[k] / a) * scaleY;
-      const dx = cx - tX, dy = cy - tY;
-      boost = 1.0 + 4.0 * Math.max(0.0, 1.0 - Math.sqrt(dx*dx+dy*dy) / tR);
+      const cx=(_bSumX[k]/a)*scaleX, cy=(_bSumY[k]/a)*scaleY;
+      const dx=cx-tX, dy=cy-tY;
+      boost = 1.0 + 4.0 * Math.max(0.0, 1.0 - Math.sqrt(dx*dx+dy*dy)/tR);
     }
-    _sortBuf[vc*2] = a * boost; _sortBuf[vc*2+1] = k; vc++;
+    _sortBuf[vc*2]=a*boost; _sortBuf[vc*2+1]=k; vc++;
   }
-  for (let i = 1; i < vc; i++) {
-    const ka = _sortBuf[i*2], kl = _sortBuf[i*2+1]; let j = i-1;
-    while (j >= 0 && _sortBuf[j*2] < ka) {
+  for (let i=1; i<vc; i++) {
+    const ka=_sortBuf[i*2], kl=_sortBuf[i*2+1]; let j=i-1;
+    while (j>=0 && _sortBuf[j*2]<ka) {
       _sortBuf[(j+1)*2]=_sortBuf[j*2]; _sortBuf[(j+1)*2+1]=_sortBuf[j*2+1]; j--;
     }
     _sortBuf[(j+1)*2]=ka; _sortBuf[(j+1)*2+1]=kl;
   }
   _rawBlobCount = Math.min(vc, MAX_RAW);
   for (let i = 0; i < _rawBlobCount; i++) {
-    const k = _sortBuf[i*2+1]|0, area = _bArea[k];
-    const cx = (_bSumX[k]/area)*scaleX, cy = (_bSumY[k]/area)*scaleY;
-    const r  = Math.sqrt(area/Math.PI) * ((scaleX+scaleY)*0.5);
-    const b  = _rawBlobs[i];
-    b.cx=cx; b.cy=cy; b.r=r; b.pxS=r*2;
+    const k=_sortBuf[i*2+1]|0, area=_bArea[k];
+    const b=_rawBlobs[i];
+    b.cx=(_bSumX[k]/area)*scaleX; b.cy=(_bSumY[k]/area)*scaleY;
+    b.r=Math.sqrt(area/Math.PI)*((scaleX+scaleY)*0.5); b.pxS=b.r*2;
     b.bx=_bMinX[k]*scaleX; b.by=_bMinY[k]*scaleY;
     b.bw=(_bMaxX[k]-_bMinX[k])*scaleX; b.bh=(_bMaxY[k]-_bMinY[k])*scaleY;
     b.area=area;
   }
 }
 
+// ── 1.8  Blob tracker — nearest-centroid, exp-smoothing α=0.38, TTL ─────────
 const TRACK_ALPHA    = 0.38;
-const TRACK_MATCH_D2 = 160 * 160;
+const TRACK_MATCH_D2 = 160*160;
 const TRACK_TTL      = 10;
-
-const _tracked = Array.from({ length: MAX_TRACKED }, (_, i) => ({
-  id:i, scx:0,scy:0,sr:0,spxS:0,
-  bx:0,by:0,bw:0,bh:0,
+const _tracked = Array.from({ length: MAX_TRACKED }, (_,i) => ({
+  id:i, scx:0,scy:0,sr:0,spxS:0, bx:0,by:0,bw:0,bh:0,
   age:0,ttl:0,active:false,matched:false
 }));
 
 function updateTracked() {
-  for (let ti = 0; ti < MAX_TRACKED; ti++) {
-    if (_tracked[ti].active) _tracked[ti].matched = false;
-  }
-  for (let ri = 0; ri < _rawBlobCount; ri++) {
-    const rb = _rawBlobs[ri];
-    let bestI = -1, bestD = TRACK_MATCH_D2;
-    for (let ti = 0; ti < MAX_TRACKED; ti++) {
-      const t = _tracked[ti];
-      if (!t.active || t.matched) continue;
-      const dx = rb.cx-t.scx, dy = rb.cy-t.scy;
-      const d2 = dx*dx+dy*dy;
-      if (d2 < bestD) { bestD=d2; bestI=ti; }
+  for (let ti=0;ti<MAX_TRACKED;ti++) if(_tracked[ti].active) _tracked[ti].matched=false;
+  for (let ri=0;ri<_rawBlobCount;ri++) {
+    const rb=_rawBlobs[ri];
+    let bestI=-1, bestD=TRACK_MATCH_D2;
+    for (let ti=0;ti<MAX_TRACKED;ti++) {
+      const t=_tracked[ti]; if(!t.active||t.matched) continue;
+      const dx=rb.cx-t.scx, dy=rb.cy-t.scy, d2=dx*dx+dy*dy;
+      if(d2<bestD){bestD=d2;bestI=ti;}
     }
-    if (bestI >= 0) {
-      const t  = _tracked[bestI], ia = 1.0-TRACK_ALPHA;
-      t.scx  = t.scx*ia+rb.cx*TRACK_ALPHA; t.scy  = t.scy*ia+rb.cy*TRACK_ALPHA;
-      t.sr   = t.sr  *ia+rb.r *TRACK_ALPHA; t.spxS = t.spxS*ia+rb.pxS*TRACK_ALPHA;
+    if (bestI>=0) {
+      const t=_tracked[bestI], ia=1.0-TRACK_ALPHA;
+      t.scx=t.scx*ia+rb.cx*TRACK_ALPHA; t.scy=t.scy*ia+rb.cy*TRACK_ALPHA;
+      t.sr=t.sr*ia+rb.r*TRACK_ALPHA; t.spxS=t.spxS*ia+rb.pxS*TRACK_ALPHA;
       t.bx=rb.bx; t.by=rb.by; t.bw=rb.bw; t.bh=rb.bh;
       t.ttl=TRACK_TTL; t.age++; t.matched=true;
     } else {
-      for (let ti = 0; ti < MAX_TRACKED; ti++) {
-        if (!_tracked[ti].active) {
+      for (let ti=0;ti<MAX_TRACKED;ti++) {
+        if(!_tracked[ti].active) {
           const t=_tracked[ti];
           t.scx=rb.cx; t.scy=rb.cy; t.sr=rb.r; t.spxS=rb.pxS;
           t.bx=rb.bx; t.by=rb.by; t.bw=rb.bw; t.bh=rb.bh;
@@ -524,31 +575,30 @@ function updateTracked() {
       }
     }
   }
-  const tOn = TOUCH.active, tR2 = TOUCH.radius * TOUCH.radius;
-  for (let ti = 0; ti < MAX_TRACKED; ti++) {
-    const t = _tracked[ti];
-    if (!t.active) continue;
-    if (tOn && t.matched) {
-      const dx = t.scx-TOUCH.x, dy = t.scy-TOUCH.y;
-      if (dx*dx+dy*dy < tR2) t.ttl = Math.min(t.ttl+4, TRACK_TTL*2);
+  const tOn=TOUCH.active, tR2=TOUCH.radius*TOUCH.radius;
+  for (let ti=0;ti<MAX_TRACKED;ti++) {
+    const t=_tracked[ti]; if(!t.active) continue;
+    if(tOn&&t.matched){
+      const dx=t.scx-TOUCH.x, dy=t.scy-TOUCH.y;
+      if(dx*dx+dy*dy<tR2) t.ttl=Math.min(t.ttl+4,TRACK_TTL*2);
     }
-    if (!t.matched) { if (--t.ttl <= 0) { t.active=false; t.age=0; } }
+    if(!t.matched){ if(--t.ttl<=0){t.active=false;t.age=0;} }
   }
 }
 
+// ── 1.9  Drawing utilities ───────────────────────────────────────────────────
 function drawCornerBrackets(ctx, x, y, w, h, arm, color, lw) {
   ctx.strokeStyle=color; ctx.lineWidth=lw; ctx.setLineDash([]);
   ctx.beginPath();
-  ctx.moveTo(x,y+arm);       ctx.lineTo(x,y);           ctx.lineTo(x+arm,y);
-  ctx.moveTo(x+w-arm,y);     ctx.lineTo(x+w,y);         ctx.lineTo(x+w,y+arm);
-  ctx.moveTo(x,y+h-arm);     ctx.lineTo(x,y+h);         ctx.lineTo(x+arm,y+h);
-  ctx.moveTo(x+w-arm,y+h);   ctx.lineTo(x+w,y+h);       ctx.lineTo(x+w,y+h-arm);
+  ctx.moveTo(x,y+arm);     ctx.lineTo(x,y);       ctx.lineTo(x+arm,y);
+  ctx.moveTo(x+w-arm,y);   ctx.lineTo(x+w,y);     ctx.lineTo(x+w,y+arm);
+  ctx.moveTo(x,y+h-arm);   ctx.lineTo(x,y+h);     ctx.lineTo(x+arm,y+h);
+  ctx.moveTo(x+w-arm,y+h); ctx.lineTo(x+w,y+h);   ctx.lineTo(x+w,y+h-arm);
   ctx.stroke();
 }
-
 function drawArrow(ctx, x1, y1, x2, y2, color) {
-  const mx=(x1+x2)*0.5, my=(y1+y2)*0.5, angle=Math.atan2(y2-y1,x2-x1);
-  const as=7, a1=angle-0.45, a2=angle+0.45;
+  const mx=(x1+x2)*.5, my=(y1+y2)*.5, angle=Math.atan2(y2-y1,x2-x1);
+  const as=7, a1=angle-.45, a2=angle+.45;
   ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.setLineDash([]);
   ctx.beginPath();
   ctx.moveTo(mx-as*Math.cos(a1),my-as*Math.sin(a1));
@@ -556,118 +606,100 @@ function drawArrow(ctx, x1, y1, x2, y2, color) {
   ctx.lineTo(mx-as*Math.cos(a2),my-as*Math.sin(a2));
   ctx.stroke();
 }
-
 let _vigGrad=null, _vigW=0, _vigH=0;
 function drawVignette(ctx, w, h) {
-  if (!_vigGrad || _vigW!==w || _vigH!==h) {
+  if (!_vigGrad||_vigW!==w||_vigH!==h) {
     _vigGrad=ctx.createRadialGradient(w*.5,h*.5,h*.22,w*.5,h*.5,Math.max(w,h)*.74);
-    _vigGrad.addColorStop(0,'rgba(0,0,0,0)');
-    _vigGrad.addColorStop(1,'rgba(0,0,0,0.52)');
+    _vigGrad.addColorStop(0,'rgba(0,0,0,0)'); _vigGrad.addColorStop(1,'rgba(0,0,0,0.52)');
     _vigW=w; _vigH=h;
   }
   ctx.fillStyle=_vigGrad; ctx.fillRect(0,0,w,h);
 }
-
 function drawTouchReticle(ctx) {
-  if (!TOUCH.active || STATE.isRecording) return;
+  if (!TOUCH.active||STATE.isRecording) return;
   const now=performance.now(), age=now-TOUCH.lastT;
-  const fade=age>TOUCH.timeout-1000 ? Math.max(0,1.0-(age-(TOUCH.timeout-1000))/1000.0) : 1.0;
+  const fade=age>TOUCH.timeout-1000?Math.max(0,1-(age-(TOUCH.timeout-1000))/1000):1;
   if (fade<=0.01) return;
-  const {x,y,radius}=TOUCH, pulse=0.55+0.45*Math.sin(now/200);
+  const {x,y,radius}=TOUCH, pulse=.55+.45*Math.sin(now/200);
   ctx.save();
-  ctx.globalAlpha=fade*0.32*pulse; ctx.strokeStyle='#b4ff37'; ctx.lineWidth=1;
+  ctx.globalAlpha=fade*.32*pulse; ctx.strokeStyle='#b4ff37'; ctx.lineWidth=1;
   ctx.setLineDash([4,5]);
-  ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.globalAlpha=fade*0.88*pulse; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+  ctx.globalAlpha=fade*.88*pulse; ctx.lineWidth=2;
   ctx.beginPath(); ctx.arc(x,y,14,0,Math.PI*2); ctx.stroke();
-  const cs=22, gap=17;
-  ctx.lineWidth=1.5;
+  const cs=22,gap=17; ctx.lineWidth=1.5;
   ctx.beginPath();
   ctx.moveTo(x-cs,y); ctx.lineTo(x-gap,y);
   ctx.moveTo(x+gap,y); ctx.lineTo(x+cs,y);
   ctx.moveTo(x,y-cs); ctx.lineTo(x,y-gap);
   ctx.moveTo(x,y+gap); ctx.lineTo(x,y+cs);
-  ctx.stroke();
-  ctx.restore();
+  ctx.stroke(); ctx.restore();
 }
 
+// ── 1.10  Ghost particle sampler ─────────────────────────────────────────────
+// Samples _rawMaskBuf at proc resolution on a hex-offset lattice.
 function sampleGhostParticles(scaleX, scaleY) {
   _ghCount = 0;
   const step = 2;
   for (let y = 0; y < PROC_H; y += step) {
-    const row = y * PROC_W;
-    const xOff = ((y / step) | 0) & 1;
+    const row = y*PROC_W, xOff = ((y/step)|0)&1;
     for (let x = xOff; x < PROC_W; x += step) {
-      if (!_rawMaskBuf[row + x]) continue;
-      _ghX[_ghCount] = x * scaleX;
-      _ghY[_ghCount] = y * scaleY;
-      _ghG[_ghCount] = _grayBuf[row + x];
+      if (!_rawMaskBuf[row+x]) continue;
+      _ghX[_ghCount]=x*scaleX; _ghY[_ghCount]=y*scaleY; _ghG[_ghCount]=_grayBuf[row+x];
       if (++_ghCount >= MAX_GHOST_PX) return;
     }
   }
 }
 
+// ── 1.11  Neural node system ─────────────────────────────────────────────────
 function updateNeuralNodes(t) {
-  for (let bi = 0; bi < MAX_TRACKED; bi++) {
-    const blob = _tracked[bi];
-    for (let ni = 0; ni < NODES_PER_BLOB; ni++) {
-      const gi = bi * NODES_PER_BLOB + ni;
-      const nd = _nnNodes[gi];
-      nd.blobIdx = bi;
-      if (!blob.active) { nd.active = false; continue; }
-      nd.active = true;
-      const angle = nd.baseAngle + t * 0.00022 + nd.phase * 0.1;
-      const r = Math.max(blob.sr, 20) * nd.orbitScale;
-      nd.x = blob.scx + Math.cos(angle) * r;
-      nd.y = blob.scy + Math.sin(angle) * r;
+  for (let bi=0; bi<MAX_TRACKED; bi++) {
+    const blob=_tracked[bi];
+    for (let ni=0; ni<NODES_PER_BLOB; ni++) {
+      const gi=bi*NODES_PER_BLOB+ni, nd=_nnNodes[gi];
+      nd.blobIdx=bi;
+      if (!blob.active){nd.active=false;continue;}
+      nd.active=true;
+      const angle=nd.baseAngle+t*0.00022+nd.phase*0.1;
+      const r=Math.max(blob.sr,20)*nd.orbitScale;
+      nd.x=blob.scx+Math.cos(angle)*r; nd.y=blob.scy+Math.sin(angle)*r;
     }
   }
-  _nnConnCount = 0;
-  for (let bi = 0; bi < MAX_TRACKED; bi++) {
-    const blob = _tracked[bi];
-    if (!blob.active || blob.age < 2) continue;
-    for (let ni = 0; ni < NODES_PER_BLOB; ni++) {
-      const a = bi * NODES_PER_BLOB + ni;
-      const b = bi * NODES_PER_BLOB + (ni + 1) % NODES_PER_BLOB;
-      if (!_nnNodes[a].active || !_nnNodes[b].active) continue;
-      if (_nnConnCount < MAX_NN_CONNECTIONS) {
-        _nnConnA[_nnConnCount] = a; _nnConnB[_nnConnCount] = b; _nnConnKind[_nnConnCount] = 0;
-        _nnConnCount++;
+  _nnConnCount=0;
+  for (let bi=0; bi<MAX_TRACKED; bi++) {
+    const blob=_tracked[bi]; if(!blob.active||blob.age<2) continue;
+    for (let ni=0; ni<NODES_PER_BLOB; ni++) {
+      const a=bi*NODES_PER_BLOB+ni, b=bi*NODES_PER_BLOB+(ni+1)%NODES_PER_BLOB;
+      if (_nnNodes[a].active&&_nnNodes[b].active&&_nnConnCount<MAX_NN_CONNECTIONS) {
+        _nnConnA[_nnConnCount]=a; _nnConnB[_nnConnCount]=b; _nnConnKind[_nnConnCount]=0; _nnConnCount++;
       }
     }
-    for (let ni = 0; ni < NODES_PER_BLOB; ni++) {
-      const a = bi * NODES_PER_BLOB + ni;
-      const b = bi * NODES_PER_BLOB + (ni + 4) % NODES_PER_BLOB;
-      if (!_nnNodes[a].active || !_nnNodes[b].active) continue;
-      if (_nnConnCount < MAX_NN_CONNECTIONS) {
-        _nnConnA[_nnConnCount] = a; _nnConnB[_nnConnCount] = b; _nnConnKind[_nnConnCount] = 1;
-        _nnConnCount++;
+    for (let ni=0; ni<NODES_PER_BLOB; ni++) {
+      const a=bi*NODES_PER_BLOB+ni, b=bi*NODES_PER_BLOB+(ni+4)%NODES_PER_BLOB;
+      if (_nnNodes[a].active&&_nnNodes[b].active&&_nnConnCount<MAX_NN_CONNECTIONS) {
+        _nnConnA[_nnConnCount]=a; _nnConnB[_nnConnCount]=b; _nnConnKind[_nnConnCount]=1; _nnConnCount++;
       }
     }
   }
-  const CONN_D2 = 230 * 230;
-  for (let bi = 0; bi < MAX_TRACKED - 1; bi++) {
-    const bA = _tracked[bi]; if (!bA.active || bA.age < 2) continue;
-    for (let bj = bi + 1; bj < MAX_TRACKED; bj++) {
-      const bB = _tracked[bj]; if (!bB.active || bB.age < 2) continue;
-      const ddx = bA.scx - bB.scx, ddy = bA.scy - bB.scy;
-      if (ddx*ddx + ddy*ddy > CONN_D2) continue;
-      let pairs = 0;
-      for (let na = 0; na < NODES_PER_BLOB && pairs < 3; na++) {
-        const idxA = bi * NODES_PER_BLOB + na; if (!_nnNodes[idxA].active) continue;
-        let bestB = -1, bestD2 = Infinity;
-        for (let nb = 0; nb < NODES_PER_BLOB; nb++) {
-          const idxB = bj * NODES_PER_BLOB + nb; if (!_nnNodes[idxB].active) continue;
-          const dX = _nnNodes[idxA].x - _nnNodes[idxB].x, dY = _nnNodes[idxA].y - _nnNodes[idxB].y;
-          const d2 = dX*dX + dY*dY;
-          if (d2 < bestD2) { bestD2 = d2; bestB = idxB; }
+  const CONN_D2=230*230;
+  for (let bi=0; bi<MAX_TRACKED-1; bi++) {
+    const bA=_tracked[bi]; if(!bA.active||bA.age<2) continue;
+    for (let bj=bi+1; bj<MAX_TRACKED; bj++) {
+      const bB=_tracked[bj]; if(!bB.active||bB.age<2) continue;
+      const ddx=bA.scx-bB.scx, ddy=bA.scy-bB.scy;
+      if (ddx*ddx+ddy*ddy>CONN_D2) continue;
+      let pairs=0;
+      for (let na=0; na<NODES_PER_BLOB&&pairs<3; na++) {
+        const idxA=bi*NODES_PER_BLOB+na; if(!_nnNodes[idxA].active) continue;
+        let bestB=-1, bestD2=Infinity;
+        for (let nb=0; nb<NODES_PER_BLOB; nb++) {
+          const idxB=bj*NODES_PER_BLOB+nb; if(!_nnNodes[idxB].active) continue;
+          const dx=_nnNodes[idxA].x-_nnNodes[idxB].x, dy=_nnNodes[idxA].y-_nnNodes[idxB].y;
+          const d2=dx*dx+dy*dy; if(d2<bestD2){bestD2=d2;bestB=idxB;}
         }
-        if (bestB >= 0 && bestD2 < CONN_D2) {
-          if (_nnConnCount < MAX_NN_CONNECTIONS) {
-            _nnConnA[_nnConnCount] = idxA; _nnConnB[_nnConnCount] = bestB; _nnConnKind[_nnConnCount] = 2;
-            _nnConnCount++; pairs++;
-          }
+        if(bestB>=0&&_nnConnCount<MAX_NN_CONNECTIONS) {
+          _nnConnA[_nnConnCount]=idxA; _nnConnB[_nnConnCount]=bestB;
+          _nnConnKind[_nnConnCount]=2; _nnConnCount++; pairs++;
         }
       }
     }
@@ -675,559 +707,727 @@ function updateNeuralNodes(t) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PHASE 2 — STATE MANAGEMENT & SYSTEM CONFIGURATION
+// PHASE 2 — APP STATE & GLOBAL CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════
+
+const CFG = {
+  motionThresh:   20,
+  brightThresh:   245,   // raised: prevents sky/ceiling flooding top-of-frame
+  minArea:        12,
+  maxArea:        20000,
+  style:          'B',   // B=Circles A=Boxes C=Ghost D=Neural E=Glitch F=PxSort
+  showConnectors: true,
+  showLabels:     true,
+  showVignette:   true,
+};
+
+const TOUCH = {
+  active:false, x:0, y:0, radius:190, lastT:0, timeout:3500
+};
 
 const STATE = {
-  style:      'B',     // 'A'=Boxes, 'B'=Circles, 'C'=Ghost, 'D'=Neural, 'E'=PixelSorting
-  motThr:     20,
-  briThr:     245,
-  minArea:    12,
-  maxArea:    3600,
-  showConn:   true,
-  showLabel:  true,
-  showVig:    true,
-  cameraOk:   false,
-  warmup:     0,
-  lastDetectT:0,
-  videoW:     0,
-  videoH:     0,
-  isRecording:false
+  cameraOk:false, camStream:null,
+  videoW:1280, videoH:720,
+  isRecording:false, mediaRecorder:null, chunks:[],
+  recordStartT:0, lastDlUrl:null,
+  fps:0, fpsT:0, fpsFrames:0, warmup:0, lastDetectT:0,
 };
 
-const TOUCH = { active: false, x: 0, y: 0, radius: 110, lastT: 0, timeout: 5000 };
+const _crop = { sx:0,sy:0,sw:0,sh:0,valid:false };
+function updateCrop(videoW, videoH, cW, cH) {
+  const vr=videoW/videoH, cr=cW/cH;
+  if (vr>cr) { _crop.sh=videoH; _crop.sw=videoH*cr; _crop.sx=(videoW-_crop.sw)*.5; _crop.sy=0; }
+  else        { _crop.sw=videoW; _crop.sh=videoW/cr; _crop.sx=0; _crop.sy=(videoH-_crop.sh)*.5; }
+  _crop.valid=true;
+}
 
-const STYLES_META = {
-  'B': { label: '⬤ CIRCLES' },
-  'A': { label: '☐ BOXES' },
-  'C': { label: '◌ GHOST' },
-  'D': { label: '⬡ NEURAL' },
-  'E': { label: '⧉ SORTING' }
+const STYLE_CYCLE = ['B','A','C','D','E','F'];
+const STYLE_NAMES = {
+  A:'&#9634; BOXES', B:'&#9899; CIRCLES', C:'&#9676; GHOST',
+  D:'&#11041; NEURAL', E:'&#9889; GLITCH', F:'&#9619; PXSORT'
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PHASE 3 — HARDWARE PIPELINE (CAMERA & MEDIA RECORDER)
+// PHASE 3 — CORE RENDERING & PROCESSING ENGINE
+//
+//  3.1  Element handles
+//  3.2  drawStyleA — red nested-frame boxes
+//  3.3  drawStyleB — white concentric circles
+//  3.4  drawStyleC — Ghost: black BG + foreground particle cloud
+//  3.5  drawStyleD — Neural: orbit nodes + bezier network
+//  3.6  drawStyleE — Depth Glitch Cascade
+//            Near objects (high pseudo-depth) → large RGB chromatic shift
+//            + per-row scan-line horizontal displacement proportional to depth.
+//            Output at PROC resolution → scaled nearest-neighbor (pixelated
+//            glitch aesthetic). Tracked blob rings drawn on top.
+//  3.7  drawStyleF — Depth Pixel Sort
+//            Column-by-column pixel sort. Segments are contiguous runs
+//            where depth >= DEPTH_THRESH. Within each segment, pixels are
+//            sorted by luminance (descending → bright pixels rise to top).
+//            Segment length caps at MAX_SEG to keep background visible.
+//            Nearest-neighbor scaling gives crunchy pixel-art look.
+//  3.8  drawHUD   — branding / stats / REC dot (skipped during recording)
+//  3.9  loop()    — main rAF loop
+//  3.10 startCamera / _startCameraFallback / _finaliseCamera
+//  3.11 startRecording / stopRecording (iOS-aware MIME selection)
+//  3.12 showError
 // ═══════════════════════════════════════════════════════════════════════════
 
-const video = document.getElementById('cam');
-const compositeCanvas = document.getElementById('composite');
-const compCtx = compositeCanvas.getContext('2d', { alpha: false, desynchronized: true });
+let compositeCanvas = null, compositeCtx = null;
+let workCanvas      = null, workCtx      = null;
+let _effectCanvas   = null, _effectCtx   = null;  // for styles E and F
+let videoEl         = null, rafId        = null;
 
-const workCanvas = document.createElement('canvas');
-const workCtx = workCanvas.getContext('2d', { alpha: false, willReadFrequently: true });
+const DETECT_INTERVAL_MS = 30; // ~33 Hz detection
 
-let mediaRecorder = null;
-let recordedChunks = [];
+// ── 3.2  Style A — red nested-frame boxes ────────────────────────────────────
+function drawStyleA(ctx, cW, cH) {
+  const blobs=[];
+  for (let ti=0;ti<MAX_TRACKED;ti++) { const t=_tracked[ti]; if(t.active&&t.age>=2) blobs.push(t); }
+  if (!blobs.length) return;
+  if (blobs.length>=3) {
+    let mnX=Infinity,mnY=Infinity,mxX=-Infinity,mxY=-Infinity;
+    for (const b of blobs){if(b.scx<mnX)mnX=b.scx;if(b.scy<mnY)mnY=b.scy;if(b.scx>mxX)mxX=b.scx;if(b.scy>mxY)mxY=b.scy;}
+    const ecx=(mnX+mxX)*.5,ecy=(mnY+mxY)*.5;
+    const erx=(mxX-mnX)*.5*1.32+42,ery=(mxY-mnY)*.5*1.32+42;
+    if (erx>20&&ery>20) {
+      ctx.save(); ctx.strokeStyle='rgba(255,60,0,0.42)'; ctx.lineWidth=1.5; ctx.setLineDash([10,8]);
+      ctx.beginPath(); ctx.ellipse(ecx,ecy,erx,ery,0,0,Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]); ctx.restore();
+    }
+  }
+  if (CFG.showConnectors&&blobs.length>1) {
+    ctx.save(); ctx.strokeStyle='rgba(255,50,0,0.28)'; ctx.lineWidth=1; ctx.setLineDash([3,6]);
+    for (let i=0;i<blobs.length;i++) {
+      let nearJ=-1,nearD=Infinity;
+      for (let j=0;j<blobs.length;j++) {
+        if(j===i) continue;
+        const dx=blobs[i].scx-blobs[j].scx,dy=blobs[i].scy-blobs[j].scy,d=dx*dx+dy*dy;
+        if(d<nearD){nearD=d;nearJ=j;}
+      }
+      if(nearJ>i){ctx.beginPath();ctx.moveTo(blobs[i].scx,blobs[i].scy);ctx.lineTo(blobs[nearJ].scx,blobs[nearJ].scy);ctx.stroke();}
+    }
+    ctx.setLineDash([]); ctx.restore();
+  }
+  for (const b of blobs) {
+    const fadeA=Math.min(1,b.age/4)*Math.min(1,b.ttl/3); if(fadeA<.05) continue;
+    const cx=b.scx,cy=b.scy,r=Math.max(b.sr,14);
+    const hw=Math.max(b.bw*.5+10,r+8),hh=Math.max(b.bh*.5+10,r+8);
+    const x0=cx-hw,y0=cy-hh,w0=hw*2,h0=hh*2;
+    ctx.save(); ctx.globalAlpha=fadeA;
+    ctx.strokeStyle='#ff2800'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+    ctx.strokeRect(x0,y0,w0,h0); ctx.setLineDash([]);
+    const s2=.60,x2=cx-hw*s2,y2=cy-hh*s2,w2=hw*s2*2,h2=hh*s2*2;
+    ctx.strokeStyle='rgba(255,80,30,0.62)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.strokeRect(x2,y2,w2,h2); ctx.setLineDash([]);
+    const ds=5; ctx.strokeStyle='rgba(255,255,255,0.72)'; ctx.lineWidth=1;
+    ctx.strokeRect(x2-ds*.5,y2-ds*.5,ds,ds); ctx.strokeRect(x2+w2-ds*.5,y2-ds*.5,ds,ds);
+    ctx.strokeRect(x2-ds*.5,y2+h2-ds*.5,ds,ds); ctx.strokeRect(x2+w2-ds*.5,y2+h2-ds*.5,ds,ds);
+    drawCornerBrackets(ctx,x0,y0,w0,h0,Math.min(16,w0*.22),'rgba(255,255,255,0.92)',2);
+    if (CFG.showLabels&&!STATE.isRecording) {
+      ctx.font='10px "Courier New",monospace'; ctx.fillStyle='rgba(255,255,255,0.88)';
+      ctx.fillText(b.spxS.toFixed(1)+' PX S',x0+2,y0-6);
+    }
+    ctx.restore();
+  }
+}
 
-function initHardwareSystem() {
-  const constraints = {
-    video: {
-      facingMode: 'environment',
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
-      frameRate: { ideal: 60 }
-    },
-    audio: false
-  };
+// ── 3.3  Style B — white concentric circles + tree connectors ────────────────
+function drawStyleB(ctx, cW, cH) {
+  const blobs=[];
+  for (let ti=0;ti<MAX_TRACKED;ti++) { const t=_tracked[ti]; if(t.active&&t.age>=2) blobs.push(t); }
+  if (!blobs.length) return;
+  blobs.sort((a,b)=>b.sr-a.sr);
+  if (CFG.showConnectors&&blobs.length>1) {
+    ctx.save();
+    for (let i=1;i<blobs.length;i++) {
+      let nearJ=0,nearD=Infinity;
+      for (let j=0;j<i;j++) {
+        const dx=blobs[i].scx-blobs[j].scx,dy=blobs[i].scy-blobs[j].scy,d=dx*dx+dy*dy;
+        if(d<nearD){nearD=d;nearJ=j;}
+      }
+      ctx.strokeStyle='rgba(255,255,255,0.38)'; ctx.lineWidth=1; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(blobs[i].scx,blobs[i].scy); ctx.lineTo(blobs[nearJ].scx,blobs[nearJ].scy); ctx.stroke();
+      drawArrow(ctx,blobs[i].scx,blobs[i].scy,blobs[nearJ].scx,blobs[nearJ].scy,'rgba(180,255,55,0.88)');
+    }
+    ctx.restore();
+  }
+  for (const b of blobs) {
+    const fadeA=Math.min(1,b.age/4)*Math.min(1,b.ttl/3); if(fadeA<.05) continue;
+    const cx=b.scx,cy=b.scy,r=Math.max(b.sr,10);
+    ctx.save(); ctx.globalAlpha=fadeA;
+    ctx.strokeStyle='rgba(255,255,255,0.84)'; ctx.lineWidth=1.5; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,0.48)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(cx,cy,Math.max(r*.35,5),0,Math.PI*2); ctx.stroke();
+    const ts=9; ctx.strokeStyle='rgba(180,255,55,0.95)'; ctx.lineWidth=1.5;
+    ctx.strokeRect(cx-ts*.5,cy-ts*.5,ts,ts);
+    if (CFG.showLabels&&!STATE.isRecording) {
+      ctx.font='10px "Courier New",monospace'; ctx.fillStyle='rgba(255,255,255,0.86)';
+      ctx.fillText(b.spxS.toFixed(1)+' PX S',cx+r+5,cy+4);
+    }
+    ctx.restore();
+  }
+}
 
-  navigator.mediaDevices.getUserMedia(constraints)
-    .then(stream => {
-      video.srcObject = stream;
-      video.setAttribute('controls', 'false');
-      // Fix Safari Mobile iOS engine layout constraints
-      video.addEventListener('loadedmetadata', () => {
-        STATE.videoW = video.videoWidth;
-        STATE.videoH = video.videoHeight;
-        setupCanvasBounds();
-        document.getElementById('splash').style.opacity = '1'; 
-      });
-    })
-    .catch(err => {
-      showError('Hardware Subsystem Access Denied: ' + err.message);
+// ── 3.4  Style C — Ghost: black background + foreground particle cloud ────────
+function drawStyleC(ctx, cW, cH, t) {
+  ctx.fillStyle='#050508'; ctx.fillRect(0,0,cW,cH);
+  if (_ghCount===0) return;
+  const tTick=(t*.014)|0;
+  ctx.save();
+  ctx.strokeStyle='rgba(255,255,255,0.88)'; ctx.lineWidth=.75; ctx.setLineDash([]);
+  ctx.beginPath(); let d1=0;
+  for (let i=0;i<_ghCount&&d1<420;i++) {
+    const pType=(i*7+tTick)%10; if(pType>5) continue;
+    const cx=_ghX[i],cy=_ghY[i],g=_ghG[i];
+    const shimmer=.85+.15*Math.sin(cx*.062+cy*.041+t*.0028);
+    const r=(1.1+(g/255)*3.2)*shimmer;
+    ctx.moveTo(cx+r,cy); ctx.arc(cx,cy,r,0,Math.PI*2); d1++;
+  }
+  ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,0.78)'; ctx.lineWidth=.65;
+  ctx.beginPath(); let d2=0;
+  for (let i=0;i<_ghCount&&d2<90;i++) {
+    const g=_ghG[i]; if(g<160) continue;
+    const pType=(i*7+tTick)%10; if(pType<8) continue;
+    const cx=_ghX[i],cy=_ghY[i],s=(1.5+(g/255)*3.8),s45=s*.707;
+    ctx.moveTo(cx-s,cy); ctx.lineTo(cx+s,cy); ctx.moveTo(cx,cy-s); ctx.lineTo(cx,cy+s);
+    ctx.moveTo(cx-s45,cy-s45); ctx.lineTo(cx+s45,cy+s45); ctx.moveTo(cx+s45,cy-s45); ctx.lineTo(cx-s45,cy+s45);
+    d2++;
+  }
+  ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.beginPath(); let d3=0;
+  for (let i=0;i<_ghCount&&d3<160;i++) {
+    const pType=(i*7+tTick)%10; if(pType<6||pType>7) continue;
+    const cx=_ghX[i],cy=_ghY[i];
+    ctx.moveTo(cx+1.2,cy); ctx.arc(cx,cy,1.2,0,Math.PI*2); d3++;
+  }
+  ctx.fill(); ctx.restore();
+}
+
+// ── 3.5  Style D — Neural: orbit node network + dashed bezier curves ─────────
+function drawStyleD(ctx, cW, cH, t) {
+  ctx.fillStyle='rgba(0,0,0,0.48)'; ctx.fillRect(0,0,cW,cH);
+  ctx.save(); ctx.setLineDash([4,3]);
+  ctx.strokeStyle='rgba(255,55,25,0.7)'; ctx.lineWidth=1; ctx.beginPath();
+  for (let ci=0;ci<_nnConnCount;ci++) {
+    if(_nnConnKind[ci]!==0) continue;
+    const na=_nnNodes[_nnConnA[ci]],nb=_nnNodes[_nnConnB[ci]]; if(!na.active||!nb.active) continue;
+    const mx=(na.x+nb.x)*.5,my=(na.y+nb.y)*.5,dx=nb.x-na.x,dy=nb.y-na.y;
+    const len=Math.sqrt(dx*dx+dy*dy)||1, sign=(ci&1)?1:-1, curv=sign*len*.30;
+    ctx.moveTo(na.x,na.y); ctx.quadraticCurveTo(mx+(-dy/len)*curv,my+(dx/len)*curv,nb.x,nb.y);
+  }
+  ctx.stroke();
+  ctx.strokeStyle='rgba(255,90,40,0.45)'; ctx.lineWidth=.75; ctx.setLineDash([3,4]); ctx.beginPath();
+  for (let ci=0;ci<_nnConnCount;ci++) {
+    if(_nnConnKind[ci]!==1) continue;
+    const na=_nnNodes[_nnConnA[ci]],nb=_nnNodes[_nnConnB[ci]]; if(!na.active||!nb.active) continue;
+    const mx=(na.x+nb.x)*.5,my=(na.y+nb.y)*.5,dx=nb.x-na.x,dy=nb.y-na.y;
+    const len=Math.sqrt(dx*dx+dy*dy)||1, sign=(ci&1)?-1:1, curv=sign*len*.42;
+    ctx.moveTo(na.x,na.y); ctx.quadraticCurveTo(mx+(-dy/len)*curv,my+(dx/len)*curv,nb.x,nb.y);
+  }
+  ctx.stroke();
+  ctx.strokeStyle='rgba(80,180,255,0.55)'; ctx.lineWidth=1.1; ctx.setLineDash([6,4]); ctx.beginPath();
+  for (let ci=0;ci<_nnConnCount;ci++) {
+    if(_nnConnKind[ci]!==2) continue;
+    const na=_nnNodes[_nnConnA[ci]],nb=_nnNodes[_nnConnB[ci]]; if(!na.active||!nb.active) continue;
+    const mx=(na.x+nb.x)*.5,my=(na.y+nb.y)*.5,dx=nb.x-na.x,dy=nb.y-na.y;
+    const len=Math.sqrt(dx*dx+dy*dy)||1, sign=(ci&1)?1:-1, curv=sign*len*.38;
+    ctx.moveTo(na.x,na.y); ctx.quadraticCurveTo(mx+(-dy/len)*curv,my+(dx/len)*curv,nb.x,nb.y);
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+  for (let ni=0;ni<MAX_NN_NODES;ni++) {
+    const nd=_nnNodes[ni]; if(!nd.active) continue;
+    const blob=_tracked[nd.blobIdx];
+    const fadeA=Math.min(1,blob.age/4)*Math.min(1,blob.ttl/3); if(fadeA<.08) continue;
+    const pulse=.55+.45*Math.sin(t*.005+nd.phase);
+    ctx.globalAlpha=fadeA*pulse; ctx.fillStyle='rgba(80,220,255,1)';
+    ctx.beginPath(); ctx.arc(nd.x,nd.y,3.8,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(80,220,255,0.35)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(nd.x,nd.y,6.5,0,Math.PI*2); ctx.stroke();
+    if (CFG.showLabels&&!STATE.isRecording) {
+      ctx.globalAlpha=fadeA*.72; ctx.font='8px "Courier New",monospace';
+      ctx.fillStyle='rgba(255,255,255,0.82)';
+      ctx.fillText('bz'+String(nd.labelId).padStart(2,'0'),nd.x+8,nd.y+3);
+    }
+  }
+  ctx.globalAlpha=1; ctx.restore();
+}
+
+// ── 3.6  Style E — Depth Glitch Cascade ──────────────────────────────────────
+//
+// Pipeline (zero GC — all buffers pre-allocated):
+//  1. Draw video → _effectCanvas at PROC resolution
+//  2. getImageData (PROC_W × PROC_H × 4 bytes = ~130 kB)
+//  3. Pre-compute per-row scan displacements using depth @ centre column
+//     and a deterministic hash function (avoids Math.random() in the loop)
+//  4. Per-pixel pass: RGB channels split horizontally by ±(depth × 7px)
+//     + row scan displacement → write to _dstImgData (pre-allocated)
+//  5. putImageData → _effectCanvas
+//  6. drawImage to composite at full size, imageSmoothingEnabled=false
+//     (nearest-neighbor → pixelated glitch aesthetic at low proc resolution)
+//  7. Draw Style B tracking circles on top at full composite resolution
+
+function drawStyleE(ctx, cW, cH, t) {
+  if (!_effectCtx || !_dstImgData) return;
+  // 1. Grab video at proc resolution
+  _effectCtx.drawImage(videoEl, _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
+  const srcImg = _effectCtx.getImageData(0, 0, PROC_W, PROC_H);
+  const s = srcImg.data, d = _dstImgData.data;
+
+  // 2. Pre-compute per-row scan displacements (135 sin evals, cheap)
+  const tInt = (t * .0014) | 0;
+  for (let y = 0; y < PROC_H; y++) {
+    const midDepth = _depthBuf[y * PROC_W + (PROC_W >> 1)];
+    // Deterministic pseudo-random glitch probability seeded by y + time
+    const seed = (((y * 47 + tInt * 11) ^ (y * 23)) & 0xFF) / 255.0;
+    _rowShifts[y] = (seed < midDepth * 0.88)
+      ? Math.round(Math.sin(y * .65 + t * .006) * midDepth * 9) | 0
+      : 0;
+  }
+
+  // 3. Per-pixel chromatic aberration pass
+  for (let y = 0; y < PROC_H; y++) {
+    const rShift = _rowShifts[y];
+    const yRow   = y * PROC_W;
+    for (let x = 0; x < PROC_W; x++) {
+      const depth    = _depthBuf[yRow + x];
+      const chrShift = (depth * 7 + .5) | 0;   // 0..7 px shift at proc res
+      const dstI     = (yRow + x) * 4;
+
+      // R channel shifted right; B shifted left; G unshifted
+      const rX = x + chrShift + rShift;
+      const gX = x             + rShift;
+      const bX = x - chrShift + rShift;
+
+      const rSafe = rX < 0 ? 0 : rX >= PROC_W ? PROC_W-1 : rX;
+      const gSafe = gX < 0 ? 0 : gX >= PROC_W ? PROC_W-1 : gX;
+      const bSafe = bX < 0 ? 0 : bX >= PROC_W ? PROC_W-1 : bX;
+
+      d[dstI]   = s[(yRow + rSafe) * 4];
+      d[dstI+1] = s[(yRow + gSafe) * 4 + 1];
+      d[dstI+2] = s[(yRow + bSafe) * 4 + 2];
+      d[dstI+3] = 255;
+    }
+  }
+
+  // 4. Blit to effect canvas → scale to composite (nearest-neighbor)
+  _effectCtx.putImageData(_dstImgData, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(_effectCanvas, 0, 0, cW, cH);
+  ctx.imageSmoothingEnabled = true;
+
+  // 5. Tracking circles on top (full composite resolution, crisp)
+  drawStyleB(ctx, cW, cH);
+}
+
+// ── 3.7  Style F — Depth Pixel Sort ──────────────────────────────────────────
+//
+// Classic glitch art pixel sort, driven by the pseudo-depth map.
+//
+// Algorithm (per column, all ops on pre-allocated typed arrays):
+//  1. Copy column RGBA into _segColBuf (PROC_H × 4 bytes)
+//  2. Compute luminance for each row → _segLuma[y]
+//  3. Scan depth top→bottom; start a segment when depth >= DEPTH_THRESH,
+//     end when below OR segment reaches MAX_SEG pixels (prevents full-column
+//     sort that would make the background unrecognisable)
+//  4. Within each segment: insertion sort _segColBuf entries by _segLuma
+//     (luminance descending → brightest pixel at the top of segment)
+//  5. Write column back to imgData
+//  6. Nearest-neighbor scale to composite
+
+const DEPTH_SORT_THRESH = 0.26; // only pixels above this depth get sorted
+const MAX_SEG           = 48;   // max contiguous sort segment (pixels)
+
+function drawStyleF(ctx, cW, cH) {
+  if (!_effectCtx || !_dstImgData) return;
+  // Capture video at proc resolution
+  _effectCtx.drawImage(videoEl, _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
+  const imgData = _effectCtx.getImageData(0, 0, PROC_W, PROC_H);
+  const px = imgData.data;   // Uint8ClampedArray — direct write-back in place
+
+  for (let x = 0; x < PROC_W; x++) {
+    const depthX = x; // proc X matches depth X 1:1
+
+    // 1. Copy column into _segColBuf + compute luminance
+    for (let y = 0; y < PROC_H; y++) {
+      const pi = (y * PROC_W + x) * 4;
+      _segColBuf[y*4]   = px[pi];
+      _segColBuf[y*4+1] = px[pi+1];
+      _segColBuf[y*4+2] = px[pi+2];
+      _segColBuf[y*4+3] = 255;
+      _segLuma[y] = (_segColBuf[y*4]*77 + _segColBuf[y*4+1]*150 + _segColBuf[y*4+2]*29) >> 8;
+    }
+
+    // 2. Find segments and sort in _segColBuf
+    let segStart = -1, segLen = 0;
+    for (let y = 0; y <= PROC_H; y++) {
+      const depth   = y < PROC_H ? _depthBuf[y * PROC_W + depthX] : 0;
+      const inSeg   = y < PROC_H && depth >= DEPTH_SORT_THRESH && segLen < MAX_SEG;
+
+      if (inSeg && segStart < 0) { segStart = y; segLen = 0; }
+      if (inSeg && segStart >= 0) { segLen++; }
+
+      if ((!inSeg || segLen >= MAX_SEG) && segStart >= 0) {
+        const end = y;
+        // Insertion sort [segStart..end-1] in _segColBuf by _segLuma (descending)
+        for (let ii = segStart + 1; ii < end; ii++) {
+          const kl  = _segLuma[ii];
+          const kr  = _segColBuf[ii*4], kg = _segColBuf[ii*4+1];
+          const kb  = _segColBuf[ii*4+2];
+          let jj = ii - 1;
+          while (jj >= segStart && _segLuma[jj] < kl) {
+            _segLuma[jj+1]      = _segLuma[jj];
+            _segColBuf[(jj+1)*4]   = _segColBuf[jj*4];
+            _segColBuf[(jj+1)*4+1] = _segColBuf[jj*4+1];
+            _segColBuf[(jj+1)*4+2] = _segColBuf[jj*4+2];
+            _segColBuf[(jj+1)*4+3] = _segColBuf[jj*4+3];
+            jj--;
+          }
+          _segLuma[jj+1]      = kl;
+          _segColBuf[(jj+1)*4]   = kr;
+          _segColBuf[(jj+1)*4+1] = kg;
+          _segColBuf[(jj+1)*4+2] = kb;
+          _segColBuf[(jj+1)*4+3] = 255;
+        }
+        segStart = -1; segLen = 0;
+        // If we hit MAX_SEG mid-column, skip ahead past this group's boundary
+        if (inSeg) { y++; }
+      }
+    }
+
+    // 3. Write _segColBuf back into imgData column
+    for (let y = 0; y < PROC_H; y++) {
+      const pi = (y * PROC_W + x) * 4;
+      px[pi]   = _segColBuf[y*4];
+      px[pi+1] = _segColBuf[y*4+1];
+      px[pi+2] = _segColBuf[y*4+2];
+    }
+  }
+
+  // Blit to effect canvas → scale to composite (nearest-neighbor)
+  _effectCtx.putImageData(imgData, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(_effectCanvas, 0, 0, cW, cH);
+  ctx.imageSmoothingEnabled = true;
+}
+
+// ── 3.8  HUD — skipped during recording (clean video output) ─────────────────
+function drawHUD(ctx, cW, cH) {
+  if (STATE.isRecording) return;   // recording = no text in output
+  ctx.save();
+  ctx.font='bold 12px "Courier New",monospace'; ctx.fillStyle='rgba(255,255,255,0.88)';
+  ctx.fillText('BLOBZ TRACKER',14,27);
+  let nActive=0; for(let ti=0;ti<MAX_TRACKED;ti++) if(_tracked[ti].active) nActive++;
+  ctx.font='9px "Courier New",monospace'; ctx.fillStyle='rgba(255,255,255,0.38)';
+  ctx.fillText('BLOBS:'+nActive+'  FPS:'+STATE.fps+(TOUCH.active?'  [FOCUS]':''),14,41);
+  ctx.restore();
+}
+
+// ── 3.9  Main animation loop ──────────────────────────────────────────────────
+function loop(now) {
+  rafId = requestAnimationFrame(loop);
+  if (!STATE.cameraOk || videoEl.readyState < 2) return;
+  STATE.fpsFrames++;
+  if (now-STATE.fpsT>=1000){STATE.fps=STATE.fpsFrames;STATE.fpsFrames=0;STATE.fpsT=now;}
+  const cW=compositeCanvas.width, cH=compositeCanvas.height;
+  if (!_crop.valid) updateCrop(STATE.videoW,STATE.videoH,cW,cH);
+
+  // A. Video base frame (skipped for Ghost which owns its own background)
+  if (CFG.style!=='C') {
+    compositeCtx.drawImage(videoEl,_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
+  }
+  // B. Vignette (skip for C/D/E/F which manage their own backgrounds)
+  if (CFG.showVignette && CFG.style==='A' || CFG.showVignette && CFG.style==='B') {
+    drawVignette(compositeCtx,cW,cH);
+  }
+  // C. Touch timeout
+  if (TOUCH.active && now-TOUCH.lastT>TOUCH.timeout) TOUCH.active=false;
+  // D. Neural orbit update (every rAF for smooth motion)
+  if (CFG.style==='D') updateNeuralNodes(now);
+
+  // E. Detection (throttled to DETECT_INTERVAL_MS)
+  if (now-STATE.lastDetectT >= DETECT_INTERVAL_MS) {
+    STATE.lastDetectT=now;
+    workCtx.drawImage(videoEl,_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,PROC_W,PROC_H);
+    const imgData=workCtx.getImageData(0,0,PROC_W,PROC_H);
+    toGrayscale(imgData.data,_grayBuf,PROC_N);
+    if (STATE.warmup>=2) {
+      computeMaskEroded(_grayBuf,_prevGrayBuf,_rawMaskBuf,_maskBuf,
+                        PROC_N,PROC_W,PROC_H,CFG.motionThresh,CFG.brightThresh);
+      computeDepthMap();
+      const labelCount=labelCC(_maskBuf,_labelBuf,_bfsQueue,PROC_W,PROC_H);
+      extractRawBlobs(labelCount,cW/PROC_W,cH/PROC_H,CFG.minArea,CFG.maxArea);
+      updateTracked();
+      if (CFG.style==='C') sampleGhostParticles(cW/PROC_W,cH/PROC_H);
+    } else { STATE.warmup++; }
+    copyBuf(_grayBuf,_prevGrayBuf,PROC_N);
+  }
+
+  // F. Draw visual overlay
+  switch (CFG.style) {
+    case 'A': drawStyleA(compositeCtx,cW,cH);       break;
+    case 'B': drawStyleB(compositeCtx,cW,cH);       break;
+    case 'C': drawStyleC(compositeCtx,cW,cH,now);   break;
+    case 'D': drawStyleD(compositeCtx,cW,cH,now);   break;
+    case 'E': drawStyleE(compositeCtx,cW,cH,now);   break;
+    case 'F': drawStyleF(compositeCtx,cW,cH);       break;
+  }
+
+  // G. Touch reticle + HUD (both suppressed when recording)
+  if (!STATE.isRecording) drawTouchReticle(compositeCtx);
+  drawHUD(compositeCtx,cW,cH);
+}
+
+// ── 3.10  Camera initialisation ───────────────────────────────────────────────
+async function startCamera() {
+  try {
+    const stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},
+      audio:false
     });
-}
-
-function setupCanvasBounds() {
-  const cW = window.innerWidth, cH = window.innerHeight;
-  compositeCanvas.width = cW; compositeCanvas.height = cH;
-  updateCrop(STATE.videoW, STATE.videoH, cW, cH);
-  _vigGrad = null;
-
-  let pW = 240, pH = Math.round(pW * cH / cW);
-  if (pW * pH > 150000) { const s = Math.sqrt(150000 / (pW * pH)); pW = (pW * s) | 0; pH = (pH * s) | 0; }
-  workCanvas.width = pW; workCanvas.height = pH;
-  initBuffers(pW, pH);
-  STATE.warmup = 0;
-  STATE.cameraOk = true;
-}
-
-let cropX=0, cropY=0, cropW=0, cropH=0;
-function updateCrop(vW, vH, cW, cH) {
-  const vAspect = vW / vH, cAspect = cW / cH;
-  if (vAspect > cAspect) {
-    cropH = vH; cropW = vH * cAspect;
-    cropX = (vW - cropW) * 0.5; cropY = 0;
-  } else {
-    cropW = vW; cropH = vW / cAspect;
-    cropX = 0; cropY = (vH - cropH) * 0.5;
+    videoEl.srcObject=stream; STATE.camStream=stream;
+    await new Promise((res,rej)=>{videoEl.onloadedmetadata=res;videoEl.onerror=()=>rej(new Error('meta'));});
+    await videoEl.play();
+    STATE.videoW=videoEl.videoWidth||1280; STATE.videoH=videoEl.videoHeight||720;
+    return _finaliseCamera();
+  } catch(err) {
+    let msg='Camera error: '+err.message;
+    if(err.name==='NotAllowedError'||err.name==='PermissionDeniedError')
+      msg='Camera access denied. Allow permission and reload.';
+    else if(err.name==='NotFoundError')      msg='No camera found on this device.';
+    else if(err.name==='NotReadableError')   msg='Camera in use by another app.';
+    else if(err.name==='OverconstrainedError') return _startCameraFallback();
+    showError(msg); return false;
   }
 }
-
-// ── Media Esportazione & UI Reset Fix ────────────────────────────────────────
-
-function toggleRecording() {
-  if (!STATE.cameraOk) return;
-  if (!STATE.isRecording) {
-    startRecording();
-  } else {
-    stopRecording();
-  }
+async function _startCameraFallback() {
+  try {
+    const stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+    videoEl.srcObject=stream; STATE.camStream=stream;
+    await new Promise(res=>{videoEl.onloadedmetadata=res;});
+    await videoEl.play();
+    STATE.videoW=videoEl.videoWidth||640; STATE.videoH=videoEl.videoHeight||480;
+    return _finaliseCamera();
+  } catch(e) { showError('Cannot access any camera: '+e.message); return false; }
 }
+function _finaliseCamera() {
+  const cW=window.innerWidth, cH=window.innerHeight;
+  compositeCanvas.width=cW; compositeCanvas.height=cH;
+  let pW=240, pH=Math.round(pW*cH/cW);
+  if (pW*pH>150000){const s=Math.sqrt(150000/(pW*pH));pW=(pW*s)|0;pH=(pH*s)|0;}
+  workCanvas.width=pW; workCanvas.height=pH;
+  initBuffers(pW,pH);
+  updateCrop(STATE.videoW,STATE.videoH,cW,cH);
+  STATE.fpsT=performance.now(); STATE.cameraOk=true;
+  const hint=document.getElementById('touch-hint');
+  hint.classList.add('show');
+  setTimeout(()=>{hint.style.opacity='0';setTimeout(()=>{hint.style.display='none';},400);},3500);
+  return true;
+}
+
+// ── 3.11  Recording — iOS-aware MIME, clean canvas output ────────────────────
+const _isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||
+  (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+
+const _mimeTypeCandidates=_isIOS
+  ? ['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm']
+  : ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4;codecs=avc1','video/mp4'];
+
+let _dlAutoHide = 0;   // clearTimeout handle for download-toast auto-dismiss
 
 function startRecording() {
-  recordedChunks = [];
-  const stream = compositeCanvas.captureStream(60);
-  
-  // Scelta del codec ottimizzato per l'hardware Apple iOS
-  let options = { mimeType: 'video/mp4' };
-  if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-    options = { mimeType: 'video/webm;codecs=vp8' };
+  if (STATE.isRecording) return;
+  if (typeof compositeCanvas.captureStream !== 'function') {
+    showError('Canvas capture not supported on this browser.'); return;
   }
-  
+  let mimeType='';
+  if (typeof MediaRecorder!=='undefined') {
+    for (const mt of _mimeTypeCandidates) if(MediaRecorder.isTypeSupported(mt)){mimeType=mt;break;}
+  }
   try {
-    mediaRecorder = new MediaRecorder(stream, options);
-  } catch (e) {
-    showError('Esportazione fallita su iOS Safari WebRTC: ' + e.message);
-    resetRecordingUIState();
-    return;
-  }
-
-  mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
-  
-  mediaRecorder.onstop = () => {
-    const blob = new Blob(recordedChunks, { type: options.mimeType });
-    const url = URL.createObjectURL(blob);
-    const dlBtn = document.getElementById('btn-download');
-    dlBtn.href = url;
-    dlBtn.download = `BLOBZ_CAPTURE_${Date.now()}.mp4`;
-    dlBtn.style.display = 'flex';
-    
-    // Auto-rimozione dell'overlay dopo 7 secondi se l'utente non lo scarica, per sbloccare i tasti
-    setTimeout(() => { resetRecordingUIState(); }, 7000);
-  };
-
-  mediaRecorder.start();
-  STATE.isRecording = true;
-  const rBtn = document.getElementById('btn-record');
-  rBtn.classList.add('recording');
-  rBtn.innerHTML = '■';
-  document.getElementById('btn-download').style.display = 'none';
+    const stream=compositeCanvas.captureStream(30);
+    const opts=mimeType?{mimeType,videoBitsPerSecond:4_000_000}:{};
+    STATE.mediaRecorder=new MediaRecorder(stream,opts);
+    STATE.chunks=[];
+    STATE.mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size>0)STATE.chunks.push(e.data);};
+    STATE.mediaRecorder.onstop=()=>{
+      const eff=mimeType||'video/webm';
+      const blob=new Blob(STATE.chunks,{type:eff});
+      if(STATE.lastDlUrl)URL.revokeObjectURL(STATE.lastDlUrl);
+      STATE.lastDlUrl=URL.createObjectURL(blob);
+      const ext=eff.includes('mp4')?'mp4':'webm';
+      const dlLink=document.getElementById('btn-download');
+      dlLink.href=STATE.lastDlUrl; dlLink.download='blobz_'+Date.now()+'.'+ext;
+      const toast=document.getElementById('download-toast');
+      toast.style.display='flex';
+      clearTimeout(_dlAutoHide);
+      _dlAutoHide=setTimeout(()=>{toast.style.display='none';},15000);
+    };
+    STATE.mediaRecorder.onerror=e=>{showError('Recording error: '+(e.error?e.error.message:'unknown'));stopRecording();};
+    STATE.mediaRecorder.start(100);
+    STATE.isRecording=true; STATE.recordStartT=performance.now();
+    document.getElementById('btn-record').textContent='\u23F9';
+    document.getElementById('btn-record').classList.add('recording');
+  } catch(err){showError('Could not start recording: '+err.message);}
 }
 
 function stopRecording() {
-  if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
-  mediaRecorder.stop();
-  // Forza lo sblocco immediato dei tasti interattivi eliminando blocchi fisici della UI
-  resetRecordingUIState();
+  if(!STATE.isRecording||!STATE.mediaRecorder) return;
+  try{STATE.mediaRecorder.stop();}catch(_){}
+  STATE.isRecording=false; STATE.mediaRecorder=null;
+  document.getElementById('btn-record').textContent='\u23FA';
+  document.getElementById('btn-record').classList.remove('recording');
 }
 
-function resetRecordingUIState() {
-  STATE.isRecording = false;
-  const rBtn = document.getElementById('btn-record');
-  if (rBtn) {
-    rBtn.classList.remove('recording');
-    rBtn.innerHTML = '⏺';
-  }
-  // Ripristina l'albero interattivo CSS pointer-events
-  document.getElementById('ctrl-bar').style.pointerEvents = 'none';
-}
-
-// Listener delegato al download per far sparire il pulsante una volta cliccato
-document.getElementById('btn-download').addEventListener('click', () => {
-  setTimeout(() => {
-    document.getElementById('btn-download').style.style.display = 'none';
-    resetRecordingUIState();
-  }, 300);
-});
-
-// ═══════════════════════════════════════════════════════════════════════════
-// PHASE 4 — HIGH PERFORMANCE RENDERING ENGINE (THE RENDERING LOOP)
-// ═══════════════════════════════════════════════════════════════════════════
-
-let rafId = null;
-
-function loop(timestamp) {
-  if (!STATE.cameraOk) return;
-  rafId = requestAnimationFrame(loop);
-
-  const cW = compositeCanvas.width, cH = compositeCanvas.height;
-  const pW = workCanvas.width, pH = workCanvas.height;
-
-  // STEP 1: Blit hardware frame su area di calcolo ottimizzata
-  workCtx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, pW, pH);
-  const imgData = workCtx.getImageData(0, 0, pW, pH);
-
-  // STEP 2: Scambio del buffer pointer circolare
-  const temp = _prevGrayBuf; _prevGrayBuf = _grayBuf; _grayBuf = temp;
-  
-  // STEP 3: Trasformazione nativa grayscale e calcolo matriciale
-  toGrayscale(imgData.data, _grayBuf, PROC_N);
-
-  if (STATE.warmup < 3) {
-    copyBuf(_grayBuf, _prevGrayBuf, PROC_N);
-    STATE.warmup++;
-    compCtx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cW, cH);
-    return;
-  }
-
-  computeMaskEroded(_grayBuf, _prevGrayBuf, _rawMaskBuf, _maskBuf, PROC_N, pW, pH, STATE.motThr, STATE.briThr);
-
-  const labelCount = labelCC(_maskBuf, _labelBuf, _bfsQueue, pW, pH);
-  const scaleX = cW / pW, scaleY = cH / pH;
-  extractRawBlobs(labelCount, scaleX, scaleY, STATE.minArea, STATE.maxArea);
-  updateTracked();
-
-  // STEP 4: Render pipeline degli stili grafici sul Canvas principale
-  if (STATE.style === 'E') {
-    // Stile Pixel Sorting: Elabora l'immagine prima di applicare overlay di diagnostica
-    compCtx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cW, cH);
-    applyPixelSortingPipeline(compCtx, cW, cH, pW, pH);
-  } else {
-    compCtx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cW, cH);
-  }
-
-  if (STATE.showVig) drawVignette(compCtx, cW, cH);
-
-  // Router degli stili geometrico-vettoriali
-  switch (STATE.style) {
-    case 'B': drawStyleCircles(compCtx); break;
-    case 'A': drawStyleBoxes(compCtx); break;
-    case 'C': sampleGhostParticles(scaleX, scaleY); drawStyleGhost(compCtx); break;
-    case 'D': updateNeuralNodes(timestamp); drawStyleNeural(compCtx); break;
-  }
-
-  drawTouchReticle(compCtx);
-  if (TOUCH.active && (performance.now() - TOUCH.lastT > TOUCH.timeout)) { TOUCH.active = false; }
-}
-
-// ── 4.1 RENDERING STYLE: CIRCLES ───────────────────────────────────────────
-function drawStyleCircles(ctx) {
-  const showConn = STATE.showConn, showLabel = STATE.showLabel;
-  let activeBlobs = [];
-
-  for (let i = 0; i < MAX_TRACKED; i++) {
-    const t = _tracked[i]; if (!t.active || t.age < 2) continue;
-    activeBlobs.push(t);
-    const { scx, scy, sr, spxS } = t;
-    const pulse = 1.0 + 0.06 * Math.sin(performance.now() / 140 + t.id);
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.48)'; ctx.lineWidth = 1.5; ctx.setLineDash([]);
-    ctx.beginPath(); ctx.arc(scx, scy, sr * pulse, 0, Math.PI * 2); ctx.stroke();
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.24)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(scx, scy, Math.max(5, sr * 0.35), 0, Math.PI * 2); ctx.stroke();
-
-    ctx.fillStyle = '#b4ff3c'; ctx.fillRect(scx - 3, scy - 3, 6, 6);
-
-    if (showLabel) {
-      ctx.fillStyle = 'rgba(255,255,255,0.78)'; ctx.font = '10px Courier New';
-      ctx.fillText(`${String(t.id).padStart(2,'0')} ${Math.round(spxS)} PX S`, scx + sr + 6, scy + 4);
-    }
-  }
-
-  if (showConn && activeBlobs.length > 1) {
-    for (let i = 0; i < activeBlobs.length - 1; i++) {
-      for (let j = i + 1; j < activeBlobs.length; j++) {
-        const bA = activeBlobs[i], bB = activeBlobs[j];
-        const dx = bA.scx - bB.scx, dy = bA.scy - bB.scy;
-        if (dx*dx + dy*dy < 240 * 240) {
-          drawArrow(ctx, bA.scx, bA.scy, bB.scx, bB.scy, 'rgba(255,255,255,0.22)');
-        }
-      }
-    }
-  }
-}
-
-// ── 4.2 RENDERING STYLE: BOXES ─────────────────────────────────────────────
-function drawStyleBoxes(ctx) {
-  const showConn = STATE.showConn, showLabel = STATE.showLabel;
-  let activeBlobs = [];
-
-  for (let i = 0; i < MAX_TRACKED; i++) {
-    const t = _tracked[i]; if (!t.active || t.age < 2) continue;
-    activeBlobs.push(t);
-    const { bx, by, bw, bh, scx, scy, spxS } = t;
-    const arm = Math.min(15, Math.min(bw * 0.3, bh * 0.3));
-
-    drawCornerBrackets(ctx, bx, by, bw, bh, arm, '#fff', 1.5);
-
-    if (showLabel) {
-      ctx.fillStyle = '#b4ff3c'; ctx.font = '9px Courier New';
-      ctx.fillText(`TRK//${String(t.id).padStart(2,'0')}`, bx + 4, by - 14);
-      ctx.fillStyle = 'rgba(255,255,255,0.7)';
-      ctx.fillText(`W:${Math.round(bw)} H:${Math.round(bh)}`, bx + 4, by - 4);
-    }
-  }
-
-  if (showConn && activeBlobs.length > 1) {
-    ctx.strokeStyle = 'rgba(255,40,0,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
-    ctx.beginPath();
-    for (let i = 0; i < activeBlobs.length; i++) {
-      if (i === 0) ctx.moveTo(activeBlobs[i].scx, activeBlobs[i].scy);
-      else ctx.lineTo(activeBlobs[i].scx, activeBlobs[i].scy);
-    }
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-}
-
-// ── 4.3 RENDERING STYLE: GHOST ─────────────────────────────────────────────
-function drawStyleGhost(ctx) {
-  ctx.save();
-  ctx.setLineDash([]);
-  for (let i = 0; i < _ghCount; i++) {
-    const gx = _ghX[i], gy = _ghY[i], gv = _ghG[i];
-    const r = (gv / 255.0) * 3.5 + 0.5;
-    ctx.fillStyle = `rgba(255,255,255,${(gv/255.0)*0.65+0.1})`;
-    ctx.beginPath(); ctx.arc(gx, gy, r, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.restore();
-}
-
-// ── 4.4 RENDERING STYLE: NEURAL ────────────────────────────────────────────
-function drawStyleNeural(ctx) {
-  ctx.save();
-  for (let i = 0; i < _nnConnCount; i++) {
-    const nA = _nnNodes[_nnConnA[i]], nB = _nnNodes[_nnConnB[i]], kind = _nnConnKind[i];
-    if (kind === 0) {
-      ctx.strokeStyle = 'rgba(240,40,10,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
-    } else if (kind === 1) {
-      ctx.strokeStyle = 'rgba(240,40,10,0.12)'; ctx.lineWidth = 0.7; ctx.setLineDash([]);
-    } else {
-      ctx.strokeStyle = 'rgba(0,180,255,0.38)'; ctx.lineWidth = 1.1; ctx.setLineDash([]);
-    }
-    const mx = (nA.x + nB.x) * 0.5, my = (nA.y + nB.y) * 0.5;
-    const dev = kind === 2 ? 24 : 8;
-    const cx = mx + Math.sin(nA.x * 0.01) * dev, cy = my + Math.cos(nB.y * 0.01) * dev;
-
-    ctx.beginPath(); ctx.moveTo(nA.x, nA.y); ctx.quadraticCurveTo(cx, cy, nB.x, nB.y); ctx.stroke();
-  }
-  ctx.setLineDash([]);
-  for (let i = 0; i < MAX_NN_NODES; i++) {
-    const nd = _nnNodes[i]; if (!nd.active) continue;
-    ctx.fillStyle = nd.labelId % 3 === 0 ? '#ff2800' : '#fff';
-    ctx.fillRect(nd.x - 1.5, nd.y - 1.5, 3, 3);
-  }
-  ctx.restore();
-}
-
-// ── 4.5 NEW STYLE: REALTIME CASCADING PIXEL SORTING (PREDICTIVE LIDAR) ──────
-function applyPixelSortingPipeline(ctx, width, height, pW, pH) {
-  const imgData = ctx.getImageData(0, 0, width, height);
-  const data = imgData.data;
-
-  // Scala i passi di campionamento in base alla risoluzione per tenere stabili i 60fps su iOS
-  const xStep = width > 1000 ? 4 : 2; 
-  const ratioX = pW / width;
-  const ratioY = pH / height;
-
-  for (let x = 0; x < width; x += xStep) {
-    let sortLength = 0;
-    const procX = (x * ratioX) | 0;
-
-    // 1. Estrazione della colonna verticale nel buffer statico ad alte prestazioni
-    for (let y = 0; y < height; y++) {
-      const idx = (y * width + x) * 4;
-      const procY = (y * ratioY) | 0;
-      const procIdx = procY * pW + procX;
-
-      // Pipeline Predittiva LiDAR: Combina la maschera di movimento al gradiente RGB per isolare la profondità volumetrica
-      const isMoving = _rawMaskBuf[procIdx] === 1;
-      const r = data[idx], g = data[idx + 1], b = data[idx + 2];
-      
-      // Calcolo pseudo-depth: Canale matematico mockato per sensore di prossimità volumetrico 3D
-      const pseudoDepth = isMoving ? (0.299 * r + 0.587 * g + 0.114 * b) : 0;
-
-      const cell = _sortColumnBuf[y];
-      cell.r = r; cell.g = g; cell.b = b;
-      cell.depth = pseudoDepth;
-    }
-
-    // 2. Algoritmo di scansione a cascata per segmentazione dei blocchi in movimento
-    for (let y = 0; y < height; y++) {
-      // Soglia Depth attiva: se rileva variazioni spaziali (pseudo-LiDAR), inizia il glitch a cascata
-      if (_sortColumnBuf[y].depth > 45) {
-        let startY = y;
-        while (y < height && _sortColumnBuf[y].depth > 45) { y++; }
-        let endY = y - 1;
-        
-        // Esegue il sorting selettivo sull'asse y (effetto gravità liquida)
-        sortColumnSegment(startY, endY);
-      }
-    }
-
-    // 3. Riscrizione atomica nel pixel buffer del Canvas
-    for (let y = 0; y < height; y++) {
-      const idx = (y * width + x) * 4;
-      const cell = _sortColumnBuf[y];
-      
-      // Applica lo sfasamento cromatico sui pixel ordinati
-      data[idx]     = cell.r;
-      data[idx + 1] = cell.g;
-      data[idx + 2] = cell.b;
-      
-      // Se l'asse parallelo è specchiato, disegna un pixel interlacciato cyber-glitch
-      if (xStep > 2 && x + 1 < width) {
-        const nextIdx = idx + 4;
-        data[nextIdx]     = cell.r * 0.8;
-        data[nextIdx + 1] = cell.g * 0.9;
-        data[nextIdx + 2] = cell.b;
-      }
-    }
-  }
-  ctx.putImageData(imgData, 0, 0);
-}
-
-// In-place Insertion Sort segmentato ad alte prestazioni (Zero allocation nell'Inner-Loop)
-function sortColumnSegment(start, end) {
-  for (let i = start + 1; i <= end; i++) {
-    const target = _sortColumnBuf[i];
-    const targetR = target.r, targetG = target.g, targetB = target.b, targetD = target.depth;
-    let j = i - 1;
-    
-    while (j >= start && _sortColumnBuf[j].depth > targetD) {
-      const next = _sortColumnBuf[j + 1];
-      const current = _sortColumnBuf[j];
-      next.r = current.r; next.g = current.g; next.b = current.b; next.depth = current.depth;
-      j--;
-    }
-    const dropCell = _sortColumnBuf[j + 1];
-    dropCell.r = targetR; dropCell.g = targetG; dropCell.b = targetB; dropCell.depth = targetD;
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// PHASE 5 — UI CONTROLLERS, INTERACTIONS & BOOTSTRAP
-// ═══════════════════════════════════════════════════════════════════════════
-
+// ── 3.12  Error display ───────────────────────────────────────────────────────
 function showError(msg) {
-  const banner = document.getElementById('error-banner');
-  banner.innerText = msg; banner.style.display = 'block';
+  const el=document.getElementById('error-banner');
+  el.textContent=msg; el.style.display='block';
+  setTimeout(()=>{el.style.display='none';},9000);
 }
 
-// Setup degli eventi UI ed binding degli elementi DOM
+// ═══════════════════════════════════════════════════════════════════════════
+// PHASE 4 — DOM EVENT LISTENERS & HARDWARE LIFECYCLE HOOKS
+// ═══════════════════════════════════════════════════════════════════════════
+
 document.addEventListener('DOMContentLoaded', () => {
-  const splash = document.getElementById('splash');
-  const btnStart = document.getElementById('btn-start');
-  const btnStyle = document.getElementById('btn-style');
-  const btnSettings = document.getElementById('btn-settings');
-  const settingsPanel = document.getElementById('settings-panel');
-  const btnRecord = document.getElementById('btn-record');
 
-  // Configurazione dei selettori di stile nel pannello principale e splash
-  const styleIds = ['spl-b', 'spl-a', 'spl-c', 'spl-d', 'spl-e'];
-  styleIds.forEach((id, index) => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      styleIds.forEach(i => { if(document.getElementById(i)) document.getElementById(i).classList.remove('active'); });
-      btn.classList.add('active');
-      const chars = ['B', 'A', 'C', 'D', 'E'];
-      updateSystemStyle(chars[index]);
-    });
-  });
+  compositeCanvas=document.getElementById('composite');
+  compositeCtx=compositeCanvas.getContext('2d',{willReadFrequently:false,alpha:false});
 
-  function updateSystemStyle(char) {
-    STATE.style = char;
-    btnStyle.innerText = STYLES_META[char].label;
-    if (char === 'E') {
-      btnStyle.style.color = '#b4ff3c';
-    } else {
-      btnStyle.style.color = '';
-    }
+  workCanvas=document.createElement('canvas');
+  workCtx=workCanvas.getContext('2d',{willReadFrequently:true});
+
+  // Effect canvas for Styles E and F (created early so initBuffers can
+  // allocate _dstImgData via _effectCtx.createImageData)
+  _effectCanvas=document.createElement('canvas');
+  _effectCtx=_effectCanvas.getContext('2d',{willReadFrequently:true});
+
+  videoEl=document.getElementById('cam');
+
+  // ── Splash — 6-style grid ──────────────────────────────────────────────
+  const splBtns={A:'spl-a',B:'spl-b',C:'spl-c',D:'spl-d',E:'spl-e',F:'spl-f'};
+  function setSplashStyle(s) {
+    CFG.style=s;
+    Object.keys(splBtns).forEach(k=>
+      document.getElementById(splBtns[k]).classList.toggle('active',k===s)
+    );
+    document.getElementById('btn-style').innerHTML=STYLE_NAMES[s];
   }
+  Object.keys(splBtns).forEach(k=>
+    document.getElementById(splBtns[k]).addEventListener('click',()=>setSplashStyle(k))
+  );
 
-  btnStyle.addEventListener('click', () => {
-    const order = ['B', 'A', 'C', 'D', 'E'];
-    let idx = (order.indexOf(STATE.style) + 1) % order.length;
-    updateSystemStyle(order[idx]);
+  // ── Splash ↔ live settings sliders (bidirectional sync) ────────────────
+  function syncSlider(sId,sValId,lId,lValId,setter) {
+    const sR=document.getElementById(sId),lR=document.getElementById(lId);
+    const sV=document.getElementById(sValId),lV=document.getElementById(lValId);
+    sR.addEventListener('input',function(){setter(parseInt(this.value,10));sV.textContent=this.value;lR.value=this.value;lV.textContent=this.value;});
+    lR.addEventListener('input',function(){setter(parseInt(this.value,10));lV.textContent=this.value;sR.value=this.value;sV.textContent=this.value;});
+  }
+  syncSlider('rng-mot','val-mot','lr-mot','lv-mot',v=>{CFG.motionThresh=v;});
+  syncSlider('rng-bri','val-bri','lr-bri','lv-bri',v=>{CFG.brightThresh=v;});
+  syncSlider('rng-min','val-min','lr-min','lv-min',v=>{CFG.minArea=v;});
+
+  // ── Touch-bias pointer events on composite canvas ──────────────────────
+  let _settingsOpen=false;
+  compositeCanvas.addEventListener('pointerdown',e=>{
+    if(_settingsOpen||!STATE.cameraOk) return;
+    e.preventDefault();
+    TOUCH.x=e.clientX; TOUCH.y=e.clientY; TOUCH.active=true; TOUCH.lastT=performance.now();
+    compositeCanvas.setPointerCapture(e.pointerId);
+  },{passive:false});
+  compositeCanvas.addEventListener('pointermove',e=>{
+    if(!TOUCH.active||e.buttons===0) return;
+    e.preventDefault();
+    TOUCH.x=e.clientX; TOUCH.y=e.clientY; TOUCH.lastT=performance.now();
+  },{passive:false});
+  compositeCanvas.addEventListener('pointerup',  e=>{e.preventDefault();},{passive:false});
+  compositeCanvas.addEventListener('pointercancel',()=>{TOUCH.lastT=performance.now()-TOUCH.timeout+500;},{passive:false});
+
+  // ── Style cycle button (A→B→C→D→E→F→A) ────────────────────────────────
+  document.getElementById('btn-style').addEventListener('click',()=>{
+    const i=STYLE_CYCLE.indexOf(CFG.style);
+    setSplashStyle(STYLE_CYCLE[(i+1)%STYLE_CYCLE.length]);
   });
 
-  btnStart.addEventListener('click', () => {
-    splash.style.opacity = '0';
-    setTimeout(() => { splash.style.display = 'none'; }, 400);
-    STATE.lastDetectT = performance.now();
-    rafId = requestAnimationFrame(loop);
+  // ── Record / stop ──────────────────────────────────────────────────────
+  document.getElementById('btn-record').addEventListener('click',()=>{
+    if(!STATE.cameraOk){showError('Camera not ready yet.');return;}
+    STATE.isRecording?stopRecording():startRecording();
   });
 
-  btnSettings.addEventListener('click', (e) => {
-    e.stopPropagation();
-    settingsPanel.classList.toggle('open');
-    btnSettings.classList.toggle('active');
+  // ── Download toast dismiss ─────────────────────────────────────────────
+  document.getElementById('btn-dismiss-dl').addEventListener('click',()=>{
+    clearTimeout(_dlAutoHide);
+    document.getElementById('download-toast').style.display='none';
   });
 
-  document.body.addEventListener('click', () => {
-    if (settingsPanel.classList.contains('open')) {
-      settingsPanel.classList.remove('open');
-      btnSettings.classList.remove('active');
+  // ── Settings panel ─────────────────────────────────────────────────────
+  document.getElementById('btn-settings').addEventListener('click',()=>{
+    _settingsOpen=!_settingsOpen;
+    document.getElementById('settings-panel').classList.toggle('open',_settingsOpen);
+    document.getElementById('btn-settings').classList.toggle('active',_settingsOpen);
+    if(_settingsOpen) TOUCH.active=false;
+  });
+  document.getElementById('btn-conn').addEventListener('click',function(){
+    CFG.showConnectors=!CFG.showConnectors;this.classList.toggle('on',CFG.showConnectors);
+  });
+  document.getElementById('btn-lbl').addEventListener('click',function(){
+    CFG.showLabels=!CFG.showLabels;this.classList.toggle('on',CFG.showLabels);
+  });
+  document.getElementById('btn-vig').addEventListener('click',function(){
+    CFG.showVignette=!CFG.showVignette;this.classList.toggle('on',CFG.showVignette);
+  });
+
+  // ── Splash → main transition ───────────────────────────────────────────
+  document.getElementById('btn-start').addEventListener('click',async()=>{
+    const splash=document.getElementById('splash');
+    splash.style.opacity='0'; splash.style.transition='opacity 0.4s ease';
+    setTimeout(()=>{splash.style.display='none';},400);
+    const ok=await startCamera();
+    if(!ok){splash.style.display='flex';splash.style.opacity='1';splash.style.transition='none';return;}
+    STATE.lastDetectT=performance.now(); STATE.fpsT=performance.now();
+    rafId=requestAnimationFrame(loop);
+  });
+
+  // ── Canvas context loss / restore ──────────────────────────────────────
+  compositeCanvas.addEventListener('contextlost',e=>{
+    e.preventDefault(); if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+    showError('Canvas context lost — please reload.'); STATE.cameraOk=false;
+  });
+  compositeCanvas.addEventListener('contextrestored',()=>{
+    if(STATE.cameraOk){STATE.lastDetectT=performance.now();rafId=requestAnimationFrame(loop);}
+  });
+
+  // ── Window resize ──────────────────────────────────────────────────────
+  window.addEventListener('resize',()=>{
+    if(!STATE.cameraOk) return;
+    const cW=window.innerWidth, cH=window.innerHeight;
+    compositeCanvas.width=cW; compositeCanvas.height=cH;
+    updateCrop(STATE.videoW,STATE.videoH,cW,cH);
+    _vigGrad=null; _vigW=0; _vigH=0;
+    let pW=240, pH=Math.round(pW*cH/cW);
+    if(pW*pH>150000){const s=Math.sqrt(150000/(pW*pH));pW=(pW*s)|0;pH=(pH*s)|0;}
+    if(pW!==workCanvas.width||pH!==workCanvas.height){
+      workCanvas.width=pW; workCanvas.height=pH;
+      initBuffers(pW,pH); STATE.warmup=0;
     }
   });
 
-  settingsPanel.addEventListener('click', e => e.stopPropagation());
-  btnRecord.addEventListener('click', e => { e.stopPropagation(); toggleRecording(); });
-
-  // Sincronizzazione real-time degli slider bidirezionali (Splash / Tuning panel)
-  function bindSliders(splId, tuneId, stateProp, valId, lvId) {
-    const s = document.getElementById(splId), t = document.getElementById(tuneId);
-    const v = document.getElementById(valId), l = document.getElementById(lvId);
-    function upd(ev) {
-      const val = parseInt(ev.target.value, 10);
-      s.value = val; t.value = val;
-      v.innerText = val; l.innerText = val;
-      STATE[stateProp] = val;
+  // ── Page visibility ────────────────────────────────────────────────────
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){if(rafId){cancelAnimationFrame(rafId);rafId=null;}}
+    else if(STATE.cameraOk&&!rafId){
+      STATE.warmup=0;STATE.fpsT=performance.now();
+      STATE.fpsFrames=0;STATE.lastDetectT=performance.now();
+      rafId=requestAnimationFrame(loop);
     }
-    s.addEventListener('input', upd); t.addEventListener('input', upd);
-  }
-  bindSliders('rng-mot', 'lr-mot', 'motThr', 'val-mot', 'lv-mot');
-  bindSliders('rng-bri', 'lr-bri', 'briThr', 'val-bri', 'lv-bri');
-  bindSliders('rng-min', 'lr-min', 'minArea', 'val-min', 'lv-min');
+  });
 
-  // Interruttori di diagnostica ausiliaria (Connectors, Labels, Vignette)
-  function bindToggle(id, stateProp) {
-    const btn = document.getElementById(id);
-    btn.addEventListener('click', () => {
-      STATE[stateProp] = !STATE[stateProp];
-      btn.classList.toggle('on', STATE[stateProp]);
-    });
-  }
-  bindToggle('btn-conn', 'showConn'); bindToggle('btn-lbl', 'showLabel'); bindToggle('btn-vig', 'showVig');
-
-  // Touch focus tracking system 
-  compositeCanvas.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 0) return;
-    const t = e.touches[0];
-    TOUCH.x = t.clientX; TOUCH.y = t.clientY; TOUCH.active = true; TOUCH.lastT = performance.now();
-    const hint = document.getElementById('touch-hint');
-    hint.style.left = `${TOUCH.x}px`; hint.style.top = `${TOUCH.y - 45}px`;
-    hint.classList.add('show');
-    setTimeout(() => hint.classList.remove('show'), 1200);
-  }, { passive: true });
-
-  initHardwareSystem();
-});
-
-// Pipeline di ripristino in caso di distruzione del contesto WebGL o del Canvas
-compositeCanvas.addEventListener('contextlost', (e) => {
-  e.preventDefault();
-  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-  showError('⚠ Errore hardware: Contesto Canvas perduto. Ricarica la pagina.');
-  STATE.cameraOk = false;
-});
-
-window.addEventListener('resize', () => {
-  if (STATE.cameraOk) setupCanvasBounds();
-});
+}); // end DOMContentLoaded
 </script>
 </body>
 </html>
