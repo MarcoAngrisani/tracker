@@ -43,8 +43,9 @@ body{
   margin-bottom:1.2rem;position:relative;z-index:1;
 }
 .spl-title{
-  font-size:4rem;font-weight:900;letter-spacing:-.04em;line-height:1;
-  color:#fff;animation:glitch 5s infinite;
+  font-size:4.6rem;font-weight:900;letter-spacing:-.05em;line-height:1;
+  color:#fff;animation:glitch 3.5s infinite;
+  text-shadow:1px 0 rgba(255,40,0,.4),-1px 0 rgba(0,170,255,.3);
 }
 .spl-title::after{
   content:'';display:block;height:3px;background:#ff2800;
@@ -109,8 +110,8 @@ input[type="range"]::-moz-range-thumb{
 .ctrl-btn{
   background:rgba(5,5,8,.72);border:1px solid rgba(255,255,255,.18);
   color:rgba(255,255,255,.78);font-family:'Courier New',monospace;
-  font-size:.57rem;letter-spacing:.1em;text-transform:uppercase;
-  padding:.5rem .85rem;cursor:pointer;
+  font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+  padding:.52rem .9rem;cursor:pointer;
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   transition:all .15s;touch-action:manipulation;
 }
@@ -201,7 +202,7 @@ input[type="range"]::-moz-range-thumb{
   display:flex;align-items:flex-end;gap:2px;height:22px;pointer-events:none;
 }
 .ab{width:3px;background:#b4ff37;border-radius:1px;min-height:2px;
-  transition:height .08s linear;}
+  transition:height .06s linear;box-shadow:0 0 4px #b4ff37;}
 #audio-bar.hidden{display:none;}
 #error-banner{
   display:none;position:fixed;top:1rem;left:1rem;right:1rem;z-index:60;
@@ -429,213 +430,258 @@ let   _nnConnCount = 0;
 //  Recording: masterGain → streamDest → MediaStream merged with canvas video.
 //  Fallback: if MediaRecorder.addTrack fails (some iOS builds), video-only.
 
-const C_MINOR_PENTA = [
-  130.81,155.56,174.61,196.00,233.08,    // C3 Eb3 F3 G3 Bb3  ← starts one octave higher
-  261.63,311.13,349.23,392.00,466.16,    // C4 Eb4 F4 G4 Bb4
-  523.25,622.25,698.46,783.99,932.33     // C5 Eb5 F5 G5 Bb5
-]; // 15 notes — all above 130 Hz, clearly audible on iPhone/Android speakers
+// ═══════════════════════════════════════════════════════════════════════════
+// PHASE 1.5 — DRUM BEAT ENGINE  (break-beat / glitch-beat style)
+//
+//  Architecture: 16-step sequencer whose BPM is driven by scene motion energy.
+//    Still scene    → 88-105 BPM  CHILL  (sparse 4/4)
+//    Slow motion    → 105-128 BPM GROOVE (mid-tempo break)
+//    Active scene   → 128-150 BPM BREAK  (amen-style syncopation)
+//    Frantic motion → 150-172 BPM RAVE   (full glitch chaos)
+//  BPM is smoothed (τ≈1.5s) so tempo changes feel musical, not jarring.
+//  Pattern transitions happen only at bar boundaries (step 0).
+//
+//  All drums synthesised from scratch — no samples, no external deps:
+//    Kick   : exponential pitch decay 150→45 Hz + sub 60→30 Hz
+//    Snare  : bandpass noise burst + transient tone at 220→130 Hz
+//    HH-cl  : highpass noise (8 kHz+) with very short decay (35ms)
+//    HH-op  : same but longer decay (200ms)
+//    Glitch : resonant bandpass noise burst (Q=9, random 3-5 kHz)
+//
+//  Noise is pre-baked into AUDIO.noiseBuffer (1s white noise, allocated once).
+//  BufferSourceNode is cheap to create per hit; GC impact is negligible
+//  at max ~200 node creations/sec.
 
 const AUDIO = {
   ctx:        null,
   masterGain: null,
-  padGain:    null,
-  padFilter:  null,
-  thereOscs:  null,   // OscillatorNode[MAX_TRACKED]
-  thereGains: null,   // GainNode[MAX_TRACKED]
-  therePans:  null,   // StereoPannerNode[MAX_TRACKED]
-  thereFilts: null,   // BiquadFilterNode[MAX_TRACKED]
   analyser:   null,
-  freqBuf:    null,   // Uint8Array(32) — FFT data
-  barEls:     null,   // HTMLElement[8] — audio-bar divs
-  streamDest: null,   // MediaStreamDestination
+  freqBuf:    null,
+  barEls:     null,
+  streamDest: null,
+  noiseBuffer:null,   // pre-baked 1s white noise — reused by all noise drums
   ready:      false,
-  active:     true,   // default ON
-  kickLastMs: 0,
-  kickCoolMs: 200,
+  active:     true,
+};
+
+// 16-step patterns: kick / snare / hihat-closed / hihat-open / glitch
+// 1 = hit, 0 = rest. Each array is exactly 16 values.
+const DRUM = {
+  bpm:         100,
+  step:        0,
+  stepTime:    0,
+  pattern:     0,
+  nextPattern: 0,
+  active:      false,
+  // zone labels used in HUD
+  zones: ['CHILL','GROOVE','BREAK','RAVE'],
+  patterns: [
+    // ── 0: CHILL (88-105 BPM) ─────────────────────────────────────────
+    { kick:  [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+      snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+      hh:    [0,1,0,1, 0,1,0,1, 0,1,0,1, 0,1,0,1],
+      hho:   [0,0,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,0],
+      glitch:[0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1] },
+    // ── 1: GROOVE (105-128 BPM) ───────────────────────────────────────
+    { kick:  [1,0,0,0, 1,0,0,0, 1,0,1,0, 0,0,0,0],
+      snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,1,0],
+      hh:    [1,1,0,1, 1,1,0,1, 1,1,0,1, 1,1,0,1],
+      hho:   [0,0,0,0, 0,0,1,0, 0,0,0,0, 0,0,1,0],
+      glitch:[0,0,0,0, 0,0,0,0, 0,0,0,1, 0,0,0,0] },
+    // ── 2: BREAK (128-150 BPM) — Amen-style syncopation ──────────────
+    { kick:  [1,0,1,0, 0,0,0,0, 1,0,0,0, 0,0,1,0],
+      snare: [0,0,0,0, 1,0,0,1, 0,0,0,0, 1,1,0,0],
+      hh:    [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1],
+      hho:   [0,0,0,1, 0,0,0,0, 0,0,0,1, 0,0,0,0],
+      glitch:[0,0,0,0, 0,1,0,0, 0,0,0,0, 0,1,0,1] },
+    // ── 3: RAVE (150-172 BPM) — full glitch chaos ─────────────────────
+    { kick:  [1,0,1,1, 0,1,0,0, 1,1,0,0, 1,0,0,1],
+      snare: [0,0,0,0, 1,0,0,1, 0,1,0,0, 1,0,1,0],
+      hh:    [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,0],
+      hho:   [0,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1],
+      glitch:[0,1,0,0, 0,0,1,0, 0,1,0,1, 0,0,1,0] },
+  ],
 };
 
 function initAudio() {
   if (AUDIO.ready) return;
   try {
-    // Reuse ctx created synchronously in btn-start click handler.
-    // If somehow missing (e.g. called without a preceding click), try creating now.
     if (!AUDIO.ctx) {
       AUDIO.ctx = new (window.AudioContext || window.webkitAudioContext)();
     }
     const ctx = AUDIO.ctx;
     if (ctx.state === 'suspended') ctx.resume().catch(()=>{});
+
+    // Master gain → speakers + analyser + recording stream
     AUDIO.masterGain = ctx.createGain();
-    AUDIO.masterGain.gain.value = 0.70;
-
-    // ── THE CRITICAL CONNECTION: masterGain → speakers ─────────────────
-    // Without this line all audio only goes to the recording stream,
-    // never to the physical output — causing complete silence.
-    AUDIO.masterGain.connect(ctx.destination);
-
-    // ── Analyser for HUD visualizer ────────────────────────────────────
+    AUDIO.masterGain.gain.value = 0.78;
+    AUDIO.masterGain.connect(ctx.destination);    // ← speakers
     AUDIO.analyser = ctx.createAnalyser();
     AUDIO.analyser.fftSize = 64;
     AUDIO.freqBuf = new Uint8Array(32);
     AUDIO.masterGain.connect(AUDIO.analyser);
-
-    // ── MediaStream destination (for recording) ────────────────────────
     AUDIO.streamDest = ctx.createMediaStreamDestination();
-    AUDIO.masterGain.connect(AUDIO.streamDest);
+    AUDIO.masterGain.connect(AUDIO.streamDest);   // ← recording
 
-    // ── Ambient pad: two detuned sawtooth osc → filter → LFO → gain ──
-    const o1 = ctx.createOscillator();
-    const o2 = ctx.createOscillator();
-    const pFilt = ctx.createBiquadFilter();
-    const pGain = ctx.createGain();
-    const lfo   = ctx.createOscillator();
-    const lfoG  = ctx.createGain();
-    o1.type = 'sawtooth'; o1.frequency.value = 196.0;  // G3 — clearly audible on iPhone speakers
-    o2.type = 'sawtooth'; o2.frequency.value = 197.2;  // G3 + 11 cents detuned
-    pFilt.type = 'lowpass'; pFilt.frequency.value = 1400; pFilt.Q.value = 2.4;
-    lfo.type = 'sine'; lfo.frequency.value = 0.055;    // ~18s per sweep cycle
-    lfoG.gain.value = 320;
-    lfo.connect(lfoG); lfoG.connect(pFilt.frequency);
-    o1.connect(pFilt); o2.connect(pFilt);
-    pFilt.connect(pGain); pGain.connect(AUDIO.masterGain);
-    pGain.gain.value = 0.0; // starts silent, fades in via updateAudio
-    o1.start(); o2.start(); lfo.start();
-    AUDIO.padGain = pGain; AUDIO.padFilter = pFilt;
+    // Pre-bake 1 second of white noise (reused by all noise-based drums)
+    AUDIO.noiseBuffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const nd = AUDIO.noiseBuffer.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
 
-    // ── Theremin oscillator pool: one set per blob slot ────────────────
-    AUDIO.thereOscs  = [];
-    AUDIO.thereGains = [];
-    AUDIO.therePans  = [];
-    AUDIO.thereFilts = [];
-    for (let i = 0; i < MAX_TRACKED; i++) {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      const pan  = ctx.createStereoPanner();
-      const filt = ctx.createBiquadFilter();
-      osc.type = 'triangle';  // warmer than sine
-      filt.type = 'lowpass'; filt.frequency.value = 1200; filt.Q.value = 1.4;
-      osc.connect(filt); filt.connect(gain); gain.connect(pan);
-      pan.connect(AUDIO.masterGain);
-      osc.frequency.value = C_MINOR_PENTA[3]; // G3=196Hz default (silent until blob activates)
-      gain.gain.value = 0.0;
-      osc.start();
-      AUDIO.thereOscs.push(osc);
-      AUDIO.thereGains.push(gain);
-      AUDIO.therePans.push(pan);
-      AUDIO.thereFilts.push(filt);
-    }
+    // Cache HUD bar elements
+    AUDIO.barEls = Array.from({length:8}, (_,i) => document.getElementById('ab'+i));
 
-    // Cache bar DOM elements for fast HUD updates
-    AUDIO.barEls = Array.from({length:8},(_,i)=>document.getElementById('ab'+i));
+    // Startup chime: quick ascending 3-note sequence (lets user confirm audio)
+    const notes = [523, 659, 784]; // C5 E5 G5 — bright, phone-speaker audible
+    notes.forEach((freq, idx) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      o.connect(g); g.connect(AUDIO.masterGain);
+      const t0 = ctx.currentTime + idx * 0.10;
+      g.gain.setValueAtTime(0, t0);
+      g.gain.linearRampToValueAtTime(0.38, t0 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.15);
+      o.start(t0); o.stop(t0 + 0.18);
+    });
+
+    // Start drum sequencer
+    DRUM.step     = 0;
+    DRUM.stepTime = ctx.currentTime + 0.3; // small grace after chime
+    DRUM.active   = true;
 
     AUDIO.ready = true;
-    if (ctx.state === 'suspended') ctx.resume();
   } catch(e) {
     console.warn('Audio init failed:', e);
     AUDIO.active = false;
   }
 }
 
-function synthesizeKick(t) {
-  // Exponentially decaying sine: 150 Hz → 40 Hz in 90ms
+// ── Drum synthesis functions — all use AUDIO.noiseBuffer for noise ──────────
+
+function drumKick(t) {
   const ctx = AUDIO.ctx;
-  const osc  = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain); gain.connect(AUDIO.masterGain);
-  osc.frequency.setValueAtTime(150, t);
-  osc.frequency.exponentialRampToValueAtTime(40, t + 0.09);
-  gain.gain.setValueAtTime(1.0, t);
-  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
-  osc.start(t); osc.stop(t + 0.32);
+  // Main body: pitch sweep 150→45 Hz
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(AUDIO.masterGain);
+  o.frequency.setValueAtTime(150, t);
+  o.frequency.exponentialRampToValueAtTime(45, t + 0.07);
+  g.gain.setValueAtTime(1.1, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.26);
+  o.start(t); o.stop(t + 0.28);
+  // Sub thud: 60→28 Hz
+  const s = ctx.createOscillator(), sg = ctx.createGain();
+  s.connect(sg); sg.connect(AUDIO.masterGain);
+  s.frequency.setValueAtTime(60, t);
+  s.frequency.exponentialRampToValueAtTime(28, t + 0.09);
+  sg.gain.setValueAtTime(0.75, t);
+  sg.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+  s.start(t); s.stop(t + 0.16);
 }
 
-function synthesizeHihat(t) {
-  // White noise through highpass — very short click
+function drumSnare(t) {
   const ctx = AUDIO.ctx;
-  const buf  = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-  const src  = ctx.createBufferSource();
-  const filt = ctx.createBiquadFilter();
-  const gain = ctx.createGain();
-  src.buffer = buf;
-  filt.type = 'highpass'; filt.frequency.value = 7000;
-  src.connect(filt); filt.connect(gain); gain.connect(AUDIO.masterGain);
-  gain.gain.setValueAtTime(0.28, t);
-  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.055);
-  src.start(t);
+  // Noise body (bandpass at 2kHz)
+  const src = ctx.createBufferSource();
+  src.buffer = AUDIO.noiseBuffer;
+  const f = ctx.createBiquadFilter(), ng = ctx.createGain();
+  f.type = 'bandpass'; f.frequency.value = 2000; f.Q.value = 0.55;
+  src.connect(f); f.connect(ng); ng.connect(AUDIO.masterGain);
+  ng.gain.setValueAtTime(0.85, t);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+  src.start(t); src.stop(t + 0.18);
+  // Transient crack: tone sweep 220→130 Hz
+  const o = ctx.createOscillator(), og = ctx.createGain();
+  o.type = 'triangle'; o.connect(og); og.connect(AUDIO.masterGain);
+  o.frequency.setValueAtTime(220, t);
+  o.frequency.exponentialRampToValueAtTime(130, t + 0.06);
+  og.gain.setValueAtTime(0.55, t);
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+  o.start(t); o.stop(t + 0.09);
 }
 
-// Called every rAF frame. Updates theremin frequencies/gains, triggers
-// percussion from motion energy. All param changes use setTargetAtTime
-// to schedule smooth transitions (no audio-thread zipper noise).
-let _prevBlobActive = new Uint8Array(MAX_TRACKED); // 0/1 — for hihat on spawn
+function drumHH(t, open) {
+  const ctx = AUDIO.ctx;
+  const src = ctx.createBufferSource();
+  src.buffer = AUDIO.noiseBuffer;
+  const f = ctx.createBiquadFilter(), g = ctx.createGain();
+  f.type = 'highpass'; f.frequency.value = 8000;
+  src.connect(f); f.connect(g); g.connect(AUDIO.masterGain);
+  const decay = open ? 0.20 : 0.032;
+  g.gain.setValueAtTime(open ? 0.42 : 0.52, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + decay);
+  src.start(t); src.stop(t + decay + 0.01);
+}
+
+function drumGlitch(t) {
+  const ctx = AUDIO.ctx;
+  const src = ctx.createBufferSource();
+  src.buffer = AUDIO.noiseBuffer;
+  const f = ctx.createBiquadFilter(), g = ctx.createGain();
+  // High resonance bandpass (Q=9) at a random mid-high frequency → "zap" sound
+  f.type = 'bandpass';
+  f.frequency.value = 2800 + (((t * 1000) | 0) % 7) * 320; // pseudo-random freq
+  f.Q.value = 9;
+  src.connect(f); f.connect(g); g.connect(AUDIO.masterGain);
+  g.gain.setValueAtTime(0.68, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.028);
+  src.start(t); src.stop(t + 0.032);
+}
+
+// ── Drum sequencer ─────────────────────────────────────────────────────────
+const DRUM_LOOKAHEAD = 0.12; // schedule 120ms ahead (handles rAF frame drops)
+
+function scheduleDrums() {
+  if (!DRUM.active || !AUDIO.ready) return;
+  const ctx = AUDIO.ctx;
+  while (DRUM.stepTime < ctx.currentTime + DRUM_LOOKAHEAD) {
+    const s  = DRUM.step;
+    const p  = DRUM.patterns[DRUM.pattern];
+    const t  = DRUM.stepTime;
+    if (p.kick[s])   drumKick(t);
+    if (p.snare[s])  drumSnare(t);
+    if (p.hh[s])     drumHH(t, false);
+    if (p.hho[s])    drumHH(t, true);
+    if (p.glitch[s]) drumGlitch(t);
+    // Step duration recalculated from CURRENT bpm → smooth real-time tempo changes
+    DRUM.stepTime += 60.0 / DRUM.bpm / 4;
+    DRUM.step      = (DRUM.step + 1) % 16;
+    // Pattern transition at bar boundary (step 0) to avoid mid-pattern jumps
+    if (DRUM.step === 0 && DRUM.nextPattern !== DRUM.pattern) {
+      DRUM.pattern = DRUM.nextPattern;
+    }
+  }
+}
+
+function updateDrumTempo(energy, nBlobs) {
+  // energy ∈ [0,1] from depth-map average; nBlobs ∈ [0,14]
+  // Target BPM: 88 (still) → 172 (frantic motion with many blobs)
+  const target = 88 + energy * 68 + Math.min(nBlobs * 2, 16);
+  // Smooth over ~1.5s (tau = 1/0.04 frames at 60fps = 25 frames = ~420ms per time constant)
+  DRUM.bpm = DRUM.bpm * 0.96 + target * 0.04;
+  DRUM.bpm = Math.max(88, Math.min(172, DRUM.bpm));
+  // Select pattern zone (change takes effect at next bar boundary)
+  DRUM.nextPattern = DRUM.bpm < 105 ? 0 : DRUM.bpm < 128 ? 1 : DRUM.bpm < 150 ? 2 : 3;
+}
 
 function updateAudio(cW, cH, nowMs) {
   if (!AUDIO.ready || !AUDIO.active) return;
-  if (AUDIO.ctx.state === 'suspended') AUDIO.ctx.resume();
-  const now = AUDIO.ctx.currentTime;
-
-  // ── Theremin: update per-blob oscillators ─────────────────────────────
-  for (let ti = 0; ti < MAX_TRACKED; ti++) {
-    const blob  = _tracked[ti];
-    const osc   = AUDIO.thereOscs[ti];
-    const gain  = AUDIO.thereGains[ti];
-    const pan   = AUDIO.therePans[ti];
-    const filt  = AUDIO.thereFilts[ti];
-    const wasOn = _prevBlobActive[ti];
-
-    if (!blob.active || blob.age < 2) {
-      gain.gain.setTargetAtTime(0.0, now, 0.12);
-      _prevBlobActive[ti] = 0;
-      continue;
-    }
-
-    // Hihat on new blob spawn
-    if (!wasOn && blob.active) {
-      synthesizeHihat(now + 0.01);
-    }
-    _prevBlobActive[ti] = 1;
-
-    // Y → pitch (bottom=low, top=high; inverted so blob rising = pitch rising)
-    const yNorm   = 1.0 - blob.scy / cH;
-    const noteIdx = Math.max(0, Math.min(14, Math.round(yNorm * 14)));
-    osc.frequency.setTargetAtTime(C_MINOR_PENTA[noteIdx], now, 0.06);
-
-    // X → stereo pan
-    pan.pan.setTargetAtTime((blob.scx / cW) * 2 - 1, now, 0.06);
-
-    // Blob radius → filter brightness (bigger = brighter)
-    const cutoff = 400 + Math.min(blob.sr / 80, 1) * 3200;
-    filt.frequency.setTargetAtTime(cutoff, now, 0.10);
-
-    // Volume: age fade-in + TTL fade-out, capped at 0.18
-    const vol = 0.30 * Math.min(1, blob.age / 5) * Math.min(1, blob.ttl / 4);
-    gain.gain.setTargetAtTime(vol, now, 0.08);
-  }
-
-  // ── Pad breathes with average motion energy ────────────────────────────
+  if (AUDIO.ctx.state === 'suspended') AUDIO.ctx.resume().catch(()=>{});
+  // Compute motion energy from depth map (sampled every 6th pixel for speed)
   let depthSum = 0;
-  const dpStep = 6;
-  const dpCount = Math.floor(PROC_N / dpStep);
+  const dpStep = 6, dpCount = Math.floor(PROC_N / dpStep);
   for (let i = 0; i < PROC_N; i += dpStep) depthSum += _depthBuf[i];
   const energy = dpCount > 0 ? depthSum / dpCount : 0;
-  AUDIO.padGain.gain.setTargetAtTime(0.12 + energy * 0.24, now, 0.4);
-
-  // ── Kick on motion energy spike (with cooldown) ────────────────────────
-  if (energy > 0.32 && nowMs - AUDIO.kickLastMs > AUDIO.kickCoolMs) {
-    synthesizeKick(now + 0.005);
-    AUDIO.kickLastMs = nowMs;
-    AUDIO.kickCoolMs = 220 + ((nowMs * 0.37) % 180 | 0); // slight variation
-  }
-
-  // ── Update HUD frequency bars (8 of the 32 FFT bins) ─────────────────
+  // Count active blobs
+  let nBlobs = 0;
+  for (let ti = 0; ti < MAX_TRACKED; ti++) if (_tracked[ti].active) nBlobs++;
+  // Update tempo → schedule drum hits
+  updateDrumTempo(energy, nBlobs);
+  scheduleDrums();
+  // Update HUD frequency bars (FFT analyser)
   if (!STATE.isRecording && AUDIO.analyser && AUDIO.barEls) {
     AUDIO.analyser.getByteFrequencyData(AUDIO.freqBuf);
-    const barEl = AUDIO.barEls;
     for (let b = 0; b < 8; b++) {
-      // Sample every 4th bin for spread across spectrum
-      const v = AUDIO.freqBuf[b * 4] / 255;
-      barEl[b].style.height = (2 + v * 18) + 'px';
+      AUDIO.barEls[b].style.height = (2 + (AUDIO.freqBuf[b * 4] / 255) * 18) + 'px';
     }
   }
 }
@@ -1481,19 +1527,68 @@ function drawStyleG(ctx, cW, cH) {
   drawStyleB(ctx, cW, cH);
 }
 
-// ── 3.8  HUD — skipped during recording (clean video output) ─────────────────
+// ── 3.8  HUD — Gen-Z beat/glitch aesthetic; skipped during recording ─────────
 function drawHUD(ctx, cW, cH) {
-  if (STATE.isRecording) return;   // recording = no text in output
+  if (STATE.isRecording) return;
   ctx.save();
-  ctx.font='bold 12px "Courier New",monospace'; ctx.fillStyle='rgba(255,255,255,0.88)';
-  ctx.fillText('BLOBZ TRACKER',14,27);
-  let nActive=0; for(let ti=0;ti<MAX_TRACKED;ti++) if(_tracked[ti].active) nActive++;
-  ctx.font='9px "Courier New",monospace'; ctx.fillStyle='rgba(255,255,255,0.38)';
-  ctx.fillText('BLOBS:'+nActive+'  FPS:'+STATE.fps+
-    (TOUCH.active?'  [FOCUS]':'')+(AUDIO.active&&AUDIO.ready?'  ♫':''),14,41);
+
+  // Brand
+  ctx.font = 'bold 11px "Courier New",monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.fillText('BLOBZ', 14, 23);
+
+  // BPM — prominent, lime green
+  const bpm = DRUM.active ? Math.round(DRUM.bpm) : '--';
+  const zone = DRUM.active ? DRUM.zones[DRUM.pattern] : 'OFF';
+  ctx.font = 'bold 22px "Courier New",monospace';
+  ctx.fillStyle = '#b4ff37';
+  ctx.fillText(bpm, 14, 48);
+  ctx.font = '8px "Courier New",monospace';
+  ctx.fillStyle = 'rgba(180,255,55,0.55)';
+  ctx.fillText('BPM  ' + zone, 14, 58);
+
+  // Blob + FPS secondary
+  let nActive = 0;
+  for (let ti = 0; ti < MAX_TRACKED; ti++) if (_tracked[ti].active) nActive++;
+  ctx.font = '8px "Courier New",monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fillText('B:' + nActive + '  ' + STATE.fps + 'fps' + (TOUCH.active ? '  FOCUS' : ''), 14, 70);
+
+  // ── 16-step sequencer dots (bottom of screen) ──────────────────────
+  // Shows current pattern + playhead position — music production aesthetic
+  if (DRUM.active) {
+    const pat  = DRUM.patterns[DRUM.pattern];
+    const dW   = Math.floor((cW - 28) / 18); // dot width
+    const dH   = 5;
+    const dY   = cH - 16;
+    for (let i = 0; i < 16; i++) {
+      const x     = 14 + i * (dW + 2);
+      const isCur = (DRUM.step === i);
+      if (isCur) {
+        ctx.fillStyle = '#b4ff37';           // playhead: lime
+      } else if (pat.kick[i]) {
+        ctx.fillStyle = 'rgba(255,40,0,0.80)'; // kick: red
+      } else if (pat.snare[i]) {
+        ctx.fillStyle = 'rgba(255,255,255,0.65)'; // snare: white
+      } else if (pat.hh[i] || pat.hho[i]) {
+        ctx.fillStyle = 'rgba(80,220,255,0.45)'; // hihat: cyan
+      } else if (pat.glitch[i]) {
+        ctx.fillStyle = 'rgba(255,40,200,0.6)'; // glitch: pink
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,0.10)'; // empty
+      }
+      ctx.fillRect(x, dY, dW, dH);
+    }
+    // Bar dividers (every 4 steps)
+    ctx.fillStyle = 'rgba(255,255,255,0.20)';
+    for (let i = 4; i < 16; i += 4) {
+      ctx.fillRect(14 + i * (dW + 2) - 2, dY - 2, 1, dH + 4);
+    }
+  }
+
   // Show/hide audio bar DOM element
-  const audioBarEl=document.getElementById('audio-bar');
-  if(audioBarEl){audioBarEl.classList.toggle('hidden',!AUDIO.active||!AUDIO.ready);}
+  const audioBarEl = document.getElementById('audio-bar');
+  if (audioBarEl) audioBarEl.classList.toggle('hidden', !AUDIO.active || !AUDIO.ready);
   ctx.restore();
 }
 
@@ -1780,10 +1875,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('btn-audio').addEventListener('click',function(){
     AUDIO.active=!AUDIO.active;
+    DRUM.active=AUDIO.active;   // drums follow audio toggle
     this.classList.toggle('on',AUDIO.active);
     if(AUDIO.ready){
-      // Fade master gain to zero when muted, restore when unmuted
-      AUDIO.masterGain.gain.setTargetAtTime(AUDIO.active?0.55:0.0,AUDIO.ctx.currentTime,0.15);
+      AUDIO.masterGain.gain.setTargetAtTime(AUDIO.active?0.78:0.0,AUDIO.ctx.currentTime,0.15);
+      // On re-enable: re-anchor step time so drums restart cleanly
+      if(AUDIO.active){DRUM.stepTime=AUDIO.ctx.currentTime+0.05;}
     }
     const barEl=document.getElementById('audio-bar');
     if(barEl) barEl.classList.toggle('hidden',!AUDIO.active);
