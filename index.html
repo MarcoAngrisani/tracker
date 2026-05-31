@@ -189,6 +189,8 @@ input[type="range"]::-moz-range-thumb{
   pointer-events:none;
 }
 #settings-panel.open{transform:translateY(0);pointer-events:auto;}
+.tune-head{font-weight:900;font-size:1.4rem;letter-spacing:-.02em;margin-bottom:.8rem;color:#fff;}
+.tune-sect{font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.3);margin:.6rem 0 .3rem;}
 #settings-panel .ctrl-row{margin-bottom:.8rem;}
 .toggle-row{display:flex;gap:.5rem;margin-top:.5rem;}
 .toggle-btn{
@@ -276,6 +278,9 @@ input[type="range"]::-moz-range-thumb{
 </div>
 
 <div id="settings-panel">
+  <!-- Effect name header -->
+  <div class="tune-head" id="tune-head">ORBIT</div>
+  <!-- Common controls (always visible) -->
   <div class="ctrl-row">
     <div class="ctrl-label">Motion Sensitivity <span id="lv-mot">20</span></div>
     <input type="range" id="lr-mot" min="5" max="60" value="20" step="1">
@@ -288,10 +293,8 @@ input[type="range"]::-moz-range-thumb{
     <div class="ctrl-label">Min Blob Size <span id="lv-min">12</span></div>
     <input type="range" id="lr-min" min="4" max="120" value="12" step="1">
   </div>
-  <div class="ctrl-row">
-    <div class="ctrl-label">Noise <span id="lv-noise">0</span></div>
-    <input type="range" id="lr-noise" min="0" max="40" value="0" step="1">
-  </div>
+  <!-- Per-effect controls injected here dynamically -->
+  <div id="tune-dynamic"></div>
   <div class="toggle-row">
     <button class="toggle-btn on" id="btn-audio">AUDIO</button>
     <button class="toggle-btn on" id="btn-vig">VIGNETTE</button>
@@ -301,11 +304,6 @@ input[type="range"]::-moz-range-thumb{
 <div id="touch-hint">
   <div class="hint-icon">&#128070;</div>
   <div class="hint-txt">Touch to focus tracking</div>
-</div>
-<div class="ab" id="ab1"></div>
-  <div class="ab" id="ab2"></div><div class="ab" id="ab3"></div>
-  <div class="ab" id="ab4"></div><div class="ab" id="ab5"></div>
-  <div class="ab" id="ab6"></div><div class="ab" id="ab7"></div>
 </div>
 <div id="error-banner"></div>
 
@@ -443,236 +441,74 @@ let   _nnConnCount = 0;
 //  at max ~200 node creations/sec.
 
 const AUDIO = {
-  ctx:        null,
-  masterGain: null,
-  analyser:   null,
-  freqBuf:    null,
-  barEls:     null,
-  streamDest: null,
-  noiseBuffer:null,   // pre-baked 1s white noise — reused by all noise drums
-  ready:      false,
-  active:     true,
-  userMuted:  false,   // toggled by AUDIO button in TUNE panel
+  ctx:         null,
+  masterGain:  null,     // global output → speakers + recording
+  ready:       false,
+  active:      true,
+  userMuted:   false,
+  noiseBuffer: null,     // pre-baked white noise for percussion + texture
+  streamDest:  null,     // MediaStreamDestination for recording
+
+  // ── Ambient layer node refs (created once in initAudio) ──
+  padOsc:      null,     // array of detuned oscillators (the warm chord bed)
+  padGain:     null,     // pad master gain
+  padFilter:   null,     // slow breathing lowpass on the pad
+  padLFO:      null,     // LFO sweeping the pad filter
+  wowLFO:      null,     // slow pitch wobble (tape wow/flutter) → all osc detune
+  melOsc:      null,     // melody voice oscillator
+  melGain:     null,     // melody voice gain (per-note envelope)
+  melFilter:   null,     // gentle lowpass on melody
+  textureGain: null,     // gain for the bright "digital scratch" texture hits
+
+  // ── Drum bus gains (progressive fade-in by motion) ──
+  kickBus:     null,
+  snareBus:    null,
+  hatBus:      null,
+  glitchBus:   null,
 };
 
-// ═══════════════════════════════════════════════════════════════════════
-// DRUM STATE MACHINE — DJ Shadow style evolving beat engine
-//
-// 8 states × probabilistic transitions — the rhythm thinks for itself.
-// No two bars sound identical. Inspired by DJ Shadow:
-//   Long slow builds (CHILL/HALF at 55 BPM) → sudden CHAOS (210 BPM) →
-//   abrupt BREAK (silence) → ROLL (snare crescendo) → crash back in.
-//
-// BPM range: 55 (HALF half-time) → 215 (CHAOS frantic)
-// Transitions: instant BPM jumps (60% of transitions) for DJ-drop feel.
-// Each bar: pattern re-generated from probabilistic tendencies
-//           → same state evolves, never repeats identically.
-// Scene motion gently nudges (does NOT directly control) the state timing.
+// ── Musical material ─────────────────────────────────────────────────────────
+// A minor pentatonic across 3 octaves — warm, nostalgic, always consonant.
+const SCALE_HZ = [
+  // A2  C3   D3   E3   G3
+  110.00, 130.81, 146.83, 164.81, 196.00,
+  // A3  C4   D4   E4   G4
+  220.00, 261.63, 293.66, 329.63, 392.00,
+  // A4  C5   D5   E5   G5
+  440.00, 523.25, 587.33, 659.25, 783.99
+];
+// Chord for the pad: A minor add9 voicing (A, C, E, B) — warm, slightly open.
+const PAD_CHORD_HZ = [110.00, 130.81, 164.81, 246.94];
 
+// ── Drum / melody state machine ───────────────────────────────────────────────
+// Replaces the old aggressive DJ-Shadow engine. The beat is now a *progressive
+// layer* that fades in with motion, sitting under an always-present ambient bed.
 const DRUM = {
-  bpm:          100,
-  targetBpm:    100,   // BPM lerp target for smooth slides (40% of transitions)
-  step:         0,
-  stepTime:     0,
-  state:        'GROOVE',
-  barsLeft:     4,
-  bar:          0,
-  stutterLen:   4,
-  stutterPos:   0,
-  pendingCrash: false,  // crash cymbal on first beat after BREAK
-  active:       false,
-  _wantState:   null,   // motion-requested next state
-  // Live 16-step pattern (recomputed each bar — typed arrays, no GC)
-  live: {
-    kick:   new Uint8Array(16),
-    snare:  new Uint8Array(16),
-    hh:     new Uint8Array(16),
-    hho:    new Uint8Array(16),
-    glitch: new Uint8Array(16),
-  },
+  bpm:        72,       // slow BoC tempo; nudged by motion within a narrow range
+  step:       0,
+  stepTime:   0,
+  active:     false,
+  intensity:  0,        // 0..1 smoothed motion intensity → drives drum-bus gains
+  melTime:    0,        // next melody-note scheduling time
+  melIdx:     7,        // current melody scale index (starts mid-range)
+  // Fixed, gentle 16-step skeleton. Density is modulated by `intensity`, not
+  // by switching patterns. Kick on beats, soft hats, occasional snare.
+  patKick:   [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,1,0],
+  patSnare:  [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+  patHat:    [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,1],
+  patGlitch: [0,0,0,0, 0,0,0,0, 0,0,0,1, 0,0,0,0],
 };
 
-// ── Pattern tendencies: hit probability per 16th-note step per instrument ────
-// 16 floats per instrument; sampled with Math.random() each bar.
-// Produces natural variation while maintaining rhythmic identity per state.
-const _TEND = {
-  CHILL:   { // minimal, half-time feel, very spacious
-    kick:   [0.88,0,0,0,      0,0,0,0,      0.75,0,0,0,      0,0,0,0],
-    snare:  [0,0,0,0,         0.85,0,0,0,   0,0,0,0,         0.90,0,0,0],
-    hh:     [0,0.50,0,0,      0,0.50,0,0,   0,0.50,0,0,      0,0.50,0,0],
-    hho:    [0,0,0,0,         0,0,0,0.30,   0,0,0,0,         0,0,0,0],
-    glitch: [0,0,0,0,         0,0,0,0,      0,0,0,0,         0,0,0,0.10],
-  },
-  GROOVE:  { // classic breakbeat, mid-tempo
-    kick:   [0.92,0,0,0,      0.22,0,0.28,0, 0.88,0,0,0,    0,0,0.15,0],
-    snare:  [0,0,0,0,         0.90,0,0,0,   0,0,0.20,0,      0.92,0,0.18,0],
-    hh:     [0.82,0,0.82,0,   0.82,0,0.82,0, 0.82,0,0.82,0, 0.82,0,0.82,0],
-    hho:    [0,0,0,0,         0,0,0.28,0,   0,0,0,0,         0,0,0.28,0],
-    glitch: [0,0,0,0,         0,0,0,0,      0,0,0,0,         0,0,0,0.18],
-  },
-  PEAK:    { // dense amen-style, everything in
-    kick:   [0.95,0,0.45,0,   0,0,0,0,      0.90,0,0.30,0,   0,0.20,0,0],
-    snare:  [0,0,0,0,         0.92,0,0,0.40, 0,0,0,0,        0.92,0.35,0,0],
-    hh:     [1,0.80,1,0.80,   1,0.80,1,0.80, 1,0.80,1,0.80, 1,0.80,1,0.80],
-    hho:    [0,0,0,0.25,      0,0,0,0,      0,0,0,0.25,      0,0,0,0],
-    glitch: [0,0,0,0,         0,0.35,0,0,   0,0,0,0,         0,0.35,0,0.55],
-  },
-  BREAK:   { // complete silence — all zeros
-    kick:   [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
-    snare:  [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
-    hh:     [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
-    hho:    [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
-    glitch: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
-  },
-  ROLL:    { // snare crescendo: density increases over 16 steps
-    kick:   [0.90,0,0,0,      0,0,0,0,      0,0,0,0,         0,0,0,0],
-    snare:  [0,0,0,0,         0.10,0,0.18,0, 0.35,0,0.50,0,  0.72,1,1,1],
-    hh:     [0.50,0.72,0.88,0.95, 1,1,1,1,  1,1,1,1,         1,1,1,1],
-    hho:    [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
-    glitch: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
-  },
-  HALF:    { // half-time: kick only on beat 1, very spacious feel
-    kick:   [0.92,0,0,0,      0,0,0,0,      0,0,0,0,         0,0,0,0],
-    snare:  [0,0,0,0,         0,0,0,0,      0.90,0,0,0,      0,0,0,0],
-    hh:     [0.70,0.82,0.70,0.78, 0.70,0.85,0.70,0.90, 0.70,0.82,0.70,0.78, 0.70,0.85,0.70,0.95],
-    hho:    [0,0,0,0,         0,0,0,0.30,   0,0,0,0,         0,0,0,0.48],
-    glitch: [0,0,0,0,         0,0,0,0,      0,0,0,0,         0,0,0.32,0],
-  },
-  CHAOS:   { // random density — unpredictable, frantic
-    kick:   [0.55,0.15,0.42,0.10, 0.22,0.38,0.15,0.28, 0.48,0.22,0.35,0.12, 0.38,0.10,0.28,0.45],
-    snare:  [0.22,0.10,0.18,0.38, 0.48,0.10,0.32,0.52, 0.15,0.42,0.12,0.38, 0.52,0.18,0.48,0.22],
-    hh:     [1,0.80,1,0.72,       1,0.88,1,0.85,        1,0.75,1,0.90,       1,0.85,1,0.62],
-    hho:    [0,0,0.22,0,          0,0.28,0,0,           0,0,0.22,0,          0,0,0,0.38],
-    glitch: [0.38,0,0.22,0,       0.32,0,0.42,0,        0.28,0.42,0,0.32,    0.22,0.48,0,0.38],
-  },
-  STUTTER: { // placeholder — filled dynamically by generatePattern }
-    kick:   [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
-    snare:  [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
-    hh:     [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
-    hho:    [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
-    glitch: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
-  },
-};
+// ── Blob-motion sampling for audio link ───────────────────────────────────────
+const _prevBlobX  = new Float32Array(MAX_TRACKED);
+const _prevBlobY  = new Float32Array(MAX_TRACKED);
+const _prevBlobOn = new Uint8Array(MAX_TRACKED);
+let   _avgBlobSpeed = 0;
+let   _primaryBlobY = 0.5;   // normalized Y of largest blob → melody pitch
 
-// Per-state BPM range [min, max] — null means "keep current"
-const _STATE_BPM = {
-  CHILL:   [55,  82],   GROOVE: [88, 118],  PEAK:   [128, 158],
-  BREAK:   [null, null], STUTTER:[95, 185], ROLL:   [120, 160],
-  HALF:    [55,  88],   CHAOS:  [155, 215],
-};
-
-// Per-state section length [min bars, max bars]
-const _SECTION_BARS = {
-  CHILL:  [4,16], GROOVE:[2,8],  PEAK:  [2,6],
-  BREAK:  [1,4],  STUTTER:[1,3], ROLL:  [1,2],
-  HALF:   [4,10], CHAOS: [1,3],
-};
-
-// Weighted transition table: [nextState, weight]
-const _TRANSITIONS = {
-  CHILL:   [['GROOVE',44],['BREAK',16],['HALF',24],['STUTTER',16]],
-  GROOVE:  [['PEAK',30],['CHILL',20],['STUTTER',18],['BREAK',14],['HALF',12],['CHAOS',6]],
-  PEAK:    [['GROOVE',26],['BREAK',32],['CHAOS',22],['STUTTER',20]],
-  BREAK:   [['CHILL',20],['GROOVE',26],['PEAK',18],['ROLL',36]],
-  STUTTER: [['GROOVE',48],['PEAK',32],['BREAK',20]],
-  ROLL:    [['PEAK',60],['CHAOS',28],['BREAK',12]],
-  HALF:    [['GROOVE',38],['BREAK',24],['CHILL',22],['PEAK',16]],
-  CHAOS:   [['BREAK',48],['GROOVE',28],['PEAK',24]],
-};
-
-function _weightedPick(opts) {
-  let total = 0;
-  for (const [,w] of opts) total += w;
-  let r = Math.random() * total;
-  for (const [st, wt] of opts) { r -= wt; if (r <= 0) return st; }
-  return opts[0][0];
-}
-
-// ── Pattern generator — called at bar boundaries ──────────────────────────────
-// Zero object allocations (writes into pre-allocated DRUM.live typed arrays).
-function generatePattern(state) {
-  const p = DRUM.live;
-
-  if (state === 'STUTTER') {
-    // Short loop fragment (2-4 steps) repeated across 16 steps
-    const sl = 2 + (Math.random() < 0.5 ? 1 : 0) + (Math.random() < 0.35 ? 1 : 0);
-    DRUM.stutterLen = sl;
-    DRUM.stutterPos = 0;
-    const hK = Math.random() < 0.80;
-    const hS = Math.random() < 0.45;
-    const hH = Math.random() < 0.85;
-    const hG = Math.random() < 0.60;
-    for (let i = 0; i < 16; i++) {
-      const mod = i % sl;
-      p.kick[i]   = (hK && mod === 0) ? 1 : 0;
-      p.snare[i]  = (hS && mod === Math.floor(sl / 2)) ? 1 : 0;
-      p.hh[i]     = (hH && mod === (sl > 2 ? 1 : 0)) ? 1 : 0;
-      p.hho[i]    = 0;
-      p.glitch[i] = (hG && mod === sl - 1) ? 1 : 0;
-    }
-    return;
-  }
-
-  const tend = _TEND[state] || _TEND.GROOVE;
-  for (let i = 0; i < 16; i++) {
-    p.kick[i]   = Math.random() < tend.kick[i]   ? 1 : 0;
-    p.snare[i]  = Math.random() < tend.snare[i]  ? 1 : 0;
-    p.hh[i]     = Math.random() < tend.hh[i]     ? 1 : 0;
-    p.hho[i]    = Math.random() < tend.hho[i]    ? 1 : 0;
-    p.glitch[i] = Math.random() < tend.glitch[i] ? 1 : 0;
-  }
-}
-
-// ── State transition ──────────────────────────────────────────────────────────
-function transitionState() {
-  const prev = DRUM.state;
-  // Motion-driven override: if scene motion wants a specific state, honor it 70% of the time
-  let next;
-  if (DRUM._wantState && Math.random() < 0.70) {
-    next = DRUM._wantState;
-    DRUM._wantState = null;
-  } else {
-    next = _weightedPick(_TRANSITIONS[prev] || [['GROOVE',100]]);
-  }
-  DRUM.state = next;
-
-  // Section length: random within state range
-  const [minB, maxB] = _SECTION_BARS[next] || [2,6];
-  DRUM.barsLeft = minB + Math.floor(Math.random() * (maxB - minB + 1));
-
-  // BPM: instant jump (DJ-drop feel) 60% of the time, smooth slide otherwise
-  const [bMin, bMax] = _STATE_BPM[next];
-  const newBpm = bMin !== null ? bMin + Math.random() * (bMax - bMin) : DRUM.bpm;
-  if (bMin !== null) {
-    if (Math.random() < 0.62 || next === 'CHAOS' || next === 'BREAK' || next === 'CHILL') {
-      DRUM.bpm = newBpm;           // instant jump
-    } else {
-      DRUM.targetBpm = newBpm;     // will slide over next few bars
-    }
-  }
-
-  // Sound effects on break transitions
-  const t = AUDIO.ctx.currentTime + 0.02;
-  if (next === 'BREAK' && prev !== 'BREAK') drumVinylStop(t);
-  if (prev === 'BREAK' && next !== 'BREAK') {
-    drumVinylStart(t);
-    DRUM.pendingCrash = true; // crash cymbal on downbeat of new section
-  }
-
-  DRUM.step = 0;
-  generatePattern(next);
-}
-
-// ── Blob motion tracking for audio link ──────────────────────────────────────
-// Stores previous centroids to compute average blob speed each audio frame.
-const _prevBlobX = new Float32Array(MAX_TRACKED);
-const _prevBlobY = new Float32Array(MAX_TRACKED);
-const _prevBlobOn = new Uint8Array(MAX_TRACKED);  // was-active last frame
-let   _avgBlobSpeed = 0;   // smoothed average speed (px/frame)
-
-// Returns {nBlobs, speed, spawned} and triggers snare on new spawns.
 function sampleBlobMotion() {
   let n = 0, speedSum = 0, spawned = 0;
+  let biggestR = -1, biggestY = _primaryBlobY * 1;
   for (let ti = 0; ti < MAX_TRACKED; ti++) {
     const t = _tracked[ti];
     if (t.active && t.age >= 2) {
@@ -680,112 +516,115 @@ function sampleBlobMotion() {
       if (_prevBlobOn[ti]) {
         const dx = t.scx - _prevBlobX[ti], dy = t.scy - _prevBlobY[ti];
         speedSum += Math.sqrt(dx*dx + dy*dy);
-      } else {
-        spawned++;  // newly confirmed blob
-      }
+      } else { spawned++; }
       _prevBlobX[ti] = t.scx; _prevBlobY[ti] = t.scy; _prevBlobOn[ti] = 1;
-    } else {
-      _prevBlobOn[ti] = 0;
-    }
+      if (t.sr > biggestR) { biggestR = t.sr; biggestY = t.scy; }
+    } else { _prevBlobOn[ti] = 0; }
   }
   const rawSpeed = n > 0 ? speedSum / n : 0;
-  _avgBlobSpeed = _avgBlobSpeed * 0.7 + rawSpeed * 0.3;  // smooth
+  _avgBlobSpeed = _avgBlobSpeed * 0.7 + rawSpeed * 0.3;
+  if (biggestR >= 0 && compositeCanvas) {
+    _primaryBlobY = biggestY / compositeCanvas.height;
+  }
   return { nBlobs: n, speed: _avgBlobSpeed, spawned };
 }
 
-// ── Scene energy influence — DIRECTLY driven by blob motion ───────────────────
-function influenceDrumState(energy, nBlobs, speed, spawned) {
-  // ── SPAWN → instant snare crack (audible "blob appeared") ──
-  if (spawned > 0 && AUDIO.ready) {
-    drumSnare(AUDIO.ctx.currentTime + 0.01, 0.5 + Math.min(spawned*0.15, 0.4));
-  }
-
-  // ── BLOB SPEED → target BPM (the core link) ──
-  // speed 0 (still) → 60 BPM ; speed 25+ px/frame (fast) → 175 BPM
-  const speedBpm = 60 + Math.min(speed / 25, 1) * 115;
-  // Blend with blob-count contribution (more blobs = more energetic)
-  const targetBpm = speedBpm + Math.min(nBlobs * 3, 18);
-  // Slew toward target — fast enough to FEEL the link, smooth enough to stay musical
-  DRUM.bpm = DRUM.bpm * 0.90 + targetBpm * 0.10;
-  DRUM.bpm = Math.max(52, Math.min(195, DRUM.bpm));
-
-  // ── BLOB SPEED → state selection (drives pattern density) ──
-  // Force state to match motion level (overrides random walk when motion is clear)
-  let wantState;
-  if (nBlobs === 0)        wantState = 'CHILL';
-  else if (speed < 2.0)    wantState = 'HALF';
-  else if (speed < 6.0)    wantState = 'GROOVE';
-  else if (speed < 13.0)   wantState = 'PEAK';
-  else                     wantState = 'CHAOS';
-  // Switch at bar boundary feel: nudge barsLeft down so transition happens soon
-  if (wantState !== DRUM.state && DRUM.state !== 'BREAK' && DRUM.state !== 'ROLL') {
-    DRUM._wantState = wantState;
-    if (DRUM.barsLeft > 1 && Math.random() < 0.5) DRUM.barsLeft = 1;
-  }
-}
-
-// ── Transition sound effects ──────────────────────────────────────────────────
-
-
 // ─────────────────────────────────────────────────────────────────────────────
-// DRUM SYNTHESIS + AUDIO INITIALISATION
-// All synthesis functions accept vel (velocity, 0..1.3) so the scheduler can
-// humanise dynamics. AUDIO.noiseBuffer is pre-baked once in initAudio.
+// AUDIO INITIALISATION — builds the ambient bed + drum buses once.
 // ─────────────────────────────────────────────────────────────────────────────
-
 function initAudio() {
   if (AUDIO.ready) return;
   try {
-    if (!AUDIO.ctx) {
-      AUDIO.ctx = new (window.AudioContext || window.webkitAudioContext)();
-    }
+    if (!AUDIO.ctx) AUDIO.ctx = new (window.AudioContext || window.webkitAudioContext)();
     const ctx = AUDIO.ctx;
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    if (ctx.state === 'suspended') ctx.resume().catch(()=>{});
 
-    // masterGain → speakers + analyser + recording stream
+    // Master → speakers + recording (NO master lowpass — keep bright textures)
     AUDIO.masterGain = ctx.createGain();
-    AUDIO.masterGain.gain.value = 0.78;
-    AUDIO.masterGain.connect(ctx.destination);       // ← SPEAKERS
-
-    AUDIO.analyser = ctx.createAnalyser();
-    AUDIO.analyser.fftSize = 64;
-    AUDIO.freqBuf = new Uint8Array(32);
-    AUDIO.masterGain.connect(AUDIO.analyser);
-
+    AUDIO.masterGain.gain.value = 0.0;   // fades up via motion link
+    AUDIO.masterGain.connect(ctx.destination);
     AUDIO.streamDest = ctx.createMediaStreamDestination();
-    AUDIO.masterGain.connect(AUDIO.streamDest);      // ← RECORDING
+    AUDIO.masterGain.connect(AUDIO.streamDest);
 
-    // Pre-bake 1 second of white noise (reused by all noise drums → zero GC)
+    // Pre-bake 1s white noise
     AUDIO.noiseBuffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const nd = AUDIO.noiseBuffer.getChannelData(0);
-    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    for (let i = 0; i < nd.length; i++) nd[i] = Math.random()*2 - 1;
 
-    // Cache HUD bar elements
-    AUDIO.barEls = Array.from({length:8}, (_,i) => document.getElementById('ab'+i));
+    // ── WOW/FLUTTER LFO: very slow pitch drift, routed to all osc detune ──
+    AUDIO.wowLFO = ctx.createOscillator();
+    AUDIO.wowLFO.type = 'sine';
+    AUDIO.wowLFO.frequency.value = 0.18;   // ~5.5s cycle
+    const wowAmt = ctx.createGain();
+    wowAmt.gain.value = 6;                  // ±6 cents
+    AUDIO.wowLFO.connect(wowAmt);
 
-    // ── Boot drum machine ──────────────────────────────────────────────
-    DRUM.bpm       = 92;
-    DRUM.targetBpm = 92;
-    DRUM.step      = 0;
-    DRUM.bar       = 0;
-    DRUM.barsLeft  = 4;
-    DRUM.state     = 'GROOVE';
-    DRUM.pendingCrash = false;
-    generatePattern('GROOVE');
+    // ── PAD: warm detuned chord bed through a slow breathing lowpass ──
+    AUDIO.padGain = ctx.createGain();
+    AUDIO.padGain.gain.value = 0.34;
+    AUDIO.padFilter = ctx.createBiquadFilter();
+    AUDIO.padFilter.type = 'lowpass';
+    AUDIO.padFilter.frequency.value = 900;
+    AUDIO.padFilter.Q.value = 0.7;
+    AUDIO.padFilter.connect(AUDIO.padGain);
+    AUDIO.padGain.connect(AUDIO.masterGain);
 
-    // Startup accent: two quick hits so user can confirm audio (C5 + G5)
-    [523.25, 783.99].forEach((freq, idx) => {
-      const o = ctx.createOscillator(), g = ctx.createGain();
-      o.type = 'sine'; o.frequency.value = freq;
-      o.connect(g); g.connect(AUDIO.masterGain);
-      const t0 = ctx.currentTime + 0.08 + idx * 0.12;
-      g.gain.setValueAtTime(0, t0);
-      g.gain.linearRampToValueAtTime(0.36, t0 + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.14);
-      o.start(t0); o.stop(t0 + 0.16);
+    AUDIO.padLFO = ctx.createOscillator();
+    AUDIO.padLFO.type = 'sine';
+    AUDIO.padLFO.frequency.value = 0.05;    // 20s breathing cycle
+    const padLFOAmt = ctx.createGain();
+    padLFOAmt.gain.value = 650;             // sweep 900±650 Hz
+    AUDIO.padLFO.connect(padLFOAmt);
+    padLFOAmt.connect(AUDIO.padFilter.frequency);
+
+    // Pad oscillators: each chord note doubled with slight detune for warmth
+    AUDIO.padOsc = [];
+    PAD_CHORD_HZ.forEach((hz) => {
+      [-7, +7].forEach((detune) => {
+        const o = ctx.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.value = hz;
+        o.detune.value = detune;
+        wowAmt.connect(o.detune);            // tape wobble
+        const og = ctx.createGain();
+        og.gain.value = 0.16;
+        o.connect(og); og.connect(AUDIO.padFilter);
+        o.start();
+        AUDIO.padOsc.push(o);
+      });
     });
 
-    DRUM.stepTime = ctx.currentTime + 0.38;  // start drums after accent
+    // ── MELODY voice: triangle through gentle lowpass, per-note envelope ──
+    AUDIO.melGain = ctx.createGain();
+    AUDIO.melGain.gain.value = 0.0;          // envelope per note
+    AUDIO.melFilter = ctx.createBiquadFilter();
+    AUDIO.melFilter.type = 'lowpass';
+    AUDIO.melFilter.frequency.value = 2200;
+    AUDIO.melFilter.Q.value = 0.8;
+    AUDIO.melOsc = ctx.createOscillator();
+    AUDIO.melOsc.type = 'triangle';
+    AUDIO.melOsc.frequency.value = SCALE_HZ[7];  // mid-range start
+    wowAmt.connect(AUDIO.melOsc.detune);
+    AUDIO.melOsc.connect(AUDIO.melFilter);
+    AUDIO.melFilter.connect(AUDIO.melGain);
+    AUDIO.melGain.connect(AUDIO.masterGain);
+    AUDIO.melOsc.start();
+
+    // ── DRUM BUSES: each percussion layer has its own gain (motion fade-in) ──
+    AUDIO.kickBus   = ctx.createGain(); AUDIO.kickBus.gain.value   = 0;
+    AUDIO.snareBus  = ctx.createGain(); AUDIO.snareBus.gain.value  = 0;
+    AUDIO.hatBus    = ctx.createGain(); AUDIO.hatBus.gain.value    = 0;
+    AUDIO.glitchBus = ctx.createGain(); AUDIO.glitchBus.gain.value = 0;
+    AUDIO.kickBus.connect(AUDIO.masterGain);
+    AUDIO.snareBus.connect(AUDIO.masterGain);
+    AUDIO.hatBus.connect(AUDIO.masterGain);
+    AUDIO.glitchBus.connect(AUDIO.masterGain);
+
+    AUDIO.wowLFO.start(); AUDIO.padLFO.start();
+
+    // Boot the sequencer clock
+    DRUM.stepTime = ctx.currentTime + 0.2;
+    DRUM.melTime  = ctx.currentTime + 0.5;
     DRUM.active   = true;
     AUDIO.ready   = true;
   } catch(e) {
@@ -794,224 +633,177 @@ function initAudio() {
   }
 }
 
-// ── drumKick: exponential pitch drop 155→42 Hz + sub thud 62→28 Hz ──────────
+// ── Percussion synths — now routed through per-layer buses (not masterGain) ───
+// Drums kept punchy/bright (sharp transients preserved as requested) but their
+// BUS gain is faded by motion intensity, so they enter progressively.
+
 function drumKick(t, vel=1.0) {
   const ctx = AUDIO.ctx;
   const o = ctx.createOscillator(), g = ctx.createGain();
-  o.connect(g); g.connect(AUDIO.masterGain);
-  o.frequency.setValueAtTime(155, t);
-  o.frequency.exponentialRampToValueAtTime(42, t + 0.07);
-  g.gain.setValueAtTime(1.10 * vel, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.26);
-  o.start(t); o.stop(t + 0.28);
-  const s = ctx.createOscillator(), sg = ctx.createGain();
-  s.connect(sg); sg.connect(AUDIO.masterGain);
-  s.frequency.setValueAtTime(62, t);
-  s.frequency.exponentialRampToValueAtTime(28, t + 0.09);
-  sg.gain.setValueAtTime(0.70 * vel, t);
-  sg.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
-  s.start(t); s.stop(t + 0.16);
+  o.connect(g); g.connect(AUDIO.kickBus);
+  o.frequency.setValueAtTime(140, t);
+  o.frequency.exponentialRampToValueAtTime(45, t + 0.08);
+  g.gain.setValueAtTime(1.0*vel, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.30);
+  o.start(t); o.stop(t + 0.32);
 }
 
-// ── drumKickGlitch: pitch UP 42→360 Hz (alien glitch feel) ──────────────────
-function drumKickGlitch(t, vel=1.0) {
-  const ctx = AUDIO.ctx;
-  const o = ctx.createOscillator(), g = ctx.createGain();
-  o.type = 'sawtooth';
-  o.connect(g); g.connect(AUDIO.masterGain);
-  o.frequency.setValueAtTime(42, t);
-  o.frequency.exponentialRampToValueAtTime(360, t + 0.04);
-  o.frequency.exponentialRampToValueAtTime(48, t + 0.13);
-  g.gain.setValueAtTime(0.80 * vel, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-  o.start(t); o.stop(t + 0.20);
-}
-
-// ── drumSnare: bandpass noise body + transient tone crack ────────────────────
 function drumSnare(t, vel=1.0) {
   const ctx = AUDIO.ctx;
-  const src = ctx.createBufferSource();
-  src.buffer = AUDIO.noiseBuffer;
+  const src = ctx.createBufferSource(); src.buffer = AUDIO.noiseBuffer;
   const f = ctx.createBiquadFilter(), ng = ctx.createGain();
-  f.type = 'bandpass'; f.frequency.value = 1900; f.Q.value = 0.55;
-  src.connect(f); f.connect(ng); ng.connect(AUDIO.masterGain);
-  ng.gain.setValueAtTime(0.80 * vel, t);
-  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
-  src.start(t); src.stop(t + 0.18);
-  const o = ctx.createOscillator(), og = ctx.createGain();
-  o.type = 'triangle'; o.connect(og); og.connect(AUDIO.masterGain);
-  o.frequency.setValueAtTime(230, t);
-  o.frequency.exponentialRampToValueAtTime(118, t + 0.06);
-  og.gain.setValueAtTime(0.50 * vel, t);
+  f.type='bandpass'; f.frequency.value=1900; f.Q.value=0.6;
+  src.connect(f); f.connect(ng); ng.connect(AUDIO.snareBus);
+  ng.gain.setValueAtTime(0.8*vel, t);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+  src.start(t); src.stop(t + 0.20);
+  const o=ctx.createOscillator(), og=ctx.createGain();
+  o.type='triangle'; o.connect(og); og.connect(AUDIO.snareBus);
+  o.frequency.setValueAtTime(220, t);
+  o.frequency.exponentialRampToValueAtTime(120, t + 0.06);
+  og.gain.setValueAtTime(0.45*vel, t);
   og.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
   o.start(t); o.stop(t + 0.09);
 }
 
-// ── drumHH: highpass noise — closed (32ms) or open (200ms) ──────────────────
 function drumHH(t, open, vel=1.0) {
   const ctx = AUDIO.ctx;
-  const src = ctx.createBufferSource();
-  src.buffer = AUDIO.noiseBuffer;
+  const src = ctx.createBufferSource(); src.buffer = AUDIO.noiseBuffer;
   const f = ctx.createBiquadFilter(), g = ctx.createGain();
-  f.type = 'highpass'; f.frequency.value = 8000;
-  src.connect(f); f.connect(g); g.connect(AUDIO.masterGain);
-  const decay = open ? 0.20 : 0.030;
-  g.gain.setValueAtTime((open ? 0.38 : 0.50) * vel, t);
+  f.type='highpass'; f.frequency.value=8500;   // bright/sharp — preserved
+  src.connect(f); f.connect(g); g.connect(AUDIO.hatBus);
+  const decay = open ? 0.18 : 0.030;
+  g.gain.setValueAtTime((open?0.34:0.46)*vel, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + decay);
   src.start(t); src.stop(t + decay + 0.01);
 }
 
-// ── drumGlitch: resonant bandpass burst Q=9 (zap / digital artifact) ────────
 function drumGlitch(t, vel=1.0) {
   const ctx = AUDIO.ctx;
-  const src = ctx.createBufferSource();
-  src.buffer = AUDIO.noiseBuffer;
+  const src = ctx.createBufferSource(); src.buffer = AUDIO.noiseBuffer;
   const f = ctx.createBiquadFilter(), g = ctx.createGain();
-  f.type = 'bandpass';
-  f.frequency.value = 2800 + (((t * 1000) | 0) % 7) * 340; // pseudo-random freq
+  f.type='bandpass';
+  f.frequency.value = 3000 + (((t*1000)|0)%7)*360;   // bright digital zap — kept
   f.Q.value = 9;
-  src.connect(f); f.connect(g); g.connect(AUDIO.masterGain);
-  g.gain.setValueAtTime(0.66 * vel, t);
+  src.connect(f); f.connect(g); g.connect(AUDIO.glitchBus);
+  g.gain.setValueAtTime(0.6*vel, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + 0.028);
   src.start(t); src.stop(t + 0.032);
 }
 
-// ── drumScratch: FM-modulated bandpass noise = vinyl scratch ─────────────────
-function drumScratch(t, vel=1.0) {
+// Bright "tape scratch / digital artifact" texture — the sharp BoC-style detail.
+// Fires occasionally regardless of drum intensity so the soundscape always has bite.
+function textureGlint(t, vel=0.5) {
   const ctx = AUDIO.ctx;
-  const src = ctx.createBufferSource(), filt = ctx.createBiquadFilter();
-  const gain = ctx.createGain(), lfo = ctx.createOscillator(), lfoG = ctx.createGain();
-  src.buffer = AUDIO.noiseBuffer;
-  filt.type = 'bandpass'; filt.frequency.value = 2800; filt.Q.value = 2.5;
-  lfo.type = 'triangle'; lfo.frequency.value = 18; lfoG.gain.value = 1800;
-  lfo.connect(lfoG); lfoG.connect(filt.frequency);
-  src.connect(filt); filt.connect(gain); gain.connect(AUDIO.masterGain);
-  gain.gain.setValueAtTime(0.54 * vel, t);
-  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.10);
-  lfo.start(t); lfo.stop(t + 0.12);
-  src.start(t); src.stop(t + 0.12);
+  const src = ctx.createBufferSource(); src.buffer = AUDIO.noiseBuffer;
+  const f = ctx.createBiquadFilter(), g = ctx.createGain();
+  f.type='highpass'; f.frequency.value = 6000;
+  src.connect(f); f.connect(g); g.connect(AUDIO.masterGain);
+  g.gain.setValueAtTime(0.10*vel, t);
+  g.gain.exponentialRampToValueAtTime(0.0005, t + 0.07);
+  src.start(t); src.stop(t + 0.09);
 }
 
-function drumVinylStop(t) {   // needle lifting off record
-  const ctx = AUDIO.ctx;
-  const o = ctx.createOscillator(), g = ctx.createGain();
-  o.type = 'sawtooth'; o.connect(g); g.connect(AUDIO.masterGain);
-  o.frequency.setValueAtTime(175, t);
-  o.frequency.exponentialRampToValueAtTime(38, t + 0.88);
-  g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.88);
-  o.start(t); o.stop(t + 0.92);
+// ── Melody scheduler: picks a nearby scale note, gentle random walk ───────────
+function scheduleMelody(ctx) {
+  while (DRUM.melTime < ctx.currentTime + 0.3) {
+    const t = DRUM.melTime;
+    // Primary blob Y → target region of the scale (top of frame = high notes)
+    const targetIdx = Math.round((1 - _primaryBlobY) * (SCALE_HZ.length - 1));
+    // Random walk toward target (keeps melodies smooth, not jumpy)
+    if (Math.random() < 0.6) {
+      DRUM.melIdx += DRUM.melIdx < targetIdx ? 1 : (DRUM.melIdx > targetIdx ? -1 : 0);
+    } else {
+      DRUM.melIdx += (Math.random() < 0.5 ? -2 : 2);
+    }
+    DRUM.melIdx = Math.max(0, Math.min(SCALE_HZ.length - 1, DRUM.melIdx));
+    const freq = SCALE_HZ[DRUM.melIdx];
+
+    // Only sound a note ~70% of the time → leaves space (BoC sparseness)
+    if (Math.random() < 0.70 && AUDIO.melOsc) {
+      AUDIO.melOsc.frequency.setTargetAtTime(freq, t, 0.04);
+      const peak = 0.16 + DRUM.intensity * 0.06;
+      AUDIO.melGain.gain.cancelScheduledValues(t);
+      AUDIO.melGain.gain.setValueAtTime(0.0, t);
+      AUDIO.melGain.gain.linearRampToValueAtTime(peak, t + 0.08);   // soft attack
+      AUDIO.melGain.gain.setTargetAtTime(0.0, t + 0.10, 0.55);      // long release
+    }
+    // Occasional bright glint for digital texture
+    if (Math.random() < 0.22) textureGlint(t + 0.02, 0.4 + Math.random()*0.5);
+
+    // Note spacing: slow (1.0–2.0s), faster when intensity is high
+    const spacing = 2.0 - DRUM.intensity * 1.1;
+    DRUM.melTime += spacing * (0.7 + Math.random()*0.6);
+  }
 }
 
-function drumVinylStart(t) {  // needle dropping back on record
-  const ctx = AUDIO.ctx;
-  const o = ctx.createOscillator(), g = ctx.createGain();
-  o.type = 'sawtooth'; o.connect(g); g.connect(AUDIO.masterGain);
-  o.frequency.setValueAtTime(38, t);
-  o.frequency.exponentialRampToValueAtTime(175, t + 0.30);
-  g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.30);
-  o.start(t); o.stop(t + 0.34);
-}
-
-function drumCrash(t) {       // bright cymbal crash (open hihat + noise blend)
-  const ctx = AUDIO.ctx;
-  const src = ctx.createBufferSource();
-  src.buffer = AUDIO.noiseBuffer;
-  const f1 = ctx.createBiquadFilter(), f2 = ctx.createBiquadFilter(), g = ctx.createGain();
-  f1.type = 'bandpass'; f1.frequency.value = 3500; f1.Q.value = 0.4;
-  f2.type = 'highpass';  f2.frequency.value = 5000;
-  src.connect(f1); f1.connect(f2); f2.connect(g); g.connect(AUDIO.masterGain);
-  g.gain.setValueAtTime(0.72, t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.3);
-  src.start(t); src.stop(t + 1.35);
-}
-
-// ── Sequencer — lookahead scheduling ─────────────────────────────────────────
-const DRUM_LOOKAHEAD = 0.12; // schedule 120ms ahead (handles rAF frame drops)
-
+// ── Drum scheduler: fixed gentle skeleton, density via bus gains ──────────────
+const DRUM_LOOKAHEAD = 0.15;
 function scheduleDrums() {
   if (!DRUM.active || !AUDIO.ready) return;
   const ctx = AUDIO.ctx;
 
+  scheduleMelody(ctx);
+
   while (DRUM.stepTime < ctx.currentTime + DRUM_LOOKAHEAD) {
-    const s = DRUM.step, p = DRUM.live, t = DRUM.stepTime;
+    const s = DRUM.step, t = DRUM.stepTime;
+    const vel = 0.6 + Math.random()*0.4;
 
-    // Crash cymbal on downbeat after BREAK
-    if (s === 0 && DRUM.pendingCrash) { drumCrash(t); DRUM.pendingCrash = false; }
+    // Always *schedule* hits; the per-bus gain (set in updateAudio) decides
+    // whether they're audible. This gives a smooth progressive entrance.
+    if (DRUM.patKick[s])   drumKick(t, vel);
+    if (DRUM.patSnare[s])  drumSnare(t, vel*0.9);
+    if (DRUM.patHat[s])    drumHH(t, false, vel*0.6);
+    if (DRUM.patGlitch[s]) drumGlitch(t, vel);
 
-    // ── Swing: push odd 16th notes back at slower states ────────────────
-    // CHILL/HALF get heavy swing (jazz feel), GROOVE light shuffle, fast=none
-    const stepDur = 60.0 / DRUM.bpm / 4;
-    const sw = DRUM.state==='CHILL'||DRUM.state==='HALF' ? 0.16
-             : DRUM.state==='GROOVE' ? 0.07 : 0.0;
-    const tHit = t + ((s & 1) ? stepDur * sw : 0);
-
-    // ── Velocity: humanise every hit ────────────────────────────────────
-    // Beats 1 & 3 (steps 0 & 8) get accent; everything else fluctuates.
-    const accent = (s === 0 || s === 8) ? 1.18 : 1.0;
-    const vel    = accent * (0.52 + Math.random() * 0.52);  // 0.52 – 1.04
-
-    // ── Fire hits ───────────────────────────────────────────────────────
-    if (p.kick[s]) {
-      // CHAOS / BREAK transitions: occasional glitch-kick (pitch-UP)
-      if (DRUM.state === 'CHAOS' && Math.random() < 0.10) drumKickGlitch(tHit, vel);
-      else drumKick(tHit, vel);
-    }
-    if (p.snare[s])  drumSnare(tHit, vel * 0.90);
-    if (p.hh[s])     drumHH(tHit, false, vel * 0.65);
-    if (p.hho[s])    drumHH(tHit, true,  vel * 0.56);
-    if (p.glitch[s]) {
-      // 28% chance of vinyl scratch instead of resonant glitch for variety
-      if (Math.random() < 0.28) drumScratch(tHit, vel * 0.82);
-      else                       drumGlitch(tHit, vel);
-    }
-
-    // ── Ghost notes: subtle quiet hits between main beats (GROOVE/PEAK) ─
-    if ((DRUM.state === 'GROOVE' || DRUM.state === 'PEAK') && Math.random() < 0.055) {
-      drumSnare(tHit + stepDur * 0.5, 0.07 + Math.random() * 0.06); // quiet 32nd
-    }
-
-    // ── Advance time ────────────────────────────────────────────────────
-    DRUM.stepTime += stepDur;
+    DRUM.stepTime += 60.0 / DRUM.bpm / 4;
     DRUM.step = (DRUM.step + 1) % 16;
-
-    // ── Bar boundary ────────────────────────────────────────────────────
-    if (DRUM.step === 0) {
-      DRUM.bar++;
-      DRUM.barsLeft--;
-
-      // Micro-drift within state keeps tempo feeling alive
-      if (DRUM.state !== 'BREAK') {
-        DRUM.bpm += (Math.random() - 0.5) * 4.2;
-        const [bMin, bMax] = _STATE_BPM[DRUM.state];
-        if (bMin !== null) DRUM.bpm = Math.max(bMin, Math.min(bMax, DRUM.bpm));
-      }
-
-      if (DRUM.barsLeft <= 0) {
-        transitionState();
-      } else {
-        generatePattern(DRUM.state); // new probabilistic pattern every bar
-      }
-    }
   }
 }
 
-
+// ── Main audio update — called each rAF. Maps motion → mix levels. ────────────
 let _audioFrame = 0;
 function updateAudio(cW, cH, nowMs) {
   if (!AUDIO.ready || !AUDIO.active) return;
   if (AUDIO.ctx.state === 'suspended') AUDIO.ctx.resume().catch(()=>{});
 
-  // Sample blob motion every 3rd frame (~20Hz — enough for tempo control)
   if ((_audioFrame++ % 3) === 0) {
     const m = sampleBlobMotion();
+    const now = AUDIO.ctx.currentTime;
 
-    // ── BLOB COUNT → MASTER VOLUME (the most obvious link) ──
-    // 0 blobs → near silence (0.06); many blobs → full (0.82)
-    const targetVol = m.nBlobs === 0 ? 0.05 : 0.30 + Math.min(m.nBlobs / 6, 1) * 0.52;
+    // ── Motion intensity 0..1: combines blob count + speed ──
+    const speedNorm = Math.min(m.speed / 16, 1);
+    const countNorm = Math.min(m.nBlobs / 5, 1);
+    const targetInt = Math.max(speedNorm, countNorm * 0.7);
+    DRUM.intensity = DRUM.intensity * 0.90 + targetInt * 0.10;   // smooth
+
+    // ── Master volume: ambient always audible, swells with presence ──
+    // Even with 0 blobs the pad breathes quietly (0.18); full scene ~0.85.
+    const baseVol = 0.18 + Math.min(m.nBlobs / 5, 1) * 0.62;
     AUDIO.masterGain.gain.setTargetAtTime(
-      AUDIO.userMuted ? 0.0 : targetVol, AUDIO.ctx.currentTime, 0.25);
+      AUDIO.userMuted ? 0.0 : baseVol, now, 0.4);
 
-    // Drive tempo + state from motion
-    influenceDrumState(0, m.nBlobs, m.speed, m.spawned);
+    // ── Progressive drum entrance: each bus fades with intensity thresholds ──
+    // Hats come first (low threshold), then kick, then snare, then glitch.
+    const I = DRUM.intensity;
+    const hatLvl    = Math.max(0, (I - 0.06) / 0.94) * 0.7;
+    const kickLvl   = Math.max(0, (I - 0.16) / 0.84) * 1.0;
+    const snareLvl  = Math.max(0, (I - 0.34) / 0.66) * 0.9;
+    const glitchLvl = Math.max(0, (I - 0.55) / 0.45) * 0.8;
+    AUDIO.hatBus.gain.setTargetAtTime(hatLvl,       now, 0.5);
+    AUDIO.kickBus.gain.setTargetAtTime(kickLvl,     now, 0.5);
+    AUDIO.snareBus.gain.setTargetAtTime(snareLvl,   now, 0.6);
+    AUDIO.glitchBus.gain.setTargetAtTime(glitchLvl, now, 0.6);
+
+    // ── Tempo drifts slowly with motion (narrow BoC range) ──
+    const targetBpm = 66 + I * 30;          // 66 (still) → 96 (active)
+    DRUM.bpm = DRUM.bpm * 0.95 + targetBpm * 0.05;
+
+    // ── Pad opens up slightly with motion (filter + level) ──
+    AUDIO.padFilter.frequency.setTargetAtTime(700 + I * 1400, now, 0.8);
+
+    // ── Spawn → soft glint accent (not an aggressive snare anymore) ──
+    if (m.spawned > 0) textureGlint(now + 0.01, 0.6);
   }
   scheduleDrums();
 }
@@ -1406,14 +1198,37 @@ function updateNeuralNodes(t) {
 
 const CFG = {
   motionThresh:   20,
-  brightThresh:   245,   // raised: prevents sky/ceiling flooding top-of-frame
+  brightThresh:   245,
   minArea:        12,
   maxArea:        20000,
-  style:          'B',   // B=Circles A=Boxes C=Ghost D=Neural E=Glitch F=PxSort
+  style:          'B',
   showConnectors: true,
   showLabels:     true,
   showVignette:   true,
-  noise:          0,        // 0-40 analog grain intensity
+  noise:          0,        // global analog grain (0-40)
+
+  // ── Per-effect parameters (each effect reads its own slice) ──
+  // GRAIN
+  grainScale:     2,        // pixel block size (1-8)
+  grainPalette:   0,        // 0=lime 1=amber 2=mono 3=cyan 4=rgb-split
+  grainDensity:   100,      // % of foreground pixels filled (20-100)
+  grainSpeed:     100,      // animation speed (0=static .. 200=fast flicker)
+  grainScan:      0,        // scanline strength (0-100)
+  grainFlicker:   0,        // luminance flicker (0-100)
+  // ASCII
+  asciiCell:      9,        // glyph cell px (5-16)
+  asciiBg:        0,        // 0=blue 1=black 2=white 3=red
+  asciiAccent:    100,      // red accent density (0-100)
+  // EVAP
+  evapThresh:     40,       // depth threshold for red dots (0-100 → 0-1)
+  evapDot:        100,      // dot size scale (40-200 %)
+  evapPalette:    0,        // 0=lime/red 1=cyan/magenta 2=white/orange
+  // PXSORT
+  sortThresh:     26,       // depth sort threshold (0-100 → 0-1)
+  sortSeg:        48,       // max segment length (8-120)
+  // NEURAL
+  neuralNodes:    9,        // nodes per blob (4-16)
+  neuralCurve:    30,       // connection curvature % (0-60)
 };
 
 const TOUCH = {
@@ -1610,7 +1425,7 @@ function drawStyleD(ctx, cW, cH, t) {
     if(_nnConnKind[ci]!==0) continue;
     const na=_nnNodes[_nnConnA[ci]],nb=_nnNodes[_nnConnB[ci]]; if(!na.active||!nb.active) continue;
     const mx=(na.x+nb.x)*.5,my=(na.y+nb.y)*.5,dx=nb.x-na.x,dy=nb.y-na.y;
-    const len=Math.sqrt(dx*dx+dy*dy)||1, sign=(ci&1)?1:-1, curv=sign*len*.30;
+    const len=Math.sqrt(dx*dx+dy*dy)||1, sign=(ci&1)?1:-1, curv=sign*len*(CFG.neuralCurve/100);
     ctx.moveTo(na.x,na.y); ctx.quadraticCurveTo(mx+(-dy/len)*curv,my+(dx/len)*curv,nb.x,nb.y);
   }
   ctx.stroke();
@@ -1619,7 +1434,7 @@ function drawStyleD(ctx, cW, cH, t) {
     if(_nnConnKind[ci]!==1) continue;
     const na=_nnNodes[_nnConnA[ci]],nb=_nnNodes[_nnConnB[ci]]; if(!na.active||!nb.active) continue;
     const mx=(na.x+nb.x)*.5,my=(na.y+nb.y)*.5,dx=nb.x-na.x,dy=nb.y-na.y;
-    const len=Math.sqrt(dx*dx+dy*dy)||1, sign=(ci&1)?-1:1, curv=sign*len*.42;
+    const len=Math.sqrt(dx*dx+dy*dy)||1, sign=(ci&1)?-1:1, curv=sign*len*(CFG.neuralCurve/100+0.12);
     ctx.moveTo(na.x,na.y); ctx.quadraticCurveTo(mx+(-dy/len)*curv,my+(dx/len)*curv,nb.x,nb.y);
   }
   ctx.stroke();
@@ -1628,7 +1443,7 @@ function drawStyleD(ctx, cW, cH, t) {
     if(_nnConnKind[ci]!==2) continue;
     const na=_nnNodes[_nnConnA[ci]],nb=_nnNodes[_nnConnB[ci]]; if(!na.active||!nb.active) continue;
     const mx=(na.x+nb.x)*.5,my=(na.y+nb.y)*.5,dx=nb.x-na.x,dy=nb.y-na.y;
-    const len=Math.sqrt(dx*dx+dy*dy)||1, sign=(ci&1)?1:-1, curv=sign*len*.38;
+    const len=Math.sqrt(dx*dx+dy*dy)||1, sign=(ci&1)?1:-1, curv=sign*len*(CFG.neuralCurve/100+0.08);
     ctx.moveTo(na.x,na.y); ctx.quadraticCurveTo(mx+(-dy/len)*curv,my+(dx/len)*curv,nb.x,nb.y);
   }
   ctx.stroke(); ctx.setLineDash([]);
@@ -1732,8 +1547,7 @@ function drawStyleE(ctx, cW, cH, t) {
 //  5. Write column back to imgData
 //  6. Nearest-neighbor scale to composite
 
-const DEPTH_SORT_THRESH = 0.26; // only pixels above this depth get sorted
-const MAX_SEG           = 48;   // max contiguous sort segment (pixels)
+// PXSORT thresholds now read live from CFG (sortThresh / sortSeg)
 
 function drawStyleF(ctx, cW, cH) {
   if (!_effectCtx || !_dstImgData) return;
@@ -1759,12 +1573,12 @@ function drawStyleF(ctx, cW, cH) {
     let segStart = -1, segLen = 0;
     for (let y = 0; y <= PROC_H; y++) {
       const depth   = y < PROC_H ? _depthBuf[y * PROC_W + depthX] : 0;
-      const inSeg   = y < PROC_H && depth >= DEPTH_SORT_THRESH && segLen < MAX_SEG;
+      const inSeg   = y < PROC_H && depth >= (CFG.sortThresh/100) && segLen < CFG.sortSeg;
 
       if (inSeg && segStart < 0) { segStart = y; segLen = 0; }
       if (inSeg && segStart >= 0) { segLen++; }
 
-      if ((!inSeg || segLen >= MAX_SEG) && segStart >= 0) {
+      if ((!inSeg || segLen >= CFG.sortSeg) && segStart >= 0) {
         const end = y;
         // Insertion sort [segStart..end-1] in _segColBuf by _segLuma (descending)
         for (let ii = segStart + 1; ii < end; ii++) {
@@ -1871,25 +1685,44 @@ function drawStyleG(ctx, cW, cH) {
 function drawStyleH(ctx, cW, cH) {
   if (!_effectCtx || !_dstImgData) return;
   const d   = _dstImgData.data;
-  const frm = STATE.fpsFrames;   // changes every rAF frame → grain animates
+  const frm = CFG.grainSpeed <= 0 ? 0 : ((performance.now() * CFG.grainSpeed * 0.0015) | 0);
+  const scale = Math.max(1, CFG.grainScale|0);
+  const densityCut = CFG.grainDensity / 100;        // 0..1
+  const pal = CFG.grainPalette;
+  // Flicker: global luminance multiplier oscillating per frame
+  const flick = CFG.grainFlicker > 0
+    ? 1 - (CFG.grainFlicker/100) * 0.5 * (0.5 + 0.5*Math.sin(performance.now()*0.02))
+    : 1;
 
   for (let y = 0; y < PROC_H; y++) {
     const row = y * PROC_W;
+    const blockY = (y / scale) | 0;
     for (let x = 0; x < PROC_W; x++) {
-      const i  = row + x;
-      const di = i * 4;
+      const i  = row + x, di = i * 4;
       if (_maskBuf[i]) {
-        // XOR-shift hash: fast deterministic noise, different every frame
-        const h     = (((i * 0x9E3779B9) ^ (frm * 0x6C62272E)) >>> 0) & 0xFF;
-        const noise = h / 255;
-        // Lime-green grain: G channel dominant, slight R/B variation
-        d[di]   = (100 + (noise * 60) | 0);
-        d[di+1] = (185 + (noise * 55) | 0);
-        d[di+2] = (45  + (noise * 38) | 0);
-        d[di+3] = 255;
-      } else {
-        d[di]=0; d[di+1]=0; d[di+2]=0; d[di+3]=255;  // black background
-      }
+        const blockX = (x / scale) | 0;
+        // Hash by block (so larger scale = chunkier grain)
+        let h = (((blockX * 73856093) ^ (blockY * 19349663) ^ (frm * 0x6C62272E)) >>> 0);
+        const noise = (h & 0xFF) / 255;
+        // Density: some blocks stay dark
+        if (((h >>> 8) & 0xFF) / 255 > densityCut) { d[di]=0; d[di+1]=0; d[di+2]=0; d[di+3]=255; continue; }
+        let r, g, b;
+        switch (pal) {
+          case 1: // amber
+            r = (150 + noise*105)*flick; g = (95 + noise*70)*flick; b = (15 + noise*25)*flick; break;
+          case 2: // mono white
+            { const v=(120+noise*135)*flick; r=v; g=v; b=v; } break;
+          case 3: // cyan
+            r = (30 + noise*55)*flick; g = (170 + noise*70)*flick; b = (190 + noise*65)*flick; break;
+          case 4: // rgb-split (channel per sub-position)
+            r = ((blockX&1)?255:noise*120)*flick;
+            g = ((blockY&1)?220:noise*100)*flick;
+            b = (((blockX+blockY)&1)?255:noise*120)*flick; break;
+          default: // lime
+            r = (100 + noise*60)*flick; g = (185 + noise*55)*flick; b = (45 + noise*38)*flick;
+        }
+        d[di]=r|0; d[di+1]=g|0; d[di+2]=b|0; d[di+3]=255;
+      } else { d[di]=0; d[di+1]=0; d[di+2]=0; d[di+3]=255; }
     }
   }
 
@@ -1898,69 +1731,57 @@ function drawStyleH(ctx, cW, cH) {
   ctx.drawImage(_effectCanvas, 0, 0, cW, cH);
   ctx.imageSmoothingEnabled = true;
 
-  // Collect active blobs sorted by radius (largest = primary target)
+  // Scanlines overlay (CRT/VHS)
+  if (CFG.grainScan > 0) {
+    ctx.save();
+    ctx.globalAlpha = (CFG.grainScan/100) * 0.5;
+    ctx.fillStyle = '#000';
+    for (let yy = 0; yy < cH; yy += 3) ctx.fillRect(0, yy, cW, 1);
+    ctx.restore();
+  }
+
+  // Crosshair + numbers (kept, minimal)
   const blobs = [];
   for (let ti = 0; ti < MAX_TRACKED; ti++) {
     const t = _tracked[ti]; if (t.active && t.age >= 2) blobs.push(t);
   }
   blobs.sort((a, b) => b.sr - a.sr);
   if (blobs.length === 0) return;
-
   ctx.save();
-
-  // Crosshair reticle on the largest blob (like Image 2 reference)
-  const bx = blobs[0].scx, by = blobs[0].scy;
-  const ri = 13, arm = 24;
-  ctx.strokeStyle = '#050508';
-  ctx.lineWidth   = 2.5;
-  ctx.setLineDash([]);
+  const bx = blobs[0].scx, by = blobs[0].scy, ri = 13, arm = 24;
+  ctx.strokeStyle = '#050508'; ctx.lineWidth = 2.5; ctx.setLineDash([]);
   ctx.beginPath();
-  ctx.arc(bx, by, ri, 0, Math.PI * 2);
-  ctx.moveTo(bx - arm, by); ctx.lineTo(bx - ri - 3, by);
-  ctx.moveTo(bx + ri + 3, by); ctx.lineTo(bx + arm, by);
-  ctx.moveTo(bx, by - arm); ctx.lineTo(bx, by - ri - 3);
-  ctx.moveTo(bx, by + ri + 3); ctx.lineTo(bx, by + arm);
+  ctx.arc(bx, by, ri, 0, Math.PI*2);
+  ctx.moveTo(bx-arm,by); ctx.lineTo(bx-ri-3,by);
+  ctx.moveTo(bx+ri+3,by); ctx.lineTo(bx+arm,by);
+  ctx.moveTo(bx,by-arm); ctx.lineTo(bx,by-ri-3);
+  ctx.moveTo(bx,by+ri+3); ctx.lineTo(bx,by+arm);
   ctx.stroke();
-
-  // Number each blob in black monospace
-  ctx.font = 'bold 20px Helvetica,Arial,sans-serif';
-  ctx.fillStyle = '#050508';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.font = '900 20px Helvetica,Arial,sans-serif';
+  ctx.fillStyle = '#050508'; ctx.textAlign='center'; ctx.textBaseline='middle';
   blobs.forEach((b, idx) => {
     if (idx >= 9) return;
-    // Offset label from crosshair centre so it's readable
-    const lx = idx === 0 ? b.scx + b.sr * 0.5 : b.scx;
-    const ly = idx === 0 ? b.scy - b.sr * 0.4 : b.scy;
-    ctx.fillText(String(idx + 1), lx, ly);
+    const lx = idx===0 ? b.scx+b.sr*0.5 : b.scx;
+    const ly = idx===0 ? b.scy-b.sr*0.4 : b.scy;
+    ctx.fillText(String(idx+1), lx, ly);
   });
-
-  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   ctx.restore();
 }
-
-// ── 3.8d  Style I — Dot Heatmap · EVAP (ref: codymarian_ "evaporator") ────────
-//
-// Visual: black background, foreground pixels sampled on hex-grid and rendered
-// as small filled circles. Color encodes depth/motion:
-//   Low depth (still/background): lime-yellow (#c8d400)
-//   High depth (moving/foreground): orange-red (#ff3800)
-// Dot radius scales with depth (near objects = larger dots).
-// Uses two batched beginPath+fill passes to minimize fillStyle changes.
-// Draws directly on composite canvas at screen resolution for crisp circles.
-
 function drawStyleI(ctx, cW, cH) {
   ctx.fillStyle = '#050508';
   ctx.fillRect(0, 0, cW, cH);
 
   const scaleX = cW / PROC_W, scaleY = cH / PROC_H;
-  const step   = 3;  // sample every 3rd proc pixel (hex-offset)
-  const baseR  = Math.max(3.0, (scaleX + scaleY) * 0.5 * 0.85);
+  const step   = 3;
+  const baseR  = Math.max(3.0, (scaleX + scaleY) * 0.5 * 0.85) * (CFG.evapDot/100);
+  const evThr  = CFG.evapThresh / 100;
+  const PAL = [['#c8d400','#ff3800'],['#39d6ff','#ff39c8'],['#ffffff','#ff8c00']][CFG.evapPalette] || ['#c8d400','#ff3800'];
 
   ctx.save();
 
   // Pass 1: lime-yellow dots (still / low depth)
-  ctx.fillStyle = '#c8d400';
+  ctx.fillStyle = PAL[0];
   ctx.beginPath();
   for (let y = 0; y < PROC_H; y += step) {
     const row  = y * PROC_W;
@@ -1968,7 +1789,7 @@ function drawStyleI(ctx, cW, cH) {
     for (let x = xOff; x < PROC_W; x += step) {
       if (!_maskBuf[row + x]) continue;
       const depth = _depthBuf[row + x];
-      if (depth > 0.40) continue;
+      if (depth > evThr) continue;
       const cx = x * scaleX, cy = y * scaleY;
       const r  = baseR * (0.65 + depth * 0.9);
       ctx.moveTo(cx + r, cy);
@@ -1978,7 +1799,7 @@ function drawStyleI(ctx, cW, cH) {
   ctx.fill();
 
   // Pass 2: orange-red dots (moving / high depth)
-  ctx.fillStyle = '#ff3800';
+  ctx.fillStyle = PAL[1];
   ctx.beginPath();
   for (let y = 0; y < PROC_H; y += step) {
     const row  = y * PROC_W;
@@ -1986,7 +1807,7 @@ function drawStyleI(ctx, cW, cH) {
     for (let x = xOff; x < PROC_W; x += step) {
       if (!_maskBuf[row + x]) continue;
       const depth = _depthBuf[row + x];
-      if (depth <= 0.40) continue;
+      if (depth <= evThr) continue;
       const cx = x * scaleX, cy = y * scaleY;
       const r  = baseR * (0.65 + depth * 0.9);
       ctx.moveTo(cx + r, cy);
@@ -2006,11 +1827,11 @@ function drawStyleI(ctx, cW, cH) {
 // accent glyphs scattered on high-motion pixels for the glitch-art look.
 const _ASCII_RAMP = " .:-=+*#%@MW";  // 12 levels dark→bright
 function drawStyleJ(ctx, cW, cH) {
-  // Flat electric-blue field
-  ctx.fillStyle = '#1a16e6';
+  // Flat field — background color from CFG
+  const bgCol = ['#1a16e6','#050508','#f2f2f2','#c00010'][CFG.asciiBg] || '#1a16e6';
+  ctx.fillStyle = bgCol;
   ctx.fillRect(0, 0, cW, cH);
-
-  const cell = 9;                     // glyph cell size in screen px
+  const cell = Math.max(5, CFG.asciiCell|0);  // glyph cell size in screen px
   const cols = (cW / cell) | 0;
   const rows = (cH / cell) | 0;
   const sx = PROC_W / cW, sy = PROC_H / cH;
@@ -2019,8 +1840,8 @@ function drawStyleJ(ctx, cW, cH) {
   ctx.font = 'bold ' + (cell + 1) + 'px Helvetica,Arial,sans-serif';
   ctx.textBaseline = 'top';
 
-  // Pass 1: white ASCII glyphs (batched — same fillStyle)
-  ctx.fillStyle = '#ffffff';
+  // Pass 1: glyphs — black on white bg, else white
+  ctx.fillStyle = (CFG.asciiBg===2) ? '#050508' : '#ffffff';
   for (let r = 0; r < rows; r++) {
     const py = (r * cell * sy) | 0;
     if (py >= PROC_H) break;
@@ -2050,7 +1871,9 @@ function drawStyleJ(ctx, cW, cH) {
       const idx = prow + px;
       if (!_maskBuf[idx]) continue;
       if (_depthBuf[idx] < 0.55) continue;          // only near/moving
-      if (((r * 13 + c * 7 + _noiseFrame) & 7) !== 0) continue; // sparse
+      if (CFG.asciiAccent <= 0) continue;
+      const acThresh = Math.max(1, 8 - ((CFG.asciiAccent/100)*7|0));
+      if (((r * 13 + c * 7 + _noiseFrame) % acThresh) !== 0) continue;
       ctx.fillText('+', c * cell, r * cell);
     }
   }
@@ -2452,16 +2275,112 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Splash — 6-style grid ──────────────────────────────────────────────
   const splBtns={A:'spl-a',B:'spl-b',C:'spl-c',D:'spl-d',F:'spl-f',H:'spl-h',I:'spl-i',J:'spl-j'};
+
+  // ── Contextual TUNE panel: per-effect parameters ──────────────────────────
+  // Spec format: [cfgKey, label, min, max, step, isSelect?, options?]
+  const TUNE_SPECS = {
+    B: [],  // ORBIT — no extra params
+    A: [],  // SCAN  — no extra params
+    C: [],  // GHOST — no extra params
+    D: [
+      ['neuralCurve','Curvature',0,60,1],
+    ],
+    F: [
+      ['sortThresh','Sort Threshold',0,90,1],
+      ['sortSeg','Segment Length',8,120,1],
+    ],
+    H: [
+      ['grainScale','Grain Size',1,8,1],
+      ['grainPalette','Palette',0,4,1,true,['Lime','Amber','Mono','Cyan','RGB']],
+      ['grainDensity','Density',20,100,1],
+      ['grainSpeed','Anim Speed',0,200,1],
+      ['grainScan','Scanlines',0,100,1],
+      ['grainFlicker','Flicker',0,100,1],
+    ],
+    I: [
+      ['evapThresh','Depth Split',0,100,1],
+      ['evapDot','Dot Size',40,200,1],
+      ['evapPalette','Palette',0,2,1,true,['Lime/Red','Cyan/Mag','White/Org']],
+    ],
+    J: [
+      ['asciiCell','Cell Size',5,16,1],
+      ['asciiBg','Background',0,3,1,true,['Blue','Black','White','Red']],
+      ['asciiAccent','Red Accents',0,100,1],
+    ],
+  };
+
+  function buildTunePanel(style) {
+    const head = document.getElementById('tune-head');
+    if (head) head.textContent = STYLE_NAMES[style] || '';
+    const host = document.getElementById('tune-dynamic');
+    if (!host) return;
+    host.innerHTML = '';
+    const specs = TUNE_SPECS[style] || [];
+    if (specs.length === 0) return;
+
+    const sect = document.createElement('div');
+    sect.className = 'tune-sect';
+    sect.textContent = (STYLE_NAMES[style]||'') + ' PARAMETERS';
+    host.appendChild(sect);
+
+    specs.forEach(spec => {
+      const [key, label, min, max, step, isSelect, options] = spec;
+      const row = document.createElement('div');
+      row.className = 'ctrl-row';
+
+      if (isSelect) {
+        // Render as a segmented toggle group
+        const lab = document.createElement('div');
+        lab.className = 'ctrl-label';
+        lab.textContent = label;
+        row.appendChild(lab);
+        const grp = document.createElement('div');
+        grp.className = 'toggle-row';
+        options.forEach((opt, oi) => {
+          const b = document.createElement('button');
+          b.className = 'toggle-btn' + (CFG[key]===oi ? ' on' : '');
+          b.textContent = opt;
+          b.style.fontSize = '.5rem';
+          b.addEventListener('click', () => {
+            CFG[key] = oi;
+            grp.querySelectorAll('.toggle-btn').forEach((x,xi)=>x.classList.toggle('on',xi===oi));
+          });
+          grp.appendChild(b);
+        });
+        row.appendChild(grp);
+      } else {
+        const lab = document.createElement('div');
+        lab.className = 'ctrl-label';
+        const valSpan = document.createElement('span');
+        valSpan.textContent = CFG[key];
+        lab.textContent = label + ' ';
+        lab.appendChild(valSpan);
+        row.appendChild(lab);
+        const inp = document.createElement('input');
+        inp.type = 'range'; inp.min = min; inp.max = max; inp.step = step;
+        inp.value = CFG[key];
+        inp.addEventListener('input', function(){
+          CFG[key] = parseInt(this.value, 10);
+          valSpan.textContent = this.value;
+        });
+        row.appendChild(inp);
+      }
+      host.appendChild(row);
+    });
+  }
+
   function setSplashStyle(s) {
     CFG.style=s;
     Object.keys(splBtns).forEach(k=>
       document.getElementById(splBtns[k]).classList.toggle('active',k===s)
     );
     document.getElementById('btn-style').innerHTML=STYLE_NAMES[s];
+    buildTunePanel(s);   // rebuild contextual params
   }
   Object.keys(splBtns).forEach(k=>
     document.getElementById(splBtns[k]).addEventListener('click',()=>setSplashStyle(k))
   );
+  buildTunePanel(CFG.style);   // build params for the default style on load
 
   // ── Splash ↔ live settings sliders (bidirectional sync) ────────────────
   function syncSlider(sId,sValId,lId,lValId,setter) {
