@@ -212,6 +212,47 @@ input[type="range"]::-moz-range-thumb{
 @keyframes hint-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
 .hint-txt{font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);}
 /* ── ERROR BANNER ──────────────────────────────────────────────────────── */
+
+/* Icon capture buttons (photo + video) — matching round style */
+#capture-cluster{display:flex;align-items:center;gap:.9rem;}
+.icon-btn{
+  width:58px;height:58px;border-radius:50%;
+  background:rgba(5,5,8,.8);border:2px solid rgba(255,255,255,.35);
+  color:#fff;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  transition:all .15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+.icon-btn:active{transform:scale(.92);opacity:.8;}
+.icon-btn.rec.recording{
+  border-color:#ff2800;background:rgba(255,40,0,.25);color:#ff2800;
+  animation:rec-pulse 1.4s ease-in-out infinite;
+}
+#btn-upload-splash{
+  width:100%;max-width:360px;padding:.85rem;margin-top:.7rem;
+  background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3);
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:.8rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  cursor:pointer;position:relative;z-index:1;transition:all .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+#btn-upload-splash:active{opacity:.7;}
+/* Upload processing overlay */
+#upload-progress{
+  display:none;position:fixed;inset:0;z-index:280;
+  background:rgba(5,5,8,.94);
+  flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+#upload-progress.show{display:flex;}
+.up-title{font-size:1.1rem;font-weight:900;letter-spacing:.04em;}
+.up-bar-wrap{width:74%;max-width:320px;height:4px;background:rgba(255,255,255,.15);overflow:hidden;}
+.up-bar{height:100%;width:0%;background:#b4ff37;transition:width .1s linear;}
+.up-pct{font-size:.7rem;color:rgba(255,255,255,.55);letter-spacing:.1em;}
+.up-cancel{margin-top:.6rem;background:transparent;border:1px solid rgba(255,255,255,.25);
+  color:rgba(255,255,255,.6);font-family:inherit;font-size:.62rem;letter-spacing:.12em;
+  text-transform:uppercase;padding:.5rem 1.1rem;cursor:pointer;}
+
 #error-banner{
   display:none;position:fixed;top:1rem;left:1rem;right:1rem;z-index:60;
   background:rgba(160,15,0,.92);backdrop-filter:blur(10px);
@@ -257,7 +298,9 @@ input[type="range"]::-moz-range-thumb{
       <input type="range" id="rng-min" min="4" max="120" value="12" step="1">
     </div>
   </div>
-  <button id="btn-start">&#9654; ENTER</button>
+  <button id="btn-start">&#9654; LIVE CAMERA</button>
+  <button id="btn-upload-splash">&#11014; UPLOAD VIDEO</button>
+  <input type="file" id="file-input" accept="video/*" style="display:none">
 </div>
 
 <video id="cam" autoplay playsinline muted></video>
@@ -266,8 +309,14 @@ input[type="range"]::-moz-range-thumb{
 <!-- ── MAIN CONTROLS ───────────────────────────────────────────────────── -->
 <div id="ctrl-bar">
   <button class="ctrl-btn" id="btn-style">ORBIT</button>
-  <button class="ctrl-btn" id="btn-photo">PHOTO</button>
-  <button id="btn-record">&#9210;</button>
+  <div id="capture-cluster">
+    <button class="icon-btn" id="btn-photo" aria-label="Photo">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    </button>
+    <button class="icon-btn rec" id="btn-record" aria-label="Record">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+    </button>
+  </div>
   <button class="ctrl-btn" id="btn-settings">TUNE</button>
 </div>
 
@@ -293,6 +342,10 @@ input[type="range"]::-moz-range-thumb{
     <div class="ctrl-label">Min Blob Size <span id="lv-min">12</span></div>
     <input type="range" id="lr-min" min="4" max="120" value="12" step="1">
   </div>
+  <div class="ctrl-row">
+    <div class="ctrl-label">Noise <span id="lv-noise">0</span></div>
+    <input type="range" id="lr-noise" min="0" max="40" value="0" step="1">
+  </div>
   <!-- Per-effect controls injected here dynamically -->
   <div id="tune-dynamic"></div>
   <div class="toggle-row">
@@ -304,6 +357,12 @@ input[type="range"]::-moz-range-thumb{
 <div id="touch-hint">
   <div class="hint-icon">&#128070;</div>
   <div class="hint-txt">Touch to focus tracking</div>
+</div>
+<div id="upload-progress">
+  <div class="up-title">PROCESSING VIDEO</div>
+  <div class="up-bar-wrap"><div class="up-bar" id="up-bar"></div></div>
+  <div class="up-pct" id="up-pct">0%</div>
+  <button class="up-cancel" id="up-cancel">CANCEL</button>
 </div>
 <div id="error-banner"></div>
 
@@ -1241,6 +1300,7 @@ const STATE = {
   isRecording:false, mediaRecorder:null, chunks:[],
   recordStartT:0, lastDlUrl:null,
   fps:0, fpsT:0, fpsFrames:0, warmup:0, lastDetectT:0,
+  uploadMode:false, uploadCancelled:false,
 };
 
 const _crop = { sx:0,sy:0,sw:0,sh:0,valid:false };
@@ -2057,6 +2117,152 @@ const _mimeTypeCandidates=_isIOS
 let _dlAutoHide = 0;   // clearTimeout handle for download-toast auto-dismiss
 
 // ─────────────────────────────────────────────────────────────────────────────
+// VIDEO UPLOAD + PROCESS
+// Loads a user video into videoEl, runs the SAME tracking/effect pipeline for a
+// live preview, then offers "process & save": plays the clip start→finish while
+// MediaRecorder captures the composite canvas (with the active style baked in),
+// fixes the WebM duration, and hands back a download.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function startUploadedVideo(file) {
+  const url = URL.createObjectURL(file);
+  // Point the existing pipeline video element at the uploaded file
+  videoEl.srcObject = null;
+  videoEl.src = url;
+  videoEl.loop = true;            // preview loops; processing temporarily disables
+  videoEl.muted = true;           // keep muted so our synth audio is the soundtrack
+  videoEl.playsInline = true;
+
+  const onReady = () => {
+    videoEl.removeEventListener('loadedmetadata', onReady);
+    STATE.videoW = videoEl.videoWidth  || 1280;
+    STATE.videoH = videoEl.videoHeight || 720;
+    STATE.uploadMode = true;
+
+    // Mirror _finaliseCamera setup
+    const cW=window.innerWidth, cH=window.innerHeight;
+    compositeCanvas.width=cW; compositeCanvas.height=cH;
+    let pW=240, pH=Math.round(pW*cH/cW);
+    if (pW*pH>150000){const s=Math.sqrt(150000/(pW*pH));pW=(pW*s)|0;pH=(pH*s)|0;}
+    workCanvas.width=pW; workCanvas.height=pH;
+    initBuffers(pW,pH);
+    updateCrop(STATE.videoW,STATE.videoH,cW,cH);
+    STATE.warmup=0; STATE.fpsT=performance.now(); STATE.cameraOk=true;
+    initAudio();
+
+    videoEl.play().catch(()=>{});
+    // Hide splash
+    const splash=document.getElementById('splash');
+    splash.style.opacity='0'; splash.style.transition='opacity .4s ease';
+    setTimeout(()=>{splash.style.display='none';},400);
+    // Swap the PHOTO/record cluster meaning: in upload mode the record button
+    // triggers a full-clip render+save instead of free recording.
+    document.getElementById('btn-record').setAttribute('data-upload','1');
+    STATE.lastDetectT=performance.now();
+    if(!rafId) rafId=requestAnimationFrame(loop);
+    showError('Upload loaded — tap the video button to render & save with this effect.');
+  };
+  videoEl.addEventListener('loadedmetadata', onReady);
+  videoEl.addEventListener('error', ()=>{
+    showError('Could not load that video file.');
+  }, {once:true});
+}
+
+// Full-clip render: rewind, record one complete pass, fix duration, download.
+async function renderUploadedClip() {
+  if (!STATE.uploadMode || STATE.isRecording) return;
+  if (typeof compositeCanvas.captureStream !== 'function') {
+    showError('Canvas capture not supported in this browser.'); return;
+  }
+  STATE.uploadCancelled = false;
+  const prog = document.getElementById('upload-progress');
+  const bar  = document.getElementById('up-bar');
+  const pct  = document.getElementById('up-pct');
+  prog.classList.add('show');
+
+  // Pick MIME (reuse global candidate list)
+  let mimeType='';
+  if (typeof MediaRecorder!=='undefined') {
+    for (const mt of _mimeTypeCandidates) if(MediaRecorder.isTypeSupported(mt)){mimeType=mt;break;}
+  }
+
+  // Build combined stream: canvas video + synth audio
+  const videoStream = compositeCanvas.captureStream(30);
+  let stream = videoStream;
+  if (AUDIO.ready && AUDIO.streamDest) {
+    try {
+      stream = new MediaStream([
+        ...videoStream.getVideoTracks(),
+        ...AUDIO.streamDest.stream.getAudioTracks()
+      ]);
+    } catch(_) { stream = videoStream; }
+  }
+
+  const opts = mimeType ? { mimeType, videoBitsPerSecond:6_000_000 } : {};
+  const rec  = new MediaRecorder(stream, opts);
+  const chunks = [];
+  rec.ondataavailable = e => { if(e.data&&e.data.size>0) chunks.push(e.data); };
+
+  // Disable loop, rewind to start, play once through
+  const wasLoop = videoEl.loop;
+  videoEl.loop = false;
+  videoEl.pause();
+  videoEl.currentTime = 0;
+  await new Promise(r => { const h=()=>{videoEl.removeEventListener('seeked',h);r();}; videoEl.addEventListener('seeked',h); });
+
+  const startT = performance.now();
+  STATE.isRecording = true;       // suppresses HUD/labels during capture
+  rec.start(100);
+  await videoEl.play().catch(()=>{});
+
+  const dur = videoEl.duration || 0;
+  // Progress updater
+  const progTimer = setInterval(()=>{
+    if (dur>0){
+      const p = Math.min(100, (videoEl.currentTime/dur)*100)|0;
+      bar.style.width = p+'%'; pct.textContent = p+'%';
+    }
+  }, 100);
+
+  // Finish handler
+  const finish = async () => {
+    clearInterval(progTimer);
+    STATE.isRecording = false;
+    try { rec.stop(); } catch(_){}
+  };
+  videoEl.addEventListener('ended', finish, {once:true});
+
+  // Cancel handler
+  const cancelBtn = document.getElementById('up-cancel');
+  const onCancel = () => { STATE.uploadCancelled = true; finish(); };
+  cancelBtn.addEventListener('click', onCancel, {once:true});
+
+  rec.onstop = async () => {
+    cancelBtn.removeEventListener('click', onCancel);
+    prog.classList.remove('show');
+    bar.style.width='0%'; pct.textContent='0%';
+    // Restore preview looping
+    videoEl.loop = wasLoop;
+    videoEl.play().catch(()=>{});
+    if (STATE.uploadCancelled) { return; }
+    let eff = mimeType || 'video/webm';
+    let blob = new Blob(chunks, {type:eff});
+    const durMs = performance.now() - startT;
+    if (eff.includes('webm')) { try { blob = await fixWebmDuration(blob, durMs); } catch(_){} }
+    if (STATE.lastDlUrl) URL.revokeObjectURL(STATE.lastDlUrl);
+    STATE.lastDlUrl = URL.createObjectURL(blob);
+    const ext = eff.includes('mp4')?'mp4':'webm';
+    const dlLink=document.getElementById('btn-download');
+    dlLink.href=STATE.lastDlUrl; dlLink.download='blobz_styled_'+Date.now()+'.'+ext;
+    dlLink.textContent='\u2b07 SAVE VIDEO';
+    const toast=document.getElementById('download-toast');
+    toast.style.display='flex';
+    clearTimeout(_dlAutoHide);
+    _dlAutoHide=setTimeout(()=>{toast.style.display='none';},25000);
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // WEBM DURATION FIX
 // Chrome's MediaRecorder writes WebM files with no Segment duration, so players
 // report an infinite / absurd length. This injects the real duration (ms) into
@@ -2417,8 +2623,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Record / stop ──────────────────────────────────────────────────────
   document.getElementById('btn-record').addEventListener('click',()=>{
-    if(!STATE.cameraOk){showError('Camera not ready yet.');return;}
-    STATE.isRecording?stopRecording():startRecording();
+    if(!STATE.cameraOk){showError('Not ready yet.');return;}
+    if(STATE.uploadMode){
+      renderUploadedClip();   // upload mode → render the whole clip with effect
+    } else {
+      STATE.isRecording?stopRecording():startRecording();
+    }
   });
 
   // ── Download toast dismiss ─────────────────────────────────────────────
@@ -2448,7 +2658,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Noise slider (settings panel only — no splash twin)
   (function(){
     const lr=document.getElementById('lr-noise'), lv=document.getElementById('lv-noise');
-    lr.addEventListener('input',function(){CFG.noise=parseInt(this.value,10);lv.textContent=this.value;});
+    if(lr&&lv) lr.addEventListener('input',function(){CFG.noise=parseInt(this.value,10);lv.textContent=this.value;});
   })();
   // Photo capture — grabs the composite canvas as PNG
   document.getElementById('btn-photo').addEventListener('click',()=>{
@@ -2493,6 +2703,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if(!ok){splash.style.display='flex';splash.style.opacity='1';splash.style.transition='none';return;}
     STATE.lastDetectT=performance.now(); STATE.fpsT=performance.now();
     rafId=requestAnimationFrame(loop);
+  });
+
+  // ── Upload video flow ──────────────────────────────────────────────────
+  document.getElementById('btn-upload-splash').addEventListener('click',()=>{
+    // AudioContext must be created in the user gesture (iOS)
+    if (!AUDIO.ctx) {
+      try { AUDIO.ctx = new (window.AudioContext||window.webkitAudioContext)(); AUDIO.ctx.resume().catch(()=>{}); }
+      catch(e){}
+    }
+    document.getElementById('file-input').click();
+  });
+  document.getElementById('file-input').addEventListener('change',function(){
+    const f=this.files&&this.files[0];
+    if(!f) return;
+    if(!f.type.startsWith('video/')){showError('Please choose a video file.');return;}
+    startUploadedVideo(f);
   });
 
   // ── Canvas context loss / restore ──────────────────────────────────────
