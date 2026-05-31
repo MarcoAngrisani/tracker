@@ -76,13 +76,31 @@ body{
 .ctrl-label span{color:#ff2800;font-weight:700;}
 input[type="range"]{
   -webkit-appearance:none;appearance:none;
-  width:100%;height:2px;background:rgba(255,255,255,.15);outline:none;cursor:pointer;
+  width:100%;
+  height:36px;                 /* tall hit area — easy to grab on mobile */
+  background:transparent;outline:none;cursor:pointer;
+  touch-action:none;           /* prevents page scroll stealing the drag */
+  margin:0;
+}
+/* Visible thin track painted via the runnable-track pseudo-element */
+input[type="range"]::-webkit-slider-runnable-track{
+  height:3px;background:rgba(255,255,255,.18);border-radius:2px;
+}
+input[type="range"]::-moz-range-track{
+  height:3px;background:rgba(255,255,255,.18);border-radius:2px;
 }
 input[type="range"]::-webkit-slider-thumb{
-  -webkit-appearance:none;width:14px;height:14px;background:#ff2800;border-radius:50%;cursor:pointer;
+  -webkit-appearance:none;
+  width:22px;height:22px;       /* large thumb — reliable touch */
+  margin-top:-9.5px;            /* center on 3px track */
+  background:#ff2800;border:2px solid rgba(255,255,255,.85);
+  border-radius:50%;cursor:pointer;
+  box-shadow:0 1px 4px rgba(0,0,0,.5);
 }
 input[type="range"]::-moz-range-thumb{
-  width:14px;height:14px;background:#ff2800;border:none;border-radius:50%;cursor:pointer;
+  width:22px;height:22px;background:#ff2800;
+  border:2px solid rgba(255,255,255,.85);border-radius:50%;cursor:pointer;
+  box-shadow:0 1px 4px rgba(0,0,0,.5);
 }
 /* 6-style 2x3 grid */
 .style-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;}
@@ -180,18 +198,22 @@ input[type="range"]::-moz-range-thumb{
 /* ── SETTINGS PANEL ────────────────────────────────────────────────────── */
 #settings-panel{
   position:fixed;bottom:0;left:0;right:0;z-index:19;
-  background:rgba(5,5,8,.95);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border-top:1px solid rgba(255,255,255,.09);
-  padding:1.3rem 1.4rem;
+  /* Semi-transparent so the live effect stays visible while tuning */
+  background:linear-gradient(to top, rgba(5,5,8,.72) 0%, rgba(5,5,8,.42) 100%);
+  backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+  border-top:1px solid rgba(255,255,255,.12);
+  padding:1rem 1.3rem;
   padding-bottom:calc(5.8rem + env(safe-area-inset-bottom));
+  max-height:62vh;overflow-y:auto;
   transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
   pointer-events:none;
+  /* readability: subtle text shadow against bright video behind */
+  text-shadow:0 1px 3px rgba(0,0,0,.7);
 }
 #settings-panel.open{transform:translateY(0);pointer-events:auto;}
-.tune-head{font-weight:900;font-size:1.4rem;letter-spacing:-.02em;margin-bottom:.8rem;color:#fff;}
+.tune-head{font-weight:900;font-size:1.1rem;letter-spacing:-.02em;margin-bottom:.5rem;color:#fff;}
 .tune-sect{font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.3);margin:.6rem 0 .3rem;}
-#settings-panel .ctrl-row{margin-bottom:.8rem;}
+#settings-panel .ctrl-row{margin-bottom:.55rem;}
 .toggle-row{display:flex;gap:.5rem;margin-top:.5rem;}
 .toggle-btn{
   flex:1;padding:.4rem;background:transparent;
@@ -2351,14 +2373,8 @@ async function renderUploadedClip() {
     let blob = new Blob(chunks, {type:eff});
     const durMs = performance.now() - startT;
     if (eff.includes('webm')) { try { blob = await fixWebmDuration(blob, durMs); } catch(_){} }
-    if (STATE.lastDlUrl) URL.revokeObjectURL(STATE.lastDlUrl);
-    STATE.lastDlUrl = URL.createObjectURL(blob);
     const ext = eff.includes('mp4')?'mp4':'webm';
-    const dlLink=document.getElementById('btn-download');
-    dlLink.href=STATE.lastDlUrl; dlLink.download='blobz_styled_'+Date.now()+'.'+ext;
-    dlLink.textContent='\u2b07 SAVE VIDEO';
-    triggerSave(dlLink);   // auto-download
-    flashToast('VIDEO SAVED');
+    saveBlob(blob, 'blobz_styled_'+Date.now()+'.'+ext);
   };
 }
 
@@ -2526,14 +2542,8 @@ function startRecording() {
       if (eff.includes('webm')) {
         try { blob = await fixWebmDuration(blob, durMs); } catch(_) {}
       }
-      if(STATE.lastDlUrl)URL.revokeObjectURL(STATE.lastDlUrl);
-      STATE.lastDlUrl=URL.createObjectURL(blob);
       const ext=eff.includes('mp4')?'mp4':'webm';
-      const dlLink=document.getElementById('btn-download');
-      dlLink.href=STATE.lastDlUrl; dlLink.download='blobz_'+Date.now()+'.'+ext;
-      dlLink.textContent='\u2b07 SAVE VIDEO';
-      triggerSave(dlLink);   // auto-download
-      flashToast('VIDEO SAVED');
+      saveBlob(blob, 'blobz_'+Date.now()+'.'+ext);
     };
     STATE.mediaRecorder.onerror=e=>{showError('Recording error: '+(e.error?e.error.message:'unknown'));stopRecording();};
     STATE.mediaRecorder.start(100);
@@ -2552,27 +2562,60 @@ function stopRecording() {
 }
 
 // ── 3.12  Error display ───────────────────────────────────────────────────────
-// Auto-download: programmatically click the prepared download link.
-function triggerSave(linkEl) {
+// ── Unified save: File System Access API when available, else anchor download ──
+// Keeps the most direct path on each platform so the user isn't forced through
+// extra confirmation dialogs where the browser allows a direct write.
+async function saveBlob(blob, filename) {
+  // 1) Best path: File System Access API (Chrome/Edge desktop, Android Chrome)
+  if (window.showSaveFilePicker) {
+    try {
+      const ext = filename.split('.').pop();
+      const types = ext === 'png'
+        ? [{ description:'Image', accept:{'image/png':['.png']} }]
+        : [{ description:'Video', accept:{[blob.type||'video/webm']:['.'+ext]} }];
+      const handle = await window.showSaveFilePicker({ suggestedName: filename, types });
+      const w = await handle.createWritable();
+      await w.write(blob);
+      await w.close();
+      flashSaved('SAVED');
+      return;
+    } catch(e) {
+      if (e && e.name === 'AbortError') return;   // user cancelled — do nothing
+      // otherwise fall through to anchor download
+    }
+  }
+  // 2) Fallback: anchor download (auto-clicked). iOS may open a tab; that's OS-level.
   try {
-    linkEl.click();   // native browser download
+    const url = URL.createObjectURL(blob);
+    if (STATE.lastDlUrl) URL.revokeObjectURL(STATE.lastDlUrl);
+    STATE.lastDlUrl = url;
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    // Also wire the toast SAVE button to the same blob as a manual backup
+    const dl = document.getElementById('btn-download');
+    if (dl) { dl.href = url; dl.download = filename; dl.textContent = '\u2b07 SAVE'; }
+    flashSaved('SAVED \u2014 OR TAP SAVE');
   } catch(e) {
-    // Fallback: show the toast so user can tap manually
-    const toast=document.getElementById('download-toast');
-    if(toast) toast.style.display='flex';
+    showError('Could not save file: ' + e.message);
   }
 }
-// Brief confirmation toast that also keeps the manual SAVE link available.
-function flashToast(label) {
-  const toast=document.getElementById('download-toast');
-  const dl=document.getElementById('btn-download');
-  if(dl) dl.textContent='\u2b07 '+label.replace(' SAVED',' — TAP TO SAVE AGAIN');
-  if(toast){
-    toast.style.display='flex';
+
+// Brief confirmation toast (auto-hides). Kept minimal — no manual OK required
+// on platforms where showSaveFilePicker already wrote the file.
+function flashSaved(label) {
+  const toast = document.getElementById('download-toast');
+  const dl = document.getElementById('btn-download');
+  if (dl && label.indexOf('TAP') < 0) dl.textContent = '\u2705 ' + label;
+  if (toast) {
+    toast.style.display = 'flex';
     clearTimeout(_dlAutoHide);
-    _dlAutoHide=setTimeout(()=>{toast.style.display='none';},12000);
+    _dlAutoHide = setTimeout(()=>{ toast.style.display='none'; }, 9000);
   }
 }
+
 function showError(msg) {
   const el=document.getElementById('error-banner');
   el.textContent=msg; el.style.display='block';
@@ -2727,7 +2770,7 @@ document.addEventListener('DOMContentLoaded', () => {
     compositeCanvas.setPointerCapture(e.pointerId);
   },{passive:false});
   compositeCanvas.addEventListener('pointermove',e=>{
-    if(!TOUCH.active||e.buttons===0) return;
+    if(_settingsOpen||!TOUCH.active||e.buttons===0) return;
     e.preventDefault();
     TOUCH.x=e.clientX; TOUCH.y=e.clientY; TOUCH.lastT=performance.now();
   },{passive:false});
@@ -2785,13 +2828,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try{
       compositeCanvas.toBlob((blob)=>{
         if(!blob){showError('Photo capture failed.');return;}
-        if(STATE.lastDlUrl)URL.revokeObjectURL(STATE.lastDlUrl);
-        STATE.lastDlUrl=URL.createObjectURL(blob);
-        const dlLink=document.getElementById('btn-download');
-        dlLink.href=STATE.lastDlUrl; dlLink.download='blobz_'+Date.now()+'.png';
-        dlLink.textContent='\u2b07 SAVE PHOTO';
-        triggerSave(dlLink);   // auto-download
-        flashToast('PHOTO SAVED');
+        saveBlob(blob, 'blobz_'+Date.now()+'.png');
       },'image/png');
     }catch(e){showError('Photo capture failed: '+e.message);}
   });
