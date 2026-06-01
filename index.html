@@ -1053,6 +1053,7 @@ function initBuffers(pW, pH) {
   _segLuma    = new Float32Array(pH);
   // Invalidate contagion grid so it rebuilds at new resolution
   if (typeof CONT !== 'undefined') { CONT.W = 0; CONT.state = null; }
+  if (typeof SPEC !== 'undefined') { SPEC.lW = 0; SPEC.lH = 0; }
   // _dstImgData requires an active 2d context; created after effectCanvas exists
   if (_effectCtx) {
     _effectCanvas.width  = pW;
@@ -1429,7 +1430,6 @@ const CFG = {
   contSpread:     22,       // spread probability % per frame (5-60)
   contSeeds:      2,        // random seeds per tick (0-8)
   contReset:      6,        // seconds between border reset waves (2-15)
-  contDisplace:   10,       // pixel displacement distance (2-30)
 };
 
 const TOUCH = {
@@ -2136,14 +2136,19 @@ let _noiseScratch = null, _noiseScratchCtx = null;
 // a zig-zag (90° stepped) cut edge, animates it to screen centre scaled up like
 // a specimen under examination, holds with a scanner frame, then dissolves.
 // One specimen at a time, driven by a small state machine.
+// ── 3.8f  Style K — SPECIMEN COLLAGE (abstract fragments accumulate) ──────────
+// Detects stable blobs, cuts each as an abstract stepped-polygon fragment, and
+// drops it onto an accumulating collage at a random position + slight rotation.
+// Fragments pile up like a growing visual database; when full, the oldest fades
+// out as a new one enters. The collage persists on its own layer between frames.
 const SPEC = {
-  phase:    'idle',   // idle | rising | hold | dissolve
-  t0:       0,
+  layer:    null, lctx:null,    // persistent collage canvas
+  lW:0, lH:0,
+  frags:    [],                 // active fragments {age,maxAge,...} for fade tracking
   srcCanvas:null, srcCtx:null,
-  sx:0, sy:0, sw:0, sh:0,
-  poly:     null,     // abstract polygon vertices (relative 0..1 in bbox)
   lastGrab: 0,
-  RISE_MS:  650, HOLD_MS: 1300, DISS_MS: 700, GAP_MS: 350,
+  GAP_MS:   620,                // min time between new fragments
+  MAX_FRAGS:14,
 };
 function _ensureSpecCanvas() {
   if (!SPEC.srcCanvas) {
@@ -2151,274 +2156,224 @@ function _ensureSpecCanvas() {
     SPEC.srcCtx = SPEC.srcCanvas.getContext('2d');
   }
 }
-// Generate an abstract polygon (irregular many-sided fragment) with 90°-ish
-// stepped angles for a glitch/crystal feel. Vertices returned as relative
-// coords (0..1) inside the bounding box. Radius varies per vertex.
+// Abstract stepped polygon (irregular fragment, 90° glitch edges), relative 0..1.
 function _makeAbstractPoly(seed) {
-  const verts = [];
-  const n = 7 + (seed % 6);             // 7..12 sides
-  let rng = (seed * 2654435761) >>> 0;
-  const rand = () => { rng = (rng*1664525+1013904223)>>>0; return rng/0xFFFFFFFF; };
-  for (let i = 0; i < n; i++) {
-    const ang = (i / n) * Math.PI * 2;
-    // radius jitter — some vertices pulled in, some out → irregular fragment
-    const r = 0.30 + rand() * 0.22;
-    let vx = 0.5 + Math.cos(ang) * r;
-    let vy = 0.5 + Math.sin(ang) * r;
-    // Quantize to a stepped grid so edges read as 90° glitch steps
-    vx = Math.round(vx * 8) / 8;
-    vy = Math.round(vy * 8) / 8;
-    verts.push([vx, vy]);
+  const verts=[]; const n=7+(seed%6);
+  let rng=(seed*2654435761)>>>0;
+  const rand=()=>{rng=(rng*1664525+1013904223)>>>0;return rng/0xFFFFFFFF;};
+  for (let i=0;i<n;i++){
+    const ang=(i/n)*Math.PI*2;
+    const r=0.30+rand()*0.22;
+    let vx=0.5+Math.cos(ang)*r, vy=0.5+Math.sin(ang)*r;
+    vx=Math.round(vx*8)/8; vy=Math.round(vy*8)/8;
+    verts.push([vx,vy]);
   }
   return verts;
 }
-// Trace a polygon path on ctx given vertices (relative) mapped into rect.
-// Uses stepped (axis-aligned) segments between vertices for the glitch edge.
 function _polyClipStepped(ctx, verts, x, y, w, h) {
   ctx.beginPath();
-  for (let i = 0; i < verts.length; i++) {
-    const [vx, vy] = verts[i];
-    const px = x + vx * w, py = y + vy * h;
-    if (i === 0) { ctx.moveTo(px, py); }
-    else {
-      // stepped move: horizontal then vertical (axis-aligned glitch edge)
-      const prev = verts[i-1];
-      const ppx = x + prev[0]*w, ppy = y + prev[1]*h;
-      ctx.lineTo(px, ppy);   // horizontal leg
-      ctx.lineTo(px, py);    // vertical leg
-    }
+  for (let i=0;i<verts.length;i++){
+    const [vx,vy]=verts[i];
+    const px=x+vx*w, py=y+vy*h;
+    if (i===0) ctx.moveTo(px,py);
+    else { const prev=verts[i-1]; const ppy=y+prev[1]*h; ctx.lineTo(px,ppy); ctx.lineTo(px,py); }
   }
   ctx.closePath();
 }
+function _ensureSpecLayer(cW, cH){
+  if (!SPEC.layer){ SPEC.layer=document.createElement('canvas'); SPEC.lctx=SPEC.layer.getContext('2d'); }
+  if (SPEC.lW!==cW||SPEC.lH!==cH){
+    SPEC.layer.width=cW; SPEC.layer.height=cH; SPEC.lW=cW; SPEC.lH=cH;
+    SPEC.lctx.clearRect(0,0,cW,cH); SPEC.frags.length=0;
+  }
+}
 function drawStyleK(ctx, cW, cH, now) {
   _ensureSpecCanvas();
-  ctx.fillStyle = 'rgba(5,5,8,0.55)';
-  ctx.fillRect(0, 0, cW, cH);
+  _ensureSpecLayer(cW, cH);
+  const L=SPEC.lctx;
 
-  if (SPEC.phase === 'idle') {
-    let best=-1, bestR=CFG.specMinR;
-    for (let ti=0; ti<MAX_TRACKED; ti++){
-      const t=_tracked[ti];
-      if (t.active && t.age>=3 && t.sr>bestR){bestR=t.sr; best=ti;}
-    }
-    if (best>=0 && now-SPEC.lastGrab > SPEC.GAP_MS) {
-      const t=_tracked[best];
-      const pad=14;
-      let bx=Math.max(0, t.bx-pad), by=Math.max(0, t.by-pad);
-      let bw=Math.min(cW-bx, t.bw+pad*2), bh=Math.min(cH-by, t.bh+pad*2);
-      if (bw>24 && bh>24) {
-        SPEC.sx=bx; SPEC.sy=by; SPEC.sw=bw; SPEC.sh=bh;
-        SPEC.poly=_makeAbstractPoly((now|0) ^ (t.id*97));
+  // Dark base
+  ctx.fillStyle='#070709'; ctx.fillRect(0,0,cW,cH);
+
+  // ── Grab a new fragment when a good blob exists ──
+  if (now-SPEC.lastGrab > SPEC.GAP_MS){
+    let best=-1,bestR=CFG.specMinR;
+    for (let ti=0;ti<MAX_TRACKED;ti++){const t=_tracked[ti];if(t.active&&t.age>=3&&t.sr>bestR){bestR=t.sr;best=ti;}}
+    if (best>=0){
+      const t=_tracked[best], pad=10;
+      let bx=Math.max(0,t.bx-pad), by=Math.max(0,t.by-pad);
+      let bw=Math.min(cW-bx,t.bw+pad*2), bh=Math.min(cH-by,t.bh+pad*2);
+      if (bw>20&&bh>20){
         SPEC.srcCanvas.width=bw; SPEC.srcCanvas.height=bh;
-        const fx=_crop.sx + (bx/cW)*_crop.sw, fy=_crop.sy + (by/cH)*_crop.sh;
+        const fx=_crop.sx+(bx/cW)*_crop.sw, fy=_crop.sy+(by/cH)*_crop.sh;
         const fw=(bw/cW)*_crop.sw, fh=(bh/cH)*_crop.sh;
         SPEC.srcCtx.clearRect(0,0,bw,bh);
-        try { SPEC.srcCtx.drawImage(videoEl, fx,fy,fw,fh, 0,0,bw,bh); } catch(e){}
-        SPEC.phase='rising'; SPEC.t0=now;
+        try{ SPEC.srcCtx.drawImage(videoEl,fx,fy,fw,fh,0,0,bw,bh);}catch(e){}
+        const poly=_makeAbstractPoly((now|0)^(t.id*97));
+
+        // Choose collage placement: scaled, random pos, slight rotation
+        const sc=0.5+Math.random()*0.5;
+        const dw=bw*sc, dh=bh*sc;
+        const px=Math.random()*(cW-dw), py=Math.random()*(cH-dh);
+        const rot=(Math.random()-0.5)*0.5;   // ±0.25 rad
+
+        // Draw the fragment onto the persistent collage layer
+        L.save();
+        L.translate(px+dw*0.5, py+dh*0.5);
+        L.rotate(rot);
+        L.translate(-dw*0.5,-dh*0.5);
+        _polyClipStepped(L, poly, 0, 0, dw, dh);
+        L.save(); L.clip();
+        L.imageSmoothingEnabled=false;
+        L.drawImage(SPEC.srcCanvas, 0,0,dw,dh);
+        L.restore();
+        // outline
+        _polyClipStepped(L, poly, 0,0,dw,dh);
+        L.strokeStyle='rgba(180,255,55,0.8)'; L.lineWidth=2; L.stroke();
+        L.restore();
+
+        SPEC.frags.push({t:now});
+        SPEC.lastGrab=now;
+
+        // When too many, fade the whole layer a touch so old ones recede
+        if (SPEC.frags.length>SPEC.MAX_FRAGS){
+          SPEC.frags.shift();
+          L.globalCompositeOperation='destination-out';
+          L.fillStyle='rgba(0,0,0,0.22)';
+          L.fillRect(0,0,cW,cH);
+          L.globalCompositeOperation='source-over';
+        }
       }
     }
   }
-  if (SPEC.phase==='idle') return;
 
-  const cx=cW*0.5, cy=cH*0.5;
-  const targetMax=Math.min(cW,cH)*0.46;
-  const scaleTo=Math.min(targetMax/SPEC.sw, targetMax/SPEC.sh);
+  // Slow continuous fade so the collage breathes / very old frags vanish
+  L.globalCompositeOperation='destination-out';
+  L.fillStyle='rgba(0,0,0,0.012)';
+  L.fillRect(0,0,cW,cH);
+  L.globalCompositeOperation='source-over';
 
-  let alpha=1, curScale=scaleTo, gx=cx, gy=cy;
-  if (SPEC.phase==='rising') {
-    const p=Math.min(1,(now-SPEC.t0)/SPEC.RISE_MS), e=1-Math.pow(1-p,3);
-    const startCx=SPEC.sx+SPEC.sw*0.5, startCy=SPEC.sy+SPEC.sh*0.5;
-    gx=startCx+(cx-startCx)*e; gy=startCy+(cy-startCy)*e;
-    curScale=(1)+(scaleTo-1)*e; alpha=0.4+0.6*e;
-    if (p>=1){SPEC.phase='hold'; SPEC.t0=now;}
-  } else if (SPEC.phase==='hold') {
-    const p=(now-SPEC.t0)/SPEC.HOLD_MS;
-    if (p>=1){SPEC.phase='dissolve'; SPEC.t0=now;}
-  } else if (SPEC.phase==='dissolve') {
-    const p=Math.min(1,(now-SPEC.t0)/SPEC.DISS_MS);
-    curScale=scaleTo*(1+p*0.12); alpha=1-p;
-    if (p>=1){SPEC.phase='idle'; SPEC.lastGrab=now; return;}
+  // Composite the collage layer onto the screen
+  ctx.drawImage(SPEC.layer, 0, 0);
+
+  if (!STATE.isRecording){
+    ctx.font='900 12px Helvetica,Arial,sans-serif';
+    ctx.fillStyle='rgba(180,255,55,0.85)';
+    ctx.fillText('SPECIMEN ['+SPEC.frags.length+']', 14, cH-20);
   }
-
-  const dw=SPEC.sw*curScale, dh=SPEC.sh*curScale;
-  const dx=gx-dw*0.5, dy=gy-dh*0.5;
-
-  ctx.save();
-  ctx.globalAlpha=alpha;
-  _polyClipStepped(ctx, SPEC.poly, dx, dy, dw, dh);
-  ctx.clip();
-  ctx.imageSmoothingEnabled=false;
-  ctx.drawImage(SPEC.srcCanvas, dx, dy, dw, dh);
-  ctx.imageSmoothingEnabled=true;
-  ctx.restore();
-
-  // Outline + label over the abstract shape
-  ctx.save();
-  ctx.globalAlpha=alpha;
-  _polyClipStepped(ctx, SPEC.poly, dx, dy, dw, dh);
-  ctx.strokeStyle='rgba(180,255,55,0.9)'; ctx.lineWidth=2; ctx.stroke();
-  if (!STATE.isRecording) {
-    ctx.font='900 13px Helvetica,Arial,sans-serif';
-    ctx.fillStyle='rgba(180,255,55,0.95)';
-    ctx.fillText('SPECIMEN', dx, dy-8);
-  }
-  ctx.restore();
 }
 
 // ── 3.8g  Style L — MOSAIC (pixelate only inside detected blob frames) ───────
-// Like SCAN: draws the live frame, then picks the active tracked blobs and
-// pixelates ONLY the region inside each blob's frame (real palette), leaving
-// the rest of the image untouched. Each region gets a frame + label.
 const MOSAIC_LETTERS = 'ROACDEFGHKLMNPSTUVXYZ';
 function drawStyleL(ctx, cW, cH) {
-  // Base live frame already drawn by the loop for style L? No — loop skips L.
-  // Draw it ourselves so untouched areas show the real video.
   ctx.drawImage(videoEl, _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,cW,cH);
-
-  // Gather active blobs (largest first), cap to a handful like SCAN
   const blobs=[];
-  for (let ti=0; ti<MAX_TRACKED; ti++){
-    const t=_tracked[ti];
-    if (t.active && t.age>=2) blobs.push(t);
-  }
+  for (let ti=0; ti<MAX_TRACKED; ti++){const t=_tracked[ti];if(t.active&&t.age>=2)blobs.push(t);}
   blobs.sort((a,b)=>b.sr-a.sr);
-  const maxRegions=Math.min(blobs.length, 6);
-
-  for (let r=0; r<maxRegions; r++){
-    const b=blobs[r];
-    // Region rect around blob (clamped)
-    const pad=10;
-    let rx=Math.max(0, b.bx-pad), ry=Math.max(0, b.by-pad);
-    let rw=Math.min(cW-rx, b.bw+pad*2), rh=Math.min(cH-ry, b.bh+pad*2);
+  const maxRegions=Math.min(blobs.length,6);
+  for (let r=0;r<maxRegions;r++){
+    const b=blobs[r], pad=10;
+    let rx=Math.max(0,b.bx-pad), ry=Math.max(0,b.by-pad);
+    let rw=Math.min(cW-rx,b.bw+pad*2), rh=Math.min(cH-ry,b.bh+pad*2);
     if (rw<16||rh<16) continue;
-
-    // Block size scales with chunk param + blob depth-ish (use radius)
-    const blocks=Math.max(2, CFG.mosaicChunk);
+    const blocks=Math.max(2,CFG.mosaicChunk);
     const bw=rw/blocks, bh=rh/blocks;
-
-    // Sample each block's centre colour from the live composite (already drawn)
-    // Read once for the whole region for speed.
     let region;
-    try { region=ctx.getImageData(rx, ry, Math.ceil(rw), Math.ceil(rh)); }
-    catch(e){ continue; }
+    try{ region=ctx.getImageData(rx,ry,Math.ceil(rw),Math.ceil(rh)); }catch(e){ continue; }
     const rp=region.data, RW=region.width;
-    for (let by=0; by<blocks; by++){
-      for (let bx=0; bx<blocks; bx++){
-        const scx=Math.min(RW-1, ((bx+0.5)*bw)|0);
-        const scy=Math.min(region.height-1, ((by+0.5)*bh)|0);
+    for (let by=0;by<blocks;by++){
+      for (let bx=0;bx<blocks;bx++){
+        const scx=Math.min(RW-1,((bx+0.5)*bw)|0), scy=Math.min(region.height-1,((by+0.5)*bh)|0);
         const si=(scy*RW+scx)*4;
         ctx.fillStyle='rgb('+rp[si]+','+rp[si+1]+','+rp[si+2]+')';
         ctx.fillRect(rx+bx*bw, ry+by*bh, Math.ceil(bw), Math.ceil(bh));
       }
     }
-    // Frame + label (SCAN aesthetic)
     ctx.strokeStyle='rgba(245,225,40,0.9)'; ctx.lineWidth=2; ctx.setLineDash([]);
-    ctx.strokeRect(rx, ry, rw, rh);
-    // corner ticks
+    ctx.strokeRect(rx,ry,rw,rh);
     ctx.strokeStyle='rgba(255,255,255,0.85)'; ctx.lineWidth=1.5;
     const tk=12;
     ctx.beginPath();
-    ctx.moveTo(rx,ry+tk); ctx.lineTo(rx,ry); ctx.lineTo(rx+tk,ry);
-    ctx.moveTo(rx+rw-tk,ry+rh); ctx.lineTo(rx+rw,ry+rh); ctx.lineTo(rx+rw,ry+rh-tk);
+    ctx.moveTo(rx,ry+tk);ctx.lineTo(rx,ry);ctx.lineTo(rx+tk,ry);
+    ctx.moveTo(rx+rw-tk,ry+rh);ctx.lineTo(rx+rw,ry+rh);ctx.lineTo(rx+rw,ry+rh-tk);
     ctx.stroke();
     if (!STATE.isRecording){
       ctx.font='900 12px Helvetica,Arial,sans-serif';
       ctx.fillStyle='rgba(245,225,40,0.95)';
-      ctx.fillText(MOSAIC_LETTERS[r % MOSAIC_LETTERS.length]+' '+((b.spxS)|0), rx+4, ry-6);
+      ctx.fillText(MOSAIC_LETTERS[r%MOSAIC_LETTERS.length]+' '+((b.spxS)|0), rx+4, ry-6);
     }
   }
 }
 
-// ── 3.8h  Style M — CONTAGION (live image, infected blocks DISPLACE) ──────────
-// The live video is the canvas. "Infected" cells spread to neighbours; each
-// infected cell DISPLACES a block of the live image (drags pixels by an offset),
-// smearing the picture organically. A clean wave periodically sweeps in from the
-// borders, restoring the untouched live frame. Touch seeds new outbreaks.
+// ── 3.8h  Style M — CONTAGION (black bg, pixels light up + spread) ────────────
+// Cellular automaton: infected cells spread to 4-neighbours each frame, painting
+// the real image colour sampled at that location onto a black field. Random +
+// touch seeds. A clean wave periodically sweeps from the borders inward.
 const CONT = {
   W:0, H:0,
-  state:   null,   // 0 clean, 1 infected
-  dirX:    null, dirY:null,   // displacement direction per cell (int8-ish)
+  state:   null,
+  colR:    null, colG:null, colB:null,
   resetT:  0, resetActive:false, resetProg:0,
   seedT:   0,
 };
 function _initContagion(){
-  const cw = Math.min(96, PROC_W), ch = Math.round(cw * PROC_H / PROC_W);
-  CONT.W=cw; CONT.H=ch;
-  const n=cw*ch;
+  const cw=Math.min(140,PROC_W), ch=Math.round(cw*PROC_H/PROC_W);
+  CONT.W=cw; CONT.H=ch; const n=cw*ch;
   CONT.state=new Uint8Array(n);
-  CONT.dirX=new Int8Array(n); CONT.dirY=new Int8Array(n);
+  CONT.colR=new Uint8Array(n); CONT.colG=new Uint8Array(n); CONT.colB=new Uint8Array(n);
 }
-function _contSeed(x, y){
-  if (x<0||y<0||x>=CONT.W||y>=CONT.H) return;
-  const i=y*CONT.W+x;
-  CONT.state[i]=1;
-  // random-ish displacement direction (−1,0,1) per axis, biased downward/right
-  CONT.dirX[i]=((Math.random()*3)|0)-1;
-  CONT.dirY[i]=((Math.random()*3)|0)-1;
-  if (CONT.dirX[i]===0 && CONT.dirY[i]===0) CONT.dirY[i]=1;
+function _contSeed(nx, ny, fd){
+  if (nx<0||ny<0||nx>=CONT.W||ny>=CONT.H) return;
+  const i=ny*CONT.W+nx; CONT.state[i]=1;
+  const fpx=Math.min(PROC_W-1,(nx/CONT.W*PROC_W)|0), fpy=Math.min(PROC_H-1,(ny/CONT.H*PROC_H)|0);
+  const fi=(fpy*PROC_W+fpx)*4;
+  CONT.colR[i]=fd[fi]; CONT.colG[i]=fd[fi+1]; CONT.colB[i]=fd[fi+2];
 }
 function drawStyleM(ctx, cW, cH, now){
-  if (!CONT.state || CONT.W===0) _initContagion();
+  if (!_effectCtx) return;
+  if (!CONT.state||CONT.W===0) _initContagion();
+  _effectCtx.drawImage(videoEl,_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,PROC_W,PROC_H);
+  let fd; try{ fd=_effectCtx.getImageData(0,0,PROC_W,PROC_H).data; }catch(e){ return; }
   const W=CONT.W, H=CONT.H, st=CONT.state;
 
-  // 1. Draw the live frame as the base (full image visible)
-  ctx.drawImage(videoEl, _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,cW,cH);
-
-  // 2. Seeds
-  if (now-CONT.seedT > 240){
+  if (now-CONT.seedT>240){
     CONT.seedT=now;
-    for (let s=0;s<CFG.contSeeds;s++) _contSeed((Math.random()*W)|0,(Math.random()*H)|0);
+    for (let s=0;s<CFG.contSeeds;s++) _contSeed((Math.random()*W)|0,(Math.random()*H)|0,fd);
   }
   if (TOUCH.active){
     const tx=((TOUCH.x/cW)*W)|0, ty=((TOUCH.y/cH)*H)|0;
-    for (let k=0;k<5;k++) _contSeed(tx+((Math.random()*6-3)|0), ty+((Math.random()*6-3)|0));
+    for (let k=0;k<5;k++) _contSeed(tx+((Math.random()*6-3)|0),ty+((Math.random()*6-3)|0),fd);
   }
 
-  // 3. Spread
   const spreadP=CFG.contSpread/100;
   for (let y=0;y<H;y++){
     for (let x=0;x<W;x++){
-      const i=y*W+x;
-      if (!st[i]) continue;
-      if (x>0   && !st[i-1] && Math.random()<spreadP){ _contSeed(x-1,y); CONT.dirX[i-1]=CONT.dirX[i]; CONT.dirY[i-1]=CONT.dirY[i]; }
-      if (x<W-1 && !st[i+1] && Math.random()<spreadP){ _contSeed(x+1,y); CONT.dirX[i+1]=CONT.dirX[i]; CONT.dirY[i+1]=CONT.dirY[i]; }
-      if (y>0   && !st[i-W] && Math.random()<spreadP){ _contSeed(x,y-1); CONT.dirX[i-W]=CONT.dirX[i]; CONT.dirY[i-W]=CONT.dirY[i]; }
-      if (y<H-1 && !st[i+W] && Math.random()<spreadP){ _contSeed(x,y+1); CONT.dirX[i+W]=CONT.dirX[i]; CONT.dirY[i+W]=CONT.dirY[i]; }
+      const i=y*W+x; if(!st[i])continue;
+      if (x>0   && !st[i-1] && Math.random()<spreadP) _contSeed(x-1,y,fd);
+      if (x<W-1 && !st[i+1] && Math.random()<spreadP) _contSeed(x+1,y,fd);
+      if (y>0   && !st[i-W] && Math.random()<spreadP) _contSeed(x,y-1,fd);
+      if (y<H-1 && !st[i+W] && Math.random()<spreadP) _contSeed(x,y+1,fd);
     }
   }
 
-  // 4. Periodic clean reset wave from borders inward
-  if (!CONT.resetActive && now-CONT.resetT > CFG.contReset*1000){
+  if (!CONT.resetActive && now-CONT.resetT>CFG.contReset*1000){
     CONT.resetActive=true; CONT.resetProg=0; CONT.resetT=now;
   }
   if (CONT.resetActive){
-    CONT.resetProg += 0.02;
+    CONT.resetProg+=0.02;
     const mx=(CONT.resetProg*W*0.5)|0, my=(CONT.resetProg*H*0.5)|0;
-    for (let y=0;y<H;y++)
-      for (let x=0;x<W;x++)
-        if (x<mx||x>=W-mx||y<my||y>=H-my) st[y*W+x]=0;
+    for (let y=0;y<H;y++) for (let x=0;x<W;x++) if(x<mx||x>=W-mx||y<my||y>=H-my) st[y*W+x]=0;
     if (CONT.resetProg>=1) CONT.resetActive=false;
   }
 
-  // 5. Render displacement: for each infected cell, copy a block of the live
-  //    canvas from an offset position → drag/smear effect. Done via drawImage
-  //    sampling the composite onto itself (cheap, GC-free per call).
+  ctx.fillStyle='#050508'; ctx.fillRect(0,0,cW,cH);
   const sw=cW/W, sh=cH/H;
-  const off=CFG.contDisplace;   // displacement in screen px
   ctx.imageSmoothingEnabled=false;
   for (let y=0;y<H;y++){
     for (let x=0;x<W;x++){
-      const i=y*W+x;
-      if (!st[i]) continue;
-      const sx=x*sw, sy=y*sh;
-      const ddx=CONT.dirX[i]*off, ddy=CONT.dirY[i]*off;
-      // source clamped inside canvas
-      let srcx=sx+ddx, srcy=sy+ddy;
-      if (srcx<0) srcx=0; if (srcy<0) srcy=0;
-      if (srcx>cW-sw) srcx=cW-sw; if (srcy>cH-sh) srcy=cH-sh;
-      try {
-        ctx.drawImage(compositeCanvas, srcx, srcy, sw, sh, sx, sy, Math.ceil(sw), Math.ceil(sh));
-      } catch(e){}
+      const i=y*W+x; if(!st[i])continue;
+      ctx.fillStyle='rgb('+CONT.colR[i]+','+CONT.colG[i]+','+CONT.colB[i]+')';
+      ctx.fillRect(x*sw,y*sh,Math.ceil(sw),Math.ceil(sh));
     }
   }
   ctx.imageSmoothingEnabled=true;
@@ -3003,7 +2958,6 @@ document.addEventListener('DOMContentLoaded', () => {
     ],
     M: [
       ['contSpread','Spread Speed',5,60,1],
-      ['contDisplace','Smear Distance',2,30,1],
       ['contSeeds','Random Seeds',0,8,1],
       ['contReset','Reset Interval',2,15,1],
     ],
