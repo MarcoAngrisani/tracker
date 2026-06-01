@@ -809,6 +809,47 @@ function textureGlint(t, vel=0.5) {
   src.start(t); src.stop(t + 0.09);
 }
 
+
+// ── Sequencer voices — pitched timbres triggered by the SEQUENCER style ──────
+// voice index: 0=Pluck 1=Bell 2=Bass 3=Pad. vel 0..1, dur seconds.
+function seqVoice(voiceIdx, freq, t, vel, dur){
+  const ctx=AUDIO.ctx; if(!ctx) return;
+  const g=ctx.createGain(); g.connect(AUDIO.masterGain);
+  if (voiceIdx===0){            // Pluck — short triangle with fast decay
+    const o=ctx.createOscillator(); o.type='triangle'; o.frequency.value=freq;
+    o.connect(g);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.22*vel,t+0.005);
+    g.gain.exponentialRampToValueAtTime(0.0005,t+Math.min(dur,0.4));
+    o.start(t); o.stop(t+Math.min(dur,0.45));
+  } else if (voiceIdx===1){     // Bell — two sine partials, long decay
+    [1,2.76].forEach((m,k)=>{
+      const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=freq*m;
+      const gg=ctx.createGain(); o.connect(gg); gg.connect(g);
+      gg.gain.value=k?0.35:1;
+      o.start(t); o.stop(t+dur+0.4);
+    });
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.18*vel,t+0.006);
+    g.gain.exponentialRampToValueAtTime(0.0005,t+dur+0.35);
+  } else if (voiceIdx===2){     // Bass — low sine, rounded
+    const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=freq*0.5;
+    o.connect(g);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.linearRampToValueAtTime(0.30*vel,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0005,t+Math.min(dur,0.5));
+    o.start(t); o.stop(t+Math.min(dur,0.55));
+  } else {                      // Pad — soft saw through gentle lowpass, slow env
+    const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=freq;
+    const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=1400;
+    o.connect(f); f.connect(g);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.linearRampToValueAtTime(0.14*vel,t+0.06);
+    g.gain.exponentialRampToValueAtTime(0.0005,t+dur+0.2);
+    o.start(t); o.stop(t+dur+0.25);
+  }
+}
+
 // ── Melody scheduler: picks a nearby scale note, gentle random walk ───────────
 function scheduleMelody(ctx) {
   while (DRUM.melTime < ctx.currentTime + 0.3) {
@@ -1347,6 +1388,14 @@ const CFG = {
   contSpread:     22,       // spread probability % per frame (5-60)
   contSeeds:      2,        // random seeds per tick (0-8)
   contReset:      6,        // seconds between border reset waves (2-15)
+  // ASCII MONO (N)
+  amonoCell:      9,        // glyph cell px (7-16)
+  amonoThresh:    35,       // brightness threshold for glyphs (0-100)
+  // SEQUENCER (O)
+  seqRows:        12,       // horizontal tracks (4-32)
+  seqSpeed:       40,       // playhead speed (5-200)
+  seqVoice:       0,        // 0=Pluck 1=Bell 2=Bass 3=Pad
+  seqThresh:      45,       // brightness threshold to fire a note (0-100)
 };
 
 const TOUCH = {
@@ -1370,11 +1419,36 @@ function updateCrop(videoW, videoH, cW, cH) {
   _crop.valid=true;
 }
 
-const STYLE_CYCLE = ['B','A','C','D','F','H','I','J','K','L','M'];
+// ── Source frame provider — downsamples huge uploads (e.g. 4K iPhone video) ──
+// Large source frames can break drawImage crop math / hurt performance. When the
+// source exceeds the cap we draw it once per frame into a downscaled canvas and
+// the whole pipeline samples from THAT instead of the raw element.
+const SRC = { canvas:null, ctx:null, active:false, w:0, h:0 };
+const SRC_MAX = 1280;   // longest side cap for the working source frame
+function setupSourceDownsample(srcW, srcH){
+  const longest = Math.max(srcW, srcH);
+  if (longest <= SRC_MAX) { SRC.active=false; return; }  // small enough → use raw
+  const scale = SRC_MAX / longest;
+  SRC.w = Math.round(srcW*scale); SRC.h = Math.round(srcH*scale);
+  if (!SRC.canvas){ SRC.canvas=document.createElement('canvas'); SRC.ctx=SRC.canvas.getContext('2d'); }
+  SRC.canvas.width=SRC.w; SRC.canvas.height=SRC.h;
+  SRC.active=true;
+}
+// Returns the element to sample from this frame (downscaled canvas or raw video).
+function sourceFrame(){
+  if (SRC.active && videoEl.readyState>=2){
+    SRC.ctx.drawImage(videoEl, 0,0, SRC.w, SRC.h);
+    return SRC.canvas;
+  }
+  return videoEl;
+}
+
+const STYLE_CYCLE = ['B','A','C','D','F','H','I','J','K','L','M','N','O'];
 const STYLE_NAMES = {
   A:'SCAN', B:'ORBIT', C:'GHOST',
   D:'NEURAL', F:'PXSORT', H:'GRAIN', I:'EVAP', J:'ASCII',
-  K:'SPECIMEN', L:'MOSAIC', M:'CONTAGION'
+  K:'SPECIMEN', L:'MOSAIC', M:'CONTAGION',
+  N:'ASCII MONO', O:'SEQUENCER'
 };
 
 // ── Interface theming — driven by the active effect's PALETTE parameter ───────
@@ -1649,7 +1723,7 @@ function drawStyleD(ctx, cW, cH, t) {
 function drawStyleF(ctx, cW, cH) {
   if (!_effectCtx || !_dstImgData) return;
   // Capture video at proc resolution
-  _effectCtx.drawImage(videoEl, _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
+  _effectCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
   const imgData = _effectCtx.getImageData(0, 0, PROC_W, PROC_H);
   const px = imgData.data;   // Uint8ClampedArray — direct write-back in place
 
@@ -1941,14 +2015,17 @@ function drawNoise(ctx, cW, cH, amount) {
   }
   const d = _noiseImg.data;
   const f = ++_noiseFrame;
-  const alpha = (amount / 40) * 90;   // 0-40 → 0-90 alpha
+  // Full-coverage grey-noise field; blended via 'overlay' so it interacts with
+  // the underlying image (darkens darks, lightens lights) like real film grain.
+  const strength = amount / 40;        // 0..1
   for (let i = 0; i < d.length; i += 4) {
-    // Fast XOR-shift hash per pixel per frame
     let h = ((i * 0x9E3779B9) ^ (f * 0x85EBCA6B)) >>> 0;
     h ^= h >>> 13; h = (h * 0x5BD1E995) >>> 0; h ^= h >>> 15;
-    const v = h & 0xFF;
+    // grain centred on mid-grey (128) so overlay leaves untouched at 0 strength
+    const n = (h & 0xFF);
+    const v = (128 + (n - 128) * strength) | 0;
     d[i] = d[i+1] = d[i+2] = v;
-    d[i+3] = (v > 128 ? alpha : 0);   // sparse grain, not full coverage
+    d[i+3] = 255;
   }
   // Blit scaled up with no smoothing (chunky grain)
   // Use a temp canvas path: putImageData can't scale, so draw via effect canvas
@@ -1967,9 +2044,11 @@ function drawNoise(ctx, cW, cH, amount) {
     _noiseScratchCtx = _noiseScratch.getContext('2d');
   }
   _noiseScratchCtx.putImageData(_noiseImg, 0, 0);
+  ctx.save();
   ctx.imageSmoothingEnabled = false;
-  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'overlay';   // film-grain blend with image
   ctx.drawImage(_noiseScratch, 0, 0, cW, cH);
+  ctx.restore();
   ctx.imageSmoothingEnabled = true;
 }
 let _noiseScratch = null, _noiseScratchCtx = null;
@@ -2110,7 +2189,7 @@ function drawStyleK(ctx, cW, cH, now) {
 // ── 3.8g  Style L — MOSAIC (pixelate only inside detected blob frames) ───────
 const MOSAIC_LETTERS = 'ROACDEFGHKLMNPSTUVXYZ';
 function drawStyleL(ctx, cW, cH) {
-  ctx.drawImage(videoEl, _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,cW,cH);
+  ctx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,cW,cH);
   const blobs=[];
   for (let ti=0; ti<MAX_TRACKED; ti++){const t=_tracked[ti];if(t.active&&t.age>=2)blobs.push(t);}
   blobs.sort((a,b)=>b.sr-a.sr);
@@ -2176,7 +2255,7 @@ function _contSeed(nx, ny, fd){
 function drawStyleM(ctx, cW, cH, now){
   if (!_effectCtx) return;
   if (!CONT.state||CONT.W===0) _initContagion();
-  _effectCtx.drawImage(videoEl,_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,PROC_W,PROC_H);
+  _effectCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,PROC_W,PROC_H);
   let fd; try{ fd=_effectCtx.getImageData(0,0,PROC_W,PROC_H).data; }catch(e){ return; }
   const W=CONT.W, H=CONT.H, st=CONT.state;
 
@@ -2204,9 +2283,22 @@ function drawStyleM(ctx, cW, cH, now){
     CONT.resetActive=true; CONT.resetProg=0; CONT.resetT=now;
   }
   if (CONT.resetActive){
-    CONT.resetProg+=0.02;
-    const mx=(CONT.resetProg*W*0.5)|0, my=(CONT.resetProg*H*0.5)|0;
-    for (let y=0;y<H;y++) for (let x=0;x<W;x++) if(x<mx||x>=W-mx||y<my||y>=H-my) st[y*W+x]=0;
+    CONT.resetProg+=0.018;
+    // Soft vignette reset: clear cells whose normalized distance from centre is
+    // beyond a shrinking radius, with a feathered edge (probabilistic clear in
+    // the feather band) so the wipe reads as a smooth closing vignette.
+    const cxn=W*0.5, cyn=H*0.5;
+    const maxR=Math.sqrt(cxn*cxn+cyn*cyn);
+    const ringR=maxR*(1-CONT.resetProg);   // radius shrinks toward centre
+    const feather=maxR*0.18;
+    for (let y=0;y<H;y++){
+      for (let x=0;x<W;x++){
+        const i=y*W+x; if(!st[i])continue;
+        const dx=x-cxn, dy=y-cyn, dist=Math.sqrt(dx*dx+dy*dy);
+        if (dist>ringR+feather) st[i]=0;                       // fully cleared zone
+        else if (dist>ringR && Math.random()<((dist-ringR)/feather)) st[i]=0; // feather
+      }
+    }
     if (CONT.resetProg>=1) CONT.resetActive=false;
   }
 
@@ -2221,6 +2313,124 @@ function drawStyleM(ctx, cW, cH, now){
     }
   }
   ctx.imageSmoothingEnabled=true;
+}
+
+// ── 3.8i  Style N — ASCII MONO (grayscale photo + warm ASCII over highlights) ─
+// Greyscale base, dark. ASCII glyphs (warm orange) overlay the brighter regions
+// of the subject, denser where it's lighter — like the orchid reference.
+const _AMONO_RAMP = " .'`^,:!-+*o0#$%&@";  // dark→bright glyph density
+function drawStyleN(ctx, cW, cH){
+  if (!_effectCtx) return;
+  // Greyscale base
+  _effectCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
+  let img; try{ img=_effectCtx.getImageData(0,0,PROC_W,PROC_H); }catch(e){ return; }
+  const px=img.data;
+  // draw greyscale to composite first
+  for (let i=0;i<px.length;i+=4){
+    const g=(px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114)|0;
+    px[i]=px[i+1]=px[i+2]=g;
+  }
+  _effectCtx.putImageData(img,0,0);
+  ctx.fillStyle='#0e0e10'; ctx.fillRect(0,0,cW,cH);
+  ctx.imageSmoothingEnabled=false;
+  ctx.globalAlpha=0.92;
+  ctx.drawImage(_effectCanvas,0,0,cW,cH);
+  ctx.globalAlpha=1;
+
+  // ASCII overlay (warm orange) over bright regions
+  const cell=Math.max(7,CFG.amonoCell|0);
+  const cols=(cW/cell)|0, rows=(cH/cell)|0;
+  const sx=PROC_W/cW, sy=PROC_H/cH;
+  ctx.fillStyle='#ff7a1e';   // warm orange
+  ctx.textBaseline='top';
+  ctx.font='700 '+(cell)+'px Helvetica,Arial,sans-serif';
+  const thr=CFG.amonoThresh*2.55;   // 0..100 → 0..255
+  for (let r=0;r<rows;r++){
+    const py=((r*cell)*sy)|0; if(py>=PROC_H)break;
+    const prow=py*PROC_W;
+    for (let c=0;c<cols;c++){
+      const pxc=((c*cell)*sx)|0; if(pxc>=PROC_W)continue;
+      const g=_grayBuf[prow+pxc];
+      if (g<thr) continue;                    // only lit regions get glyphs
+      const lvl=((g-thr)/(255-thr)*(_AMONO_RAMP.length-1))|0;
+      const ch=_AMONO_RAMP[Math.max(0,Math.min(_AMONO_RAMP.length-1,lvl))];
+      if (ch===' ') continue;
+      // slight alpha variation by brightness
+      ctx.globalAlpha=0.45+0.5*(g/255);
+      ctx.fillText(ch, c*cell, r*cell);
+    }
+  }
+  ctx.globalAlpha=1;
+  ctx.textBaseline='alphabetic';
+}
+
+// ── 3.8j  Style O — SEQUENCER (image rows = tracks, playhead triggers notes) ──
+// Divides the frame into horizontal rows (tracks). A vertical playhead sweeps
+// L→R; when it crosses a column, each row whose brightness at that column passes
+// a threshold fires a note (row position → pitch, brightness → velocity). Notes
+// play through the selected seq voice, integrated over the existing audio bed.
+const SEQ = {
+  col:0, lastCol:-1, lastT:0,
+};
+function drawStyleO(ctx, cW, cH, now){
+  if (!_effectCtx) return;
+  // Greyscale-ish base (slightly dimmed so the playhead + grid read clearly)
+  _effectCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
+  let img; try{ img=_effectCtx.getImageData(0,0,PROC_W,PROC_H); }catch(e){ return; }
+  const px=img.data;
+  for (let i=0;i<px.length;i+=4){
+    const g=(px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114)|0;
+    px[i]=px[i+1]=px[i+2]=g;
+  }
+  _effectCtx.putImageData(img,0,0);
+  ctx.fillStyle='#0a0a0c'; ctx.fillRect(0,0,cW,cH);
+  ctx.imageSmoothingEnabled=false;
+  ctx.globalAlpha=0.85; ctx.drawImage(_effectCanvas,0,0,cW,cH); ctx.globalAlpha=1;
+
+  const rows=Math.max(4, CFG.seqRows|0);
+  const rowH=cH/rows;
+  // Horizontal track lines
+  ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1;
+  for (let r=1;r<rows;r++){ ctx.beginPath(); ctx.moveTo(0,r*rowH); ctx.lineTo(cW,r*rowH); ctx.stroke(); }
+
+  // Playhead advance — speed from CFG (columns per second across full width)
+  const cols=PROC_W;                         // sample resolution across width
+  const speed=CFG.seqSpeed/100;              // 0.05..2 sweeps/sec approx
+  const sweepDur=Math.max(0.5, 4.0/(speed*2+0.2));   // seconds per full sweep
+  const phase=((now/1000)/sweepDur)%1;        // 0..1
+  const playX=phase*cW;
+  const pcol=(phase*cols)|0;
+
+  // Trigger notes when the playhead crosses into a new column (throttled)
+  if (pcol!==SEQ.lastCol && AUDIO.ready && !AUDIO.userMuted){
+    SEQ.lastCol=pcol;
+    const voice=CFG.seqVoice;
+    const thr=CFG.seqThresh*2.55;
+    for (let r=0;r<rows;r++){
+      // sample brightness at (pcol, row centre)
+      const py=Math.min(PROC_H-1, ((r+0.5)*rowH * (PROC_H/cH))|0);
+      const g=_grayBuf[py*PROC_W + Math.min(PROC_W-1,pcol)];
+      if (g<thr) continue;
+      // row → pitch (top row = high). Map to scale.
+      const idx=Math.round((1-r/(rows-1))*(SCALE_HZ.length-1));
+      const freq=SCALE_HZ[Math.max(0,Math.min(SCALE_HZ.length-1,idx))];
+      const vel=0.3+0.7*((g-thr)/(255-thr));
+      seqVoice(voice, freq, AUDIO.ctx.currentTime+0.01, vel, sweepDur/cols*4);
+      // light up the triggered cell
+      ctx.fillStyle='rgba(255,220,40,'+(0.25+vel*0.5)+')';
+      ctx.fillRect(playX-2, r*rowH, 6, rowH);
+    }
+  }
+
+  // Playhead line
+  ctx.strokeStyle='#ffdc28'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(playX,0); ctx.lineTo(playX,cH); ctx.stroke();
+  if (!STATE.isRecording){
+    ctx.font='900 11px Helvetica,Arial,sans-serif';
+    ctx.fillStyle='#ffdc28';
+    const vname=['PLUCK','BELL','BASS','PAD'][CFG.seqVoice]||'';
+    ctx.fillText('SEQ '+rows+'tr '+vname, 12, cH-18);
+  }
 }
 
 function drawHUD(ctx, cW, cH) {
@@ -2241,11 +2451,11 @@ function loop(now) {
   if (!_crop.valid) updateCrop(STATE.videoW,STATE.videoH,cW,cH);
 
   // A. Video base frame (some styles own their background)
-  if (CFG.style!=='C' && CFG.style!=='L' && CFG.style!=='M' && CFG.style!=='K') {
-    compositeCtx.drawImage(videoEl,_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
+  if (CFG.style!=='C' && CFG.style!=='L' && CFG.style!=='M' && CFG.style!=='K' && CFG.style!=='N' && CFG.style!=='O') {
+    compositeCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
   } else if (CFG.style==='K') {
     // SPECIMEN needs the live frame underneath (it dims it itself)
-    compositeCtx.drawImage(videoEl,_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
+    compositeCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
   }
   // B. Vignette (skip for C/D/E/F which manage their own backgrounds)
   if (CFG.showVignette && CFG.style==='A' || CFG.showVignette && CFG.style==='B') {
@@ -2259,7 +2469,7 @@ function loop(now) {
   // E. Detection (throttled to DETECT_INTERVAL_MS)
   if (now-STATE.lastDetectT >= DETECT_INTERVAL_MS) {
     STATE.lastDetectT=now;
-    workCtx.drawImage(videoEl,_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,PROC_W,PROC_H);
+    workCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,PROC_W,PROC_H);
     const imgData=workCtx.getImageData(0,0,PROC_W,PROC_H);
     toGrayscale(imgData.data,_grayBuf,PROC_N);
     if (STATE.warmup>=2) {
@@ -2287,6 +2497,8 @@ function loop(now) {
     case 'K': drawStyleK(compositeCtx,cW,cH,now);   break;
     case 'L': drawStyleL(compositeCtx,cW,cH);       break;
     case 'M': drawStyleM(compositeCtx,cW,cH,now);   break;
+    case 'N': drawStyleN(compositeCtx,cW,cH);       break;
+    case 'O': drawStyleO(compositeCtx,cW,cH,now);   break;
   }
 
   // Noise overlay (on top of style, under HUD)
@@ -2311,6 +2523,8 @@ async function startCamera() {
     await new Promise((res,rej)=>{videoEl.onloadedmetadata=res;videoEl.onerror=()=>rej(new Error('meta'));});
     await videoEl.play();
     STATE.videoW=videoEl.videoWidth||1280; STATE.videoH=videoEl.videoHeight||720;
+    setupSourceDownsample(STATE.videoW, STATE.videoH);
+    if (SRC.active){ STATE.videoW=SRC.w; STATE.videoH=SRC.h; }
     return _finaliseCamera();
   } catch(err) {
     let msg='Camera error: '+err.message;
@@ -2379,6 +2593,9 @@ function startUploadedVideo(file) {
     videoEl.removeEventListener('loadedmetadata', onReady);
     STATE.videoW = videoEl.videoWidth  || 1280;
     STATE.videoH = videoEl.videoHeight || 720;
+    setupSourceDownsample(STATE.videoW, STATE.videoH);   // handle 4K uploads
+    // After downsample the working source dims change → crop against those
+    if (SRC.active){ STATE.videoW=SRC.w; STATE.videoH=SRC.h; }
     STATE.uploadMode = true;
 
     // Mirror _finaliseCamera setup
@@ -2863,6 +3080,16 @@ document.addEventListener('DOMContentLoaded', () => {
       ['contSpread','Spread Speed',5,60,1],
       ['contSeeds','Random Seeds',0,8,1],
       ['contReset','Reset Interval',2,15,1],
+    ],
+    N: [
+      ['amonoCell','Glyph Size',7,16,1],
+      ['amonoThresh','Brightness Gate',0,100,1],
+    ],
+    O: [
+      ['seqRows','Tracks',4,32,1],
+      ['seqSpeed','Playhead Speed',5,200,1],
+      ['seqVoice','Voice',0,3,1,true,['Pluck','Bell','Bass','Pad']],
+      ['seqThresh','Note Gate',0,100,1],
     ],
   };
 
