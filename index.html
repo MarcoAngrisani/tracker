@@ -81,6 +81,14 @@ body{
   background:transparent;border:2px solid rgba(200,240,30,.55);
   color:rgba(200,240,30,.9);box-shadow:none;
 }
+.spl-mini{
+  margin-top:.3rem;background:transparent;border:none;
+  color:rgba(200,240,30,.55);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;transition:color .15s;
+}
+.spl-mini.on{color:#c8f01e;}
+.spl-mini:active{opacity:.6;}
 .ctrl-row{display:flex;flex-direction:column;gap:.35rem;}
 .ctrl-label{
   font-size:.57rem;letter-spacing:.15em;text-transform:uppercase;
@@ -123,9 +131,10 @@ input[type="range"]::-moz-range-thumb{
 }
 /* STYLE button left-aligned, TUNE right-aligned, fixed-width so text length
    never pushes the centre cluster off-centre */
-#btn-style{justify-self:start;}
+.ctrl-left{justify-self:start;display:flex;gap:.5rem;align-items:center;}
 #btn-settings{justify-self:end;}
 #ctrl-bar .ctrl-btn{min-width:84px;text-align:center;}
+#ctrl-bar .ctrl-btn.icon-only{min-width:0;padding:.6rem .7rem;font-size:.9rem;}
 #capture-cluster{justify-self:center;}
 .ctrl-btn{
   background:rgba(10,14,10,.7);border:1px solid var(--accent-line);
@@ -159,29 +168,19 @@ input[type="range"]::-moz-range-thumb{
 #download-toast{
   position:fixed;
   bottom:calc(5.8rem + env(safe-area-inset-bottom));
-  left:50%;transform:translateX(-50%);
-  z-index:25;
-  display:none;align-items:center;gap:.5rem;
+  left:50%;transform:translateX(-50%) translateY(8px);
+  z-index:25;opacity:0;pointer-events:none;
+  display:flex;align-items:center;
   background:rgba(5,5,8,.92);
   border:1px solid rgba(30,220,90,.6);
-  padding:.5rem .9rem;
+  padding:.5rem .9rem;border-radius:14px;
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  white-space:nowrap;
-  animation:toast-in .25s ease;
+  white-space:nowrap;transition:opacity .25s ease,transform .25s ease;
 }
-@keyframes toast-in{
-  from{opacity:0;transform:translateX(-50%) translateY(8px);}
-  to{opacity:1;transform:translateX(-50%) translateY(0);}
-}
-#btn-download{
+#download-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#download-toast span{
   color:rgba(30,220,90,1);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
-  font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
-  text-decoration:none;cursor:pointer;
-}
-#btn-dismiss-dl{
-  background:transparent;border:none;color:rgba(255,255,255,.35);
-  font-size:.9rem;line-height:1;cursor:pointer;padding:0 .1rem;
-  touch-action:manipulation;
+  font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
 }
 /* ── SETTINGS PANEL ────────────────────────────────────────────────────── */
 #settings-panel{
@@ -276,6 +275,7 @@ input[type="range"]::-moz-range-thumb{
     <div class="spl-actions">
       <button id="btn-start" class="sq-btn">LIVE CAMERA</button>
       <button id="btn-upload-splash" class="sq-btn sq-ghost">UPLOAD VIDEO</button>
+      <button id="btn-autosave" class="spl-mini">&#9711; ENABLE AUTO-SAVE</button>
     </div>
   </div>
   <input type="file" id="file-input" accept="video/*" style="display:none">
@@ -286,7 +286,10 @@ input[type="range"]::-moz-range-thumb{
 
 <!-- ── MAIN CONTROLS ───────────────────────────────────────────────────── -->
 <div id="ctrl-bar">
-  <button class="ctrl-btn" id="btn-style">ORBIT</button>
+  <div class="ctrl-left">
+    <button class="ctrl-btn icon-only" id="btn-home" aria-label="Home">&#8962;</button>
+    <button class="ctrl-btn" id="btn-style">ORBIT</button>
+  </div>
   <div id="capture-cluster">
     <button class="icon-btn" id="btn-photo" aria-label="Photo">
       <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -299,10 +302,7 @@ input[type="range"]::-moz-range-thumb{
 </div>
 
 <!-- Download toast: fixed above ctrl-bar, never inside it (layout fix) -->
-<div id="download-toast">
-  <a id="btn-download">&#11015; SAVE</a>
-  <button id="btn-dismiss-dl">&#215;</button>
-</div>
+<div id="download-toast"><span>&#10003; SAVED</span></div>
 
 <div id="settings-panel">
   <!-- Effect name header -->
@@ -953,23 +953,30 @@ function updateAudio(cW, cH, nowMs) {
     const targetInt = Math.max(speedNorm, countNorm * 0.7);
     DRUM.intensity = DRUM.intensity * 0.85 + targetInt * 0.15;   // responsive
 
+    // ── SEQUENCER mode: duck the ambient bed so the image-as-music is clear ──
+    const seqMode = (CFG.style === 'O');
+
     // ── Master volume: ambient always audible, swells with presence ──
-    // Even with 0 blobs the pad breathes quietly (0.18); full scene ~0.85.
-    const baseVol = 0.18 + Math.min(m.nBlobs / 5, 1) * 0.62;
+    let baseVol = 0.18 + Math.min(m.nBlobs / 5, 1) * 0.62;
+    if (seqMode) baseVol = 0.85;   // keep master open; bed buses ducked below
     AUDIO.masterGain.gain.setTargetAtTime(
       AUDIO.userMuted ? 0.0 : baseVol, now, 0.4);
 
     // ── Progressive drum entrance: each bus fades with intensity thresholds ──
-    // Hats come first (low threshold), then kick, then snare, then glitch.
     const I = DRUM.intensity;
-    const hatLvl    = Math.max(0, (I - 0.06) / 0.94) * 0.7;
-    const kickLvl   = Math.max(0, (I - 0.16) / 0.84) * 1.0;
-    const snareLvl  = Math.max(0, (I - 0.34) / 0.66) * 0.9;
-    const glitchLvl = Math.max(0, (I - 0.55) / 0.45) * 0.8;
+    const duck = seqMode ? 0.12 : 1.0;   // near-silence the bed in sequencer mode
+    const hatLvl    = Math.max(0, (I - 0.06) / 0.94) * 0.7 * duck;
+    const kickLvl   = Math.max(0, (I - 0.16) / 0.84) * 1.0 * duck;
+    const snareLvl  = Math.max(0, (I - 0.34) / 0.66) * 0.9 * duck;
+    const glitchLvl = Math.max(0, (I - 0.55) / 0.45) * 0.8 * duck;
     AUDIO.hatBus.gain.setTargetAtTime(hatLvl,       now, 0.5);
     AUDIO.kickBus.gain.setTargetAtTime(kickLvl,     now, 0.5);
     AUDIO.snareBus.gain.setTargetAtTime(snareLvl,   now, 0.6);
     AUDIO.glitchBus.gain.setTargetAtTime(glitchLvl, now, 0.6);
+    // Pad also ducked in sequencer mode
+    if (AUDIO.padGain) AUDIO.padGain.gain.setTargetAtTime(seqMode ? 0.06 : 0.34, now, 0.5);
+    // Melody voice off in sequencer mode (the image drives the notes instead)
+    if (seqMode && AUDIO.melGain) AUDIO.melGain.gain.setTargetAtTime(0.0, now, 0.3);
 
     // ── Tempo: wide expressive range, slewed for musical transitions ──
     // Still scenes drift very slow (~58 BPM, half-time feel); frantic scenes
@@ -1412,10 +1419,19 @@ const STATE = {
 };
 
 const _crop = { sx:0,sy:0,sw:0,sh:0,valid:false };
+// Digital zoom (pinch-controlled). factor 1..4; crop shrinks toward centre.
+const ZOOM = { factor:1, min:1, max:4, lastShown:0 };
 function updateCrop(videoW, videoH, cW, cH) {
   const vr=videoW/videoH, cr=cW/cH;
-  if (vr>cr) { _crop.sh=videoH; _crop.sw=videoH*cr; _crop.sx=(videoW-_crop.sw)*.5; _crop.sy=0; }
-  else        { _crop.sw=videoW; _crop.sh=videoW/cr; _crop.sx=0; _crop.sy=(videoH-_crop.sh)*.5; }
+  // First compute the full aspect-correct crop (cover), then apply zoom.
+  let sw, sh;
+  if (vr>cr) { sh=videoH; sw=videoH*cr; }
+  else        { sw=videoW; sh=videoW/cr; }
+  // Zoom: shrink the sampled region around its centre.
+  sw/=ZOOM.factor; sh/=ZOOM.factor;
+  _crop.sw=sw; _crop.sh=sh;
+  _crop.sx=(videoW-sw)*0.5;
+  _crop.sy=(videoH-sh)*0.5;
   _crop.valid=true;
 }
 
@@ -2070,8 +2086,8 @@ const SPEC = {
   frags:    [],                 // active fragments {age,maxAge,...} for fade tracking
   srcCanvas:null, srcCtx:null,
   lastGrab: 0,
-  GAP_MS:   620,                // min time between new fragments
-  MAX_FRAGS:14,
+  GAP_MS:   190,                // min time between new fragments (faster)
+  MAX_FRAGS:30,                 // denser collage
 };
 function _ensureSpecCanvas() {
   if (!SPEC.srcCanvas) {
@@ -2263,10 +2279,15 @@ function drawStyleM(ctx, cW, cH, now){
     CONT.seedT=now;
     for (let s=0;s<CFG.contSeeds;s++) _contSeed((Math.random()*W)|0,(Math.random()*H)|0,fd);
   }
-  if (TOUCH.active){
+  // Touch wipes the field and restarts a fresh outbreak from the touch point.
+  if (TOUCH.active && !CONT._touchLatch){
+    CONT._touchLatch = true;             // one reset per touch (not every frame)
+    st.fill(0);                          // clear everything
+    CONT.resetActive = false;
     const tx=((TOUCH.x/cW)*W)|0, ty=((TOUCH.y/cH)*H)|0;
-    for (let k=0;k<5;k++) _contSeed(tx+((Math.random()*6-3)|0),ty+((Math.random()*6-3)|0),fd);
+    for (let k=0;k<6;k++) _contSeed(tx+((Math.random()*4-2)|0),ty+((Math.random()*4-2)|0),fd);
   }
+  if (!TOUCH.active) CONT._touchLatch = false;
 
   const spreadP=CFG.contSpread/100;
   for (let y=0;y<H;y++){
@@ -2365,72 +2386,114 @@ function drawStyleN(ctx, cW, cH){
 }
 
 // ── 3.8j  Style O — SEQUENCER (image rows = tracks, playhead triggers notes) ──
-// Divides the frame into horizontal rows (tracks). A vertical playhead sweeps
-// L→R; when it crosses a column, each row whose brightness at that column passes
-// a threshold fires a note (row position → pitch, brightness → velocity). Notes
-// play through the selected seq voice, integrated over the existing audio bed.
-const SEQ = {
-  col:0, lastCol:-1, lastT:0,
-};
+// The image IS the score. Rows = tracks; a vertical playhead sweeps L→R. As it
+// crosses each column, every row whose brightness passes a gate fires a note:
+//   row position  → pitch (top = high)
+//   brightness    → velocity AND timbre brightness (filter open)
+// The bed is ducked (see updateAudio) so the image-music is clearly audible.
+// Strong visual feedback: the active column lights up, triggered cells flash.
+const SEQ = { lastCol:-1, flashes:[] };
 function drawStyleO(ctx, cW, cH, now){
   if (!_effectCtx) return;
-  // Greyscale-ish base (slightly dimmed so the playhead + grid read clearly)
+  // High-contrast greyscale base so bright structures (the "notes") are obvious
   _effectCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
   let img; try{ img=_effectCtx.getImageData(0,0,PROC_W,PROC_H); }catch(e){ return; }
   const px=img.data;
   for (let i=0;i<px.length;i+=4){
-    const g=(px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114)|0;
+    let g=(px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114);
+    g=Math.max(0,Math.min(255,(g-110)*1.6+110));   // boost contrast
     px[i]=px[i+1]=px[i+2]=g;
   }
   _effectCtx.putImageData(img,0,0);
-  ctx.fillStyle='#0a0a0c'; ctx.fillRect(0,0,cW,cH);
+  ctx.fillStyle='#08080a'; ctx.fillRect(0,0,cW,cH);
   ctx.imageSmoothingEnabled=false;
-  ctx.globalAlpha=0.85; ctx.drawImage(_effectCanvas,0,0,cW,cH); ctx.globalAlpha=1;
+  ctx.globalAlpha=0.7; ctx.drawImage(_effectCanvas,0,0,cW,cH); ctx.globalAlpha=1;
 
   const rows=Math.max(4, CFG.seqRows|0);
   const rowH=cH/rows;
-  // Horizontal track lines
-  ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1;
+
+  // Track lines + row index ticks
+  ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
   for (let r=1;r<rows;r++){ ctx.beginPath(); ctx.moveTo(0,r*rowH); ctx.lineTo(cW,r*rowH); ctx.stroke(); }
 
-  // Playhead advance — speed from CFG (columns per second across full width)
-  const cols=PROC_W;                         // sample resolution across width
-  const speed=CFG.seqSpeed/100;              // 0.05..2 sweeps/sec approx
-  const sweepDur=Math.max(0.5, 4.0/(speed*2+0.2));   // seconds per full sweep
-  const phase=((now/1000)/sweepDur)%1;        // 0..1
+  // Playhead position
+  const speed=CFG.seqSpeed/100;
+  const sweepDur=Math.max(0.5, 4.0/(speed*2+0.2));
+  const cols=PROC_W;
+  const phase=((now/1000)/sweepDur)%1;
   const playX=phase*cW;
   const pcol=(phase*cols)|0;
 
-  // Trigger notes when the playhead crosses into a new column (throttled)
+  // Active column highlight band (so you SEE what's being read)
+  ctx.fillStyle='rgba(255,220,40,0.07)';
+  ctx.fillRect(playX-cW*0.02, 0, cW*0.04, cH);
+
+  // Trigger notes on column change
   if (pcol!==SEQ.lastCol && AUDIO.ready && !AUDIO.userMuted){
     SEQ.lastCol=pcol;
     const voice=CFG.seqVoice;
     const thr=CFG.seqThresh*2.55;
+    const noteDur=sweepDur/cols*8;
     for (let r=0;r<rows;r++){
-      // sample brightness at (pcol, row centre)
-      const py=Math.min(PROC_H-1, ((r+0.5)*rowH * (PROC_H/cH))|0);
+      const py=Math.min(PROC_H-1, ((r+0.5)*rowH*(PROC_H/cH))|0);
       const g=_grayBuf[py*PROC_W + Math.min(PROC_W-1,pcol)];
       if (g<thr) continue;
-      // row → pitch (top row = high). Map to scale.
       const idx=Math.round((1-r/(rows-1))*(SCALE_HZ.length-1));
       const freq=SCALE_HZ[Math.max(0,Math.min(SCALE_HZ.length-1,idx))];
-      const vel=0.3+0.7*((g-thr)/(255-thr));
-      seqVoice(voice, freq, AUDIO.ctx.currentTime+0.01, vel, sweepDur/cols*4);
-      // light up the triggered cell
-      ctx.fillStyle='rgba(255,220,40,'+(0.25+vel*0.5)+')';
-      ctx.fillRect(playX-2, r*rowH, 6, rowH);
+      const bright=(g-thr)/(255-thr);          // 0..1
+      const vel=0.35+0.65*bright;
+      seqVoice(voice, freq, AUDIO.ctx.currentTime+0.01, vel, noteDur);
+      // brightness also adds a high-octave sparkle for very bright cells
+      if (bright>0.7) seqVoice(1, freq*2, AUDIO.ctx.currentTime+0.01, bright*0.4, noteDur*0.6);
+      // queue a visual flash for this cell
+      SEQ.flashes.push({x:playX, y:r*rowH, h:rowH, t:now, vel:vel});
     }
   }
 
-  // Playhead line
-  ctx.strokeStyle='#ffdc28'; ctx.lineWidth=2;
+  // Render flashes (fade over 350ms) — the image visibly "playing"
+  ctx.textBaseline='middle';
+  for (let i=SEQ.flashes.length-1;i>=0;i--){
+    const fl=SEQ.flashes[i];
+    const age=(now-fl.t)/350;
+    if (age>=1){ SEQ.flashes.splice(i,1); continue; }
+    const a=(1-age)*fl.vel;
+    ctx.fillStyle='rgba(255,220,40,'+(a*0.8)+')';
+    ctx.fillRect(0, fl.y, cW, fl.h);            // light the whole ROW (track) it triggered
+    ctx.fillStyle='rgba(255,255,255,'+a+')';
+    ctx.fillRect(fl.x-3, fl.y, 7, fl.h);        // bright marker at the trigger point
+  }
+  ctx.textBaseline='alphabetic';
+
+  // Playhead line (bold)
+  ctx.strokeStyle='#ffdc28'; ctx.lineWidth=3;
   ctx.beginPath(); ctx.moveTo(playX,0); ctx.lineTo(playX,cH); ctx.stroke();
+
   if (!STATE.isRecording){
-    ctx.font='900 11px Helvetica,Arial,sans-serif';
+    ctx.font='900 12px Helvetica,Arial,sans-serif';
     ctx.fillStyle='#ffdc28';
     const vname=['PLUCK','BELL','BASS','PAD'][CFG.seqVoice]||'';
-    ctx.fillText('SEQ '+rows+'tr '+vname, 12, cH-18);
+    ctx.fillText('\u266A SEQUENCER \u00b7 '+rows+' TRACKS \u00b7 '+vname, 12, cH-18);
   }
+}
+
+// Brief zoom-level badge shown while/just after pinching.
+function drawZoomBadge(ctx, cW, cH, now){
+  if (STATE.isRecording) return;
+  const age = now - ZOOM.lastShown;
+  if (ZOOM.factor<=1.001 || age>1200) return;
+  const fade = age>800 ? 1-(age-800)/400 : 1;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0,fade);
+  ctx.font='900 22px Helvetica,Arial,sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  const txt=ZOOM.factor.toFixed(1)+'\u00d7';
+  ctx.fillStyle='rgba(5,5,8,0.55)';
+  const w=72,h=40;
+  ctx.fillRect(cW*0.5-w/2, cH*0.18-h/2, w, h);
+  ctx.fillStyle='#ffffff';
+  ctx.fillText(txt, cW*0.5, cH*0.18);
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  ctx.restore();
 }
 
 function drawHUD(ctx, cW, cH) {
@@ -2503,6 +2566,7 @@ function loop(now) {
 
   // Noise overlay (on top of style, under HUD)
   if (CFG.noise > 0) drawNoise(compositeCtx, cW, cH, CFG.noise);
+  drawZoomBadge(compositeCtx, cW, cH, now);
 
   // Audio engine update — drives drums from blob motion
   updateAudio(cW,cH,now);
@@ -2897,11 +2961,70 @@ function stopRecording() {
 }
 
 // ── 3.12  Error display ───────────────────────────────────────────────────────
-// ── Unified save: File System Access API when available, else anchor download ──
-// Keeps the most direct path on each platform so the user isn't forced through
-// extra confirmation dialogs where the browser allows a direct write.
+
+// ── Return to home: stop current mode, free resources, allow switching modes ──
+function returnToHome() {
+  // Stop any recording in flight
+  if (STATE.isRecording && STATE.mediaRecorder) {
+    try { STATE.mediaRecorder.stop(); } catch(e){}
+  }
+  STATE.isRecording = false;
+  // Stop the render/preview loop
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  // Tear down live camera stream
+  if (STATE.camStream) {
+    STATE.camStream.getTracks().forEach(t=>{ try{t.stop();}catch(e){} });
+    STATE.camStream = null;
+  }
+  // Tear down uploaded video
+  if (STATE.uploadMode) {
+    try { videoEl.pause(); } catch(e){}
+    if (videoEl.src) { try { URL.revokeObjectURL(videoEl.src); } catch(e){} videoEl.removeAttribute('src'); videoEl.load(); }
+  }
+  videoEl.srcObject = null;
+  STATE.uploadMode = false;
+  STATE.cameraOk = false;
+  STATE.uploadCancelled = false;
+  SRC.active = false;
+  ZOOM.factor = 1;
+  _crop.valid = false;
+  // Lower audio so the home is quiet
+  if (AUDIO.ready) AUDIO.masterGain.gain.setTargetAtTime(0.0, AUDIO.ctx.currentTime, 0.2);
+  // Hide any upload progress
+  const prog=document.getElementById('upload-progress'); if(prog) prog.classList.remove('show');
+  // Show splash + restart its animation
+  const splash=document.getElementById('splash');
+  splash.style.display='flex'; splash.style.opacity='1'; splash.style.transition='none';
+  if (window._splashAnimStart) window._splashAnimStart();
+}
+
+// ── Seamless save ────────────────────────────────────────────────────────────
+// If the user granted a folder once (from the home screen), every file writes
+// straight into it with NO further prompts. Otherwise: showSaveFilePicker (one
+// prompt) or, as a last resort, a direct anchor download.
+let _saveDir = null;   // FileSystemDirectoryHandle granted at startup
+
+// Ask for a target folder once. Called from the home screen before entering.
+async function requestSaveAccess() {
+  if (!window.showDirectoryPicker) return false;   // unsupported → silent fallback later
+  try {
+    _saveDir = await window.showDirectoryPicker({ mode:'readwrite', startIn:'pictures' });
+    return true;
+  } catch(e) { _saveDir = null; return false; }     // user dismissed → fallbacks
+}
+
 async function saveBlob(blob, filename) {
-  // 1) Best path: File System Access API (Chrome/Edge desktop, Android Chrome)
+  // 1) Seamless: write into the pre-granted folder, no prompt at all.
+  if (_saveDir) {
+    try {
+      const fh = await _saveDir.getFileHandle(filename, { create:true });
+      const w = await fh.createWritable();
+      await w.write(blob); await w.close();
+      flashSaved('SAVED');
+      return;
+    } catch(e) { /* fall through */ }
+  }
+  // 2) One-prompt save picker (folder wasn't granted).
   if (window.showSaveFilePicker) {
     try {
       const ext = filename.split('.').pop();
@@ -2910,44 +3033,34 @@ async function saveBlob(blob, filename) {
         : [{ description:'Video', accept:{[blob.type||'video/webm']:['.'+ext]} }];
       const handle = await window.showSaveFilePicker({ suggestedName: filename, types });
       const w = await handle.createWritable();
-      await w.write(blob);
-      await w.close();
+      await w.write(blob); await w.close();
       flashSaved('SAVED');
       return;
     } catch(e) {
-      if (e && e.name === 'AbortError') return;   // user cancelled — do nothing
-      // otherwise fall through to anchor download
+      if (e && e.name === 'AbortError') return;
     }
   }
-  // 2) Fallback: anchor download (auto-clicked). iOS may open a tab; that's OS-level.
+  // 3) Last resort: direct anchor download (auto). iOS may open a tab (OS-level).
   try {
     const url = URL.createObjectURL(blob);
     if (STATE.lastDlUrl) URL.revokeObjectURL(STATE.lastDlUrl);
     STATE.lastDlUrl = url;
     const a = document.createElement('a');
     a.href = url; a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    // Also wire the toast SAVE button to the same blob as a manual backup
-    const dl = document.getElementById('btn-download');
-    if (dl) { dl.href = url; dl.download = filename; dl.textContent = '\u2b07 SAVE'; }
-    flashSaved('SAVED \u2014 OR TAP SAVE');
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    flashSaved('SAVED');
   } catch(e) {
     showError('Could not save file: ' + e.message);
   }
 }
 
-// Brief confirmation toast (auto-hides). Kept minimal — no manual OK required
-// on platforms where showSaveFilePicker already wrote the file.
+// Brief confirmation toast (auto-hides). No manual action required.
 function flashSaved(label) {
   const toast = document.getElementById('download-toast');
-  const dl = document.getElementById('btn-download');
-  if (dl && label.indexOf('TAP') < 0) dl.textContent = '\u2705 ' + label;
   if (toast) {
-    toast.style.display = 'flex';
+    toast.classList.add('show');
     clearTimeout(_dlAutoHide);
-    _dlAutoHide = setTimeout(()=>{ toast.style.display='none'; }, 9000);
+    _dlAutoHide = setTimeout(()=>{ toast.classList.remove('show'); }, 3500);
   }
 }
 
@@ -3178,19 +3291,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Touch-bias pointer events on composite canvas ──────────────────────
   let _settingsOpen=false;
+  // Pointer tracking: 1 pointer = tap-to-focus, 2 pointers = pinch-to-zoom.
+  const _ptrs = new Map();           // pointerId → {x,y}
+  let _pinchStartDist = 0, _pinchStartZoom = 1;
+  function _twoPointerDist(){
+    const p=[..._ptrs.values()];
+    if(p.length<2) return 0;
+    const dx=p[0].x-p[1].x, dy=p[0].y-p[1].y;
+    return Math.sqrt(dx*dx+dy*dy);
+  }
   compositeCanvas.addEventListener('pointerdown',e=>{
     if(_settingsOpen||!STATE.cameraOk) return;
     e.preventDefault();
-    TOUCH.x=e.clientX; TOUCH.y=e.clientY; TOUCH.active=true; TOUCH.lastT=performance.now();
+    _ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
     compositeCanvas.setPointerCapture(e.pointerId);
+    if(_ptrs.size===2){
+      // Enter pinch mode: cancel focus, capture baseline distance + zoom
+      TOUCH.active=false;
+      _pinchStartDist=_twoPointerDist();
+      _pinchStartZoom=ZOOM.factor;
+    } else if(_ptrs.size===1){
+      TOUCH.x=e.clientX; TOUCH.y=e.clientY; TOUCH.active=true; TOUCH.lastT=performance.now();
+    }
   },{passive:false});
   compositeCanvas.addEventListener('pointermove',e=>{
-    if(_settingsOpen||!TOUCH.active||e.buttons===0) return;
+    if(_settingsOpen) return;
     e.preventDefault();
-    TOUCH.x=e.clientX; TOUCH.y=e.clientY; TOUCH.lastT=performance.now();
+    if(_ptrs.has(e.pointerId)) _ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(_ptrs.size>=2 && _pinchStartDist>0){
+      // Pinch → adjust digital zoom
+      const d=_twoPointerDist();
+      let z=_pinchStartZoom*(d/_pinchStartDist);
+      z=Math.max(ZOOM.min,Math.min(ZOOM.max,z));
+      ZOOM.factor=z;
+      ZOOM.lastShown=performance.now();
+      updateCrop(STATE.videoW,STATE.videoH,compositeCanvas.width,compositeCanvas.height);
+    } else if(TOUCH.active && e.buttons!==0){
+      TOUCH.x=e.clientX; TOUCH.y=e.clientY; TOUCH.lastT=performance.now();
+    }
   },{passive:false});
-  compositeCanvas.addEventListener('pointerup',  e=>{e.preventDefault();},{passive:false});
-  compositeCanvas.addEventListener('pointercancel',()=>{TOUCH.lastT=performance.now()-TOUCH.timeout+500;},{passive:false});
+  function _ptrEnd(e){
+    e.preventDefault();
+    _ptrs.delete(e.pointerId);
+    if(_ptrs.size<2) _pinchStartDist=0;       // exit pinch
+    if(_ptrs.size===0) TOUCH.lastT=performance.now()-TOUCH.timeout+500;
+  }
+  compositeCanvas.addEventListener('pointerup',_ptrEnd,{passive:false});
+  compositeCanvas.addEventListener('pointercancel',_ptrEnd,{passive:false});
 
   // ── Style cycle button (A→B→C→D→E→F→A) ────────────────────────────────
   document.getElementById('btn-style').addEventListener('click',()=>{
@@ -3206,12 +3353,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       STATE.isRecording?stopRecording():startRecording();
     }
-  });
-
-  // ── Download toast dismiss ─────────────────────────────────────────────
-  document.getElementById('btn-dismiss-dl').addEventListener('click',()=>{
-    clearTimeout(_dlAutoHide);
-    document.getElementById('download-toast').style.display='none';
   });
 
   // ── Settings panel ─────────────────────────────────────────────────────
@@ -3265,13 +3406,27 @@ document.addEventListener('DOMContentLoaded', () => {
         AUDIO.ctx.resume().catch(()=>{});
       } catch(e) { console.warn('AudioContext pre-init failed:',e); }
     }
+    STATE.uploadMode=false;   // ensure clean live mode (re-entrant)
+    const recBtn=document.getElementById('btn-record');
+    if(recBtn) recBtn.removeAttribute('data-upload');
     const splash=document.getElementById('splash');
     splash.style.opacity='0'; splash.style.transition='opacity 0.4s ease';
     setTimeout(()=>{splash.style.display='none'; if(window._splashAnimStop)window._splashAnimStop();},400);
     const ok=await startCamera();
     if(!ok){splash.style.display='flex';splash.style.opacity='1';splash.style.transition='none';return;}
     STATE.lastDetectT=performance.now(); STATE.fpsT=performance.now();
+    if(rafId) cancelAnimationFrame(rafId);
     rafId=requestAnimationFrame(loop);
+  });
+
+  // ── HOME button: return to splash, switch modes without reload ─────────
+  document.getElementById('btn-home').addEventListener('click',returnToHome);
+
+  // ── Auto-save: grant a folder once from the home for seamless saving ───
+  document.getElementById('btn-autosave').addEventListener('click',async function(){
+    const ok=await requestSaveAccess();
+    if(ok){ this.classList.add('on'); this.innerHTML='\u2713 AUTO-SAVE ON'; }
+    else  { showError('Auto-save not available on this browser — files will download instead.'); }
   });
 
   // ── Upload video flow ──────────────────────────────────────────────────
