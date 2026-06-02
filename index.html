@@ -81,14 +81,7 @@ body{
   background:transparent;border:2px solid rgba(200,240,30,.55);
   color:rgba(200,240,30,.9);box-shadow:none;
 }
-.spl-mini{
-  margin-top:.3rem;background:transparent;border:none;
-  color:rgba(200,240,30,.55);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
-  font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
-  cursor:pointer;-webkit-tap-highlight-color:transparent;transition:color .15s;
-}
-.spl-mini.on{color:#c8f01e;}
-.spl-mini:active{opacity:.6;}
+
 .ctrl-row{display:flex;flex-direction:column;gap:.35rem;}
 .ctrl-label{
   font-size:.57rem;letter-spacing:.15em;text-transform:uppercase;
@@ -275,7 +268,6 @@ input[type="range"]::-moz-range-thumb{
     <div class="spl-actions">
       <button id="btn-start" class="sq-btn">LIVE CAMERA</button>
       <button id="btn-upload-splash" class="sq-btn sq-ghost">UPLOAD VIDEO</button>
-      <button id="btn-autosave" class="spl-mini">&#9711; ENABLE AUTO-SAVE</button>
     </div>
   </div>
   <input type="file" id="file-input" accept="video/*" style="display:none">
@@ -3002,29 +2994,8 @@ function returnToHome() {
 // If the user granted a folder once (from the home screen), every file writes
 // straight into it with NO further prompts. Otherwise: showSaveFilePicker (one
 // prompt) or, as a last resort, a direct anchor download.
-let _saveDir = null;   // FileSystemDirectoryHandle granted at startup
-
-// Ask for a target folder once. Called from the home screen before entering.
-async function requestSaveAccess() {
-  if (!window.showDirectoryPicker) return false;   // unsupported → silent fallback later
-  try {
-    _saveDir = await window.showDirectoryPicker({ mode:'readwrite', startIn:'pictures' });
-    return true;
-  } catch(e) { _saveDir = null; return false; }     // user dismissed → fallbacks
-}
-
 async function saveBlob(blob, filename) {
-  // 1) Seamless: write into the pre-granted folder, no prompt at all.
-  if (_saveDir) {
-    try {
-      const fh = await _saveDir.getFileHandle(filename, { create:true });
-      const w = await fh.createWritable();
-      await w.write(blob); await w.close();
-      flashSaved('SAVED');
-      return;
-    } catch(e) { /* fall through */ }
-  }
-  // 2) One-prompt save picker (folder wasn't granted).
+  // 1) Save picker where supported (one OK, Chrome/Edge desktop + Android).
   if (window.showSaveFilePicker) {
     try {
       const ext = filename.split('.').pop();
@@ -3421,13 +3392,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── HOME button: return to splash, switch modes without reload ─────────
   document.getElementById('btn-home').addEventListener('click',returnToHome);
-
-  // ── Auto-save: grant a folder once from the home for seamless saving ───
-  document.getElementById('btn-autosave').addEventListener('click',async function(){
-    const ok=await requestSaveAccess();
-    if(ok){ this.classList.add('on'); this.innerHTML='\u2713 AUTO-SAVE ON'; }
-    else  { showError('Auto-save not available on this browser — files will download instead.'); }
-  });
 
   // ── Upload video flow ──────────────────────────────────────────────────
   document.getElementById('btn-upload-splash').addEventListener('click',()=>{
