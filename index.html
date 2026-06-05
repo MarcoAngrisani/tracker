@@ -124,11 +124,20 @@ input[type="range"]::-moz-range-thumb{
 }
 /* STYLE button left-aligned, TUNE right-aligned, fixed-width so text length
    never pushes the centre cluster off-centre */
-.ctrl-left{justify-self:start;display:flex;gap:.5rem;align-items:center;}
+#btn-style{justify-self:start;}
 #btn-settings{justify-self:end;}
 #ctrl-bar .ctrl-btn{min-width:84px;text-align:center;}
-#ctrl-bar .ctrl-btn.icon-only{min-width:0;padding:.6rem .7rem;font-size:.9rem;}
 #capture-cluster{justify-self:center;}
+/* Discreet back arrow — transparent, top-left, outside the control bar */
+#btn-back{
+  position:fixed;top:calc(.6rem + env(safe-area-inset-top));left:.7rem;z-index:22;
+  width:44px;height:44px;display:none;align-items:center;justify-content:center;
+  background:transparent;border:none;color:#fff;
+  font-size:2rem;line-height:1;font-weight:300;cursor:pointer;
+  text-shadow:0 1px 6px rgba(0,0,0,.6);-webkit-tap-highlight-color:transparent;
+  opacity:.85;transition:opacity .15s;
+}
+#btn-back:active{opacity:.5;}
 .ctrl-btn{
   background:rgba(10,14,10,.7);border:1px solid var(--accent-line);
   color:var(--accent);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
@@ -267,21 +276,19 @@ input[type="range"]::-moz-range-thumb{
     </div>
     <div class="spl-actions">
       <button id="btn-start" class="sq-btn">LIVE CAMERA</button>
-      <button id="btn-upload-splash" class="sq-btn sq-ghost">UPLOAD VIDEO</button>
+      <button id="btn-upload-splash" class="sq-btn sq-ghost">UPLOAD MEDIA</button>
     </div>
   </div>
-  <input type="file" id="file-input" accept="video/*" style="display:none">
+  <input type="file" id="file-input" accept="video/*,image/*" style="display:none">
 </div>
 
 <video id="cam" autoplay playsinline muted></video>
 <canvas id="composite"></canvas>
 
 <!-- ── MAIN CONTROLS ───────────────────────────────────────────────────── -->
+<button id="btn-back" aria-label="Back to home">&#8249;</button>
 <div id="ctrl-bar">
-  <div class="ctrl-left">
-    <button class="ctrl-btn icon-only" id="btn-home" aria-label="Home">&#8962;</button>
-    <button class="ctrl-btn" id="btn-style">ORBIT</button>
-  </div>
+  <button class="ctrl-btn" id="btn-style">ORBIT</button>
   <div id="capture-cluster">
     <button class="icon-btn" id="btn-photo" aria-label="Photo">
       <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -1432,6 +1439,9 @@ function updateCrop(videoW, videoH, cW, cH) {
 // source exceeds the cap we draw it once per frame into a downscaled canvas and
 // the whole pipeline samples from THAT instead of the raw element.
 const SRC = { canvas:null, ctx:null, active:false, w:0, h:0 };
+// Still-image upload support: when an image is loaded we render it into this
+// canvas and the whole pipeline samples from it (videoEl stays unused).
+const STILL = { canvas:null, ctx:null, active:false, w:0, h:0 };
 const SRC_MAX = 1280;   // longest side cap for the working source frame
 function setupSourceDownsample(srcW, srcH){
   const longest = Math.max(srcW, srcH);
@@ -1444,6 +1454,7 @@ function setupSourceDownsample(srcW, srcH){
 }
 // Returns the element to sample from this frame (downscaled canvas or raw video).
 function sourceFrame(){
+  if (STILL.active) return STILL.canvas;          // uploaded photo
   if (SRC.active && videoEl.readyState>=2){
     SRC.ctx.drawImage(videoEl, 0,0, SRC.w, SRC.h);
     return SRC.canvas;
@@ -2499,7 +2510,7 @@ function drawHUD(ctx, cW, cH) {
 // ── 3.9  Main animation loop ──────────────────────────────────────────────────
 function loop(now) {
   rafId = requestAnimationFrame(loop);
-  if (!STATE.cameraOk || videoEl.readyState < 2) return;
+  if (!STATE.cameraOk || (!STILL.active && videoEl.readyState < 2)) return;
   STATE.fpsFrames++;
   if (now-STATE.fpsT>=1000){STATE.fps=STATE.fpsFrames;STATE.fpsFrames=0;STATE.fpsT=now;}
   const cW=compositeCanvas.width, cH=compositeCanvas.height;
@@ -2673,14 +2684,58 @@ function startUploadedVideo(file) {
     // Swap the PHOTO/record cluster meaning: in upload mode the record button
     // triggers a full-clip render+save instead of free recording.
     document.getElementById('btn-record').setAttribute('data-upload','1');
+    const bk=document.getElementById('btn-back'); if(bk) bk.style.display='flex';
     STATE.lastDetectT=performance.now();
     if(!rafId) rafId=requestAnimationFrame(loop);
-    showError('Upload loaded — tap the video button to render & save with this effect.');
+    showError('Video loaded — tap the video button to render & save with this effect.');
   };
   videoEl.addEventListener('loadedmetadata', onReady);
   videoEl.addEventListener('error', ()=>{
     showError('Could not load that video file.');
   }, {once:true});
+}
+
+// Load a still image into the pipeline (applies live effects over a fixed frame).
+function startUploadedImage(file){
+  const url=URL.createObjectURL(file);
+  const im=new Image();
+  im.onload=()=>{
+    if(!STILL.canvas){ STILL.canvas=document.createElement('canvas'); STILL.ctx=STILL.canvas.getContext('2d'); }
+    // Downscale very large photos for performance
+    let w=im.naturalWidth, h=im.naturalHeight;
+    const longest=Math.max(w,h);
+    if(longest>1280){ const s=1280/longest; w=Math.round(w*s); h=Math.round(h*s); }
+    STILL.canvas.width=w; STILL.canvas.height=h; STILL.w=w; STILL.h=h;
+    STILL.ctx.drawImage(im,0,0,w,h);
+    STILL.active=true;
+    URL.revokeObjectURL(url);
+
+    STATE.videoW=w; STATE.videoH=h;
+    STATE.uploadMode=true;   // record button → re-export the styled still as PNG? keep photo flow
+    SRC.active=false;
+
+    const cW=window.innerWidth, cH=window.innerHeight;
+    compositeCanvas.width=cW; compositeCanvas.height=cH;
+    let pW=240, pH=Math.round(pW*cH/cW);
+    if (pW*pH>150000){const s=Math.sqrt(150000/(pW*pH));pW=(pW*s)|0;pH=(pH*s)|0;}
+    workCanvas.width=pW; workCanvas.height=pH;
+    initBuffers(pW,pH);
+    updateCrop(STATE.videoW,STATE.videoH,cW,cH);
+    STATE.warmup=0; STATE.fpsT=performance.now(); STATE.cameraOk=true;
+    initAudio();
+
+    const splash=document.getElementById('splash');
+    splash.style.opacity='0'; splash.style.transition='opacity .4s ease';
+    setTimeout(()=>{splash.style.display='none'; if(window._splashAnimStop)window._splashAnimStop();},400);
+    const bk=document.getElementById('btn-back'); if(bk) bk.style.display='flex';
+    // In photo mode the record button is irrelevant; PHOTO button saves the styled frame.
+    document.getElementById('btn-record').removeAttribute('data-upload');
+    STATE.lastDetectT=performance.now();
+    if(!rafId) rafId=requestAnimationFrame(loop);
+    showError('Photo loaded — pick a style, then tap PHOTO to save the result.');
+  };
+  im.onerror=()=>{ showError('Could not load that image.'); URL.revokeObjectURL(url); };
+  im.src=url;
 }
 
 // Full-clip render: rewind, record one complete pass, fix duration, download.
@@ -2756,9 +2811,14 @@ async function renderUploadedClip() {
     cancelBtn.removeEventListener('click', onCancel);
     prog.classList.remove('show');
     bar.style.width='0%'; pct.textContent='0%';
-    // Restore preview looping
-    videoEl.loop = wasLoop;
-    videoEl.play().catch(()=>{});
+    STATE.isRecording = false;
+    // Restore looping preview: rewind to start and force playback so it doesn't
+    // sit frozen on the last frame.
+    videoEl.loop = true;
+    try { videoEl.currentTime = 0; } catch(_){}
+    const _resume = ()=>{ videoEl.play().catch(()=>{}); };
+    _resume();
+    setTimeout(_resume, 60);   // second nudge in case the first is ignored
     if (STATE.uploadCancelled) { return; }
     let eff = mimeType || 'video/webm';
     let blob = new Blob(chunks, {type:eff});
@@ -2978,13 +3038,15 @@ function returnToHome() {
   STATE.cameraOk = false;
   STATE.uploadCancelled = false;
   SRC.active = false;
+  STILL.active = false;
   ZOOM.factor = 1;
   _crop.valid = false;
   // Lower audio so the home is quiet
   if (AUDIO.ready) AUDIO.masterGain.gain.setTargetAtTime(0.0, AUDIO.ctx.currentTime, 0.2);
   // Hide any upload progress
   const prog=document.getElementById('upload-progress'); if(prog) prog.classList.remove('show');
-  // Show splash + restart its animation
+  // Hide back arrow, show splash + restart its animation
+  const bk=document.getElementById('btn-back'); if(bk) bk.style.display='none';
   const splash=document.getElementById('splash');
   splash.style.display='flex'; splash.style.opacity='1'; splash.style.transition='none';
   if (window._splashAnimStart) window._splashAnimStart();
@@ -2995,13 +3057,30 @@ function returnToHome() {
 // straight into it with NO further prompts. Otherwise: showSaveFilePicker (one
 // prompt) or, as a last resort, a direct anchor download.
 async function saveBlob(blob, filename) {
-  // 1) Save picker where supported (one OK, Chrome/Edge desktop + Android).
+  const type = blob.type || (filename.endsWith('.png') ? 'image/png' : 'video/webm');
+
+  // 1) Web Share with files — best on iPhone: native sheet → "Save Image"/"Save
+  //    Video" in a single tap, no download verification. Must be in a user
+  //    gesture; photo capture and record-stop both qualify.
+  try {
+    const file = new File([blob], filename, { type });
+    if (navigator.canShare && navigator.canShare({ files:[file] })) {
+      await navigator.share({ files:[file] });
+      flashSaved('SAVED');
+      return;
+    }
+  } catch(e) {
+    if (e && e.name === 'AbortError') return;   // user closed the share sheet
+    // otherwise fall through to other methods
+  }
+
+  // 2) File System Access picker (Chrome/Edge desktop, Android).
   if (window.showSaveFilePicker) {
     try {
       const ext = filename.split('.').pop();
       const types = ext === 'png'
         ? [{ description:'Image', accept:{'image/png':['.png']} }]
-        : [{ description:'Video', accept:{[blob.type||'video/webm']:['.'+ext]} }];
+        : [{ description:'Video', accept:{[type]:['.'+ext]} }];
       const handle = await window.showSaveFilePicker({ suggestedName: filename, types });
       const w = await handle.createWritable();
       await w.write(blob); await w.close();
@@ -3011,7 +3090,8 @@ async function saveBlob(blob, filename) {
       if (e && e.name === 'AbortError') return;
     }
   }
-  // 3) Last resort: direct anchor download (auto). iOS may open a tab (OS-level).
+
+  // 3) Last resort: direct anchor download.
   try {
     const url = URL.createObjectURL(blob);
     if (STATE.lastDlUrl) URL.revokeObjectURL(STATE.lastDlUrl);
@@ -3385,13 +3465,14 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(()=>{splash.style.display='none'; if(window._splashAnimStop)window._splashAnimStop();},400);
     const ok=await startCamera();
     if(!ok){splash.style.display='flex';splash.style.opacity='1';splash.style.transition='none';return;}
+    const bk=document.getElementById('btn-back'); if(bk) bk.style.display='flex';
     STATE.lastDetectT=performance.now(); STATE.fpsT=performance.now();
     if(rafId) cancelAnimationFrame(rafId);
     rafId=requestAnimationFrame(loop);
   });
 
   // ── HOME button: return to splash, switch modes without reload ─────────
-  document.getElementById('btn-home').addEventListener('click',returnToHome);
+  document.getElementById('btn-back').addEventListener('click',returnToHome);
 
   // ── Upload video flow ──────────────────────────────────────────────────
   document.getElementById('btn-upload-splash').addEventListener('click',()=>{
@@ -3405,8 +3486,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('file-input').addEventListener('change',function(){
     const f=this.files&&this.files[0];
     if(!f) return;
-    if(!f.type.startsWith('video/')){showError('Please choose a video file.');return;}
-    startUploadedVideo(f);
+    if(f.type.startsWith('image/'))      startUploadedImage(f);
+    else if(f.type.startsWith('video/')) startUploadedVideo(f);
+    else showError('Please choose a video or image file.');
+    this.value='';   // allow re-selecting the same file later
   });
 
   // ── Canvas context loss / restore ──────────────────────────────────────
