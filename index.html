@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0a0e0a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>BLOBZ — Motion Tracker</title>
+<title>RASTER — Motion Tracker</title>
 <style>
 /* ════════════════════════════════════════════════════════════════════════
    THEME — single source of truth for interface colour.
@@ -271,7 +271,7 @@ input[type="range"]::-moz-range-thumb{
   <canvas id="splash-bg"></canvas>
   <div class="spl-inner">
     <div class="spl-brand">
-      <div class="spl-title">BLOBZ</div>
+      <div class="spl-title">RASTER</div>
       <div class="spl-sub">MOTION&nbsp;TRACKER</div>
     </div>
     <div class="spl-actions">
@@ -1402,6 +1402,15 @@ const CFG = {
   seqSpeed:       40,       // playhead speed (5-200)
   seqVoice:       0,        // 0=Pluck 1=Bell 2=Bass 3=Pad
   seqThresh:      45,       // brightness threshold to fire a note (0-100)
+  // THERMAL (P)
+  thermalSmooth:  1,        // 0=blocky 1=smooth
+  // WAVEFIELD (Q)
+  waveLen:        40,       // ring wavelength px (18-120)
+  waveSpeed:      30,       // ring expansion speed (5-100)
+  waveRings:      5,        // rings per source (2-10)
+  // PHOTOMOSAIC (R)
+  mosaicTile:     14,       // glyph tile px (8-28)
+  mosaicColor:    1,        // 0=mono 1=colour
 };
 
 const TOUCH = {
@@ -1462,12 +1471,13 @@ function sourceFrame(){
   return videoEl;
 }
 
-const STYLE_CYCLE = ['B','A','C','D','F','H','I','J','K','L','M','N','O'];
+const STYLE_CYCLE = ['B','A','C','D','F','H','I','J','K','L','M','N','O','P','Q','R'];
 const STYLE_NAMES = {
   A:'SCAN', B:'ORBIT', C:'GHOST',
   D:'NEURAL', F:'PXSORT', H:'GRAIN', I:'EVAP', J:'ASCII',
   K:'SPECIMEN', L:'MOSAIC', M:'CONTAGION',
-  N:'ASCII MONO', O:'SEQUENCER'
+  N:'ASCII MONO', O:'SEQUENCER',
+  P:'THERMAL', Q:'WAVEFIELD', R:'PHOTOMOSAIC'
 };
 
 // ── Interface theming — driven by the active effect's PALETTE parameter ───────
@@ -2479,6 +2489,124 @@ function drawStyleO(ctx, cW, cH, now){
   }
 }
 
+// ── 3.8k  Style P — THERMAL (luminance → infrared palette) ────────────────────
+// Maps brightness onto a thermal ramp (black→purple→magenta→red→orange→yellow→
+// white). Reads the downsampled frame at PROC res, paints scaled-up blocks.
+// Thermal lookup table (256 entries) built once.
+const _THERMAL_LUT = (function(){
+  // control stops: pos[0..1] → [r,g,b]
+  const stops=[
+    [0.00,  5,  4, 16],
+    [0.18, 40,  8, 90],
+    [0.38,150, 12,150],
+    [0.55,235, 30, 60],
+    [0.72,255,130, 10],
+    [0.88,255,235, 60],
+    [1.00,255,255,255],
+  ];
+  const lut=new Uint8Array(256*3);
+  for(let i=0;i<256;i++){
+    const t=i/255;
+    let a=stops[0], b=stops[stops.length-1];
+    for(let s=0;s<stops.length-1;s++){ if(t>=stops[s][0]&&t<=stops[s+1][0]){a=stops[s];b=stops[s+1];break;} }
+    const span=(b[0]-a[0])||1, f=(t-a[0])/span;
+    lut[i*3]  =(a[1]+(b[1]-a[1])*f)|0;
+    lut[i*3+1]=(a[2]+(b[2]-a[2])*f)|0;
+    lut[i*3+2]=(a[3]+(b[3]-a[3])*f)|0;
+  }
+  return lut;
+})();
+function drawStyleP(ctx, cW, cH){
+  if(!_effectCtx) return;
+  _effectCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
+  let img; try{ img=_effectCtx.getImageData(0,0,PROC_W,PROC_H); }catch(e){ return; }
+  const px=img.data;
+  for(let i=0;i<px.length;i+=4){
+    let g=(px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114)|0;
+    // optional contrast boost so heat zones pop
+    g=Math.max(0,Math.min(255,(g-90)*1.4+90))|0;
+    const li=g*3;
+    px[i]=_THERMAL_LUT[li]; px[i+1]=_THERMAL_LUT[li+1]; px[i+2]=_THERMAL_LUT[li+2];
+  }
+  _effectCtx.putImageData(img,0,0);
+  ctx.imageSmoothingEnabled=(CFG.thermalSmooth===1);
+  ctx.drawImage(_effectCanvas,0,0,cW,cH);
+  ctx.imageSmoothingEnabled=true;
+}
+
+// ── 3.8l  Style Q — WAVEFIELD (concentric ripples from blobs, interfering) ────
+// Each tracked blob emits expanding concentric rings; their summed field is
+// rendered as bright interference contours. Audio-reactive: ring speed tracks
+// overall motion. Drawn over a dimmed frame so the rings read clearly.
+function drawStyleQ(ctx, cW, cH, now){
+  // dim base
+  ctx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,cW,cH);
+  ctx.fillStyle='rgba(5,6,12,0.62)'; ctx.fillRect(0,0,cW,cH);
+
+  // gather active blob centres
+  const src=[];
+  for(let ti=0;ti<MAX_TRACKED;ti++){ const t=_tracked[ti]; if(t.active&&t.age>=2) src.push(t); }
+  if(src.length===0) return;
+
+  const t=now/1000;
+  const wlen=Math.max(18, CFG.waveLen);          // wavelength in px
+  const speed=CFG.waveSpeed/10;                   // ring expansion speed
+  const rings=CFG.waveRings|0;                     // rings drawn per source
+  ctx.lineWidth=1.6;
+  ctx.globalCompositeOperation='lighter';          // rings add → interference glow
+  for(let s=0;s<src.length;s++){
+    const b=src[s];
+    const hue=(s*47)%360;
+    for(let r=0;r<rings;r++){
+      // expanding radius with phase offset per ring
+      const rad=((t*speed*60 + r*wlen) % (wlen*rings));
+      if(rad<2) continue;
+      const fade=1-(rad/(wlen*rings));
+      ctx.strokeStyle='hsla('+hue+',90%,60%,'+(fade*0.5).toFixed(3)+')';
+      ctx.beginPath();
+      ctx.arc(b.scx, b.scy, rad, 0, Math.PI*2);
+      ctx.stroke();
+    }
+  }
+  ctx.globalCompositeOperation='source-over';
+}
+
+// ── 3.8m  Style R — PHOTOMOSAIC (Ken Knowlton-style symbol reconstruction) ────
+// Rebuilds the image from a grid of glyph tiles; glyph chosen by local
+// brightness (dense glyph = dark, light glyph = bright), tinted by the cell's
+// average colour. Reads PROC frame for speed.
+const _MOSAIC_GLYPHS = "@#W$9876543210?!abc;:+=-,._ ";  // dense→sparse
+function drawStyleR(ctx, cW, cH){
+  if(!_effectCtx) return;
+  _effectCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
+  let img; try{ img=_effectCtx.getImageData(0,0,PROC_W,PROC_H); }catch(e){ return; }
+  const px=img.data;
+
+  ctx.fillStyle='#070708'; ctx.fillRect(0,0,cW,cH);
+  const cell=Math.max(8, CFG.mosaicTile|0);
+  const cols=(cW/cell)|0, rows=(cH/cell)|0;
+  const sx=PROC_W/cW, sy=PROC_H/cH;
+  ctx.textBaseline='middle'; ctx.textAlign='center';
+  ctx.font='700 '+(cell)+'px Helvetica,Arial,monospace';
+  const colored=(CFG.mosaicColor===1);
+  for(let r=0;r<rows;r++){
+    const pyc=Math.min(PROC_H-1, (((r+0.5)*cell)*sy)|0);
+    for(let c=0;c<cols;c++){
+      const pxc=Math.min(PROC_W-1, (((c+0.5)*cell)*sx)|0);
+      const si=(pyc*PROC_W+pxc)*4;
+      const R=px[si], G=px[si+1], B=px[si+2];
+      const lum=(R*0.299+G*0.587+B*0.114)/255;
+      const gi=Math.min(_MOSAIC_GLYPHS.length-1, ((1-lum)*(_MOSAIC_GLYPHS.length-1))|0);
+      const ch=_MOSAIC_GLYPHS[gi];
+      if(ch===' ') continue;
+      if(colored) ctx.fillStyle='rgb('+R+','+G+','+B+')';
+      else { const v=(60+lum*195)|0; ctx.fillStyle='rgb('+v+','+v+','+v+')'; }
+      ctx.fillText(ch, c*cell+cell*0.5, r*cell+cell*0.5);
+    }
+  }
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+}
+
 // Brief zoom-level badge shown while/just after pinching.
 function drawZoomBadge(ctx, cW, cH, now){
   if (STATE.isRecording) return;
@@ -2517,7 +2645,7 @@ function loop(now) {
   if (!_crop.valid) updateCrop(STATE.videoW,STATE.videoH,cW,cH);
 
   // A. Video base frame (some styles own their background)
-  if (CFG.style!=='C' && CFG.style!=='L' && CFG.style!=='M' && CFG.style!=='K' && CFG.style!=='N' && CFG.style!=='O') {
+  if (CFG.style!=='C' && CFG.style!=='L' && CFG.style!=='M' && CFG.style!=='K' && CFG.style!=='N' && CFG.style!=='O' && CFG.style!=='P' && CFG.style!=='Q' && CFG.style!=='R') {
     compositeCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
   } else if (CFG.style==='K') {
     // SPECIMEN needs the live frame underneath (it dims it itself)
@@ -2565,6 +2693,9 @@ function loop(now) {
     case 'M': drawStyleM(compositeCtx,cW,cH,now);   break;
     case 'N': drawStyleN(compositeCtx,cW,cH);       break;
     case 'O': drawStyleO(compositeCtx,cW,cH,now);   break;
+    case 'P': drawStyleP(compositeCtx,cW,cH);       break;
+    case 'Q': drawStyleQ(compositeCtx,cW,cH,now);   break;
+    case 'R': drawStyleR(compositeCtx,cW,cH);       break;
   }
 
   // Noise overlay (on top of style, under HUD)
@@ -2825,7 +2956,7 @@ async function renderUploadedClip() {
     const durMs = performance.now() - startT;
     if (eff.includes('webm')) { try { blob = await fixWebmDuration(blob, durMs); } catch(_){} }
     const ext = eff.includes('mp4')?'mp4':'webm';
-    saveBlob(blob, 'blobz_styled_'+Date.now()+'.'+ext);
+    saveBlob(blob, 'raster_styled_'+Date.now()+'.'+ext);
   };
 }
 
@@ -2994,7 +3125,7 @@ function startRecording() {
         try { blob = await fixWebmDuration(blob, durMs); } catch(_) {}
       }
       const ext=eff.includes('mp4')?'mp4':'webm';
-      saveBlob(blob, 'blobz_'+Date.now()+'.'+ext);
+      saveBlob(blob, 'raster_'+Date.now()+'.'+ext);
     };
     STATE.mediaRecorder.onerror=e=>{showError('Recording error: '+(e.error?e.error.message:'unknown'));stopRecording();};
     STATE.mediaRecorder.start(100);
@@ -3255,6 +3386,18 @@ document.addEventListener('DOMContentLoaded', () => {
       ['seqVoice','Voice',0,3,1,true,['Pluck','Bell','Bass','Pad']],
       ['seqThresh','Note Gate',0,100,1],
     ],
+    P: [
+      ['thermalSmooth','Render',0,1,1,true,['Blocky','Smooth']],
+    ],
+    Q: [
+      ['waveLen','Wavelength',18,120,1],
+      ['waveSpeed','Ring Speed',5,100,1],
+      ['waveRings','Ring Count',2,10,1],
+    ],
+    R: [
+      ['mosaicTile','Tile Size',8,28,1],
+      ['mosaicColor','Colour',0,1,1,true,['Mono','Colour']],
+    ],
   };
 
   function buildTunePanel(style) {
@@ -3435,7 +3578,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try{
       compositeCanvas.toBlob((blob)=>{
         if(!blob){showError('Photo capture failed.');return;}
-        saveBlob(blob, 'blobz_'+Date.now()+'.png');
+        saveBlob(blob, 'raster_'+Date.now()+'.png');
       },'image/png');
     }catch(e){showError('Photo capture failed: '+e.message);}
   });
