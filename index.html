@@ -81,6 +81,13 @@ body{
   background:transparent;border:2px solid rgba(200,240,30,.55);
   color:rgba(200,240,30,.9);box-shadow:none;
 }
+#spl-feedback{
+  margin-top:.4rem;color:rgba(200,240,30,.5);text-decoration:none;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;
+  -webkit-tap-highlight-color:transparent;
+}
+#spl-feedback:active{color:#c8f01e;}
 
 .ctrl-row{display:flex;flex-direction:column;gap:.35rem;}
 .ctrl-label{
@@ -234,6 +241,7 @@ input[type="range"]::-moz-range-thumb{
 
 /* Icon capture buttons (photo + video) — matching round style */
 #capture-cluster{display:flex;align-items:center;gap:.9rem;}
+.icon-btn.gallery{width:44px;height:44px;border-radius:14px;opacity:.85;}
 .icon-btn{
   width:60px;height:60px;border-radius:20px;   /* squircle */
   background:rgba(10,14,10,.8);
@@ -287,6 +295,7 @@ input[type="range"]::-moz-range-thumb{
     <div class="spl-actions">
       <button id="btn-start" class="sq-btn">LIVE CAMERA</button>
       <button id="btn-upload-splash" class="sq-btn sq-ghost">UPLOAD MEDIA</button>
+      <a id="spl-feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSf1l0Q6f9-xg_b7Z1Qz72V2Ki5HqHSNYXWSiHLsQavz27Hrng/viewform" target="_blank" rel="noopener">&#9998; FEEDBACK</a>
     </div>
   </div>
   <input type="file" id="file-input" accept="video/*,image/*" style="display:none">
@@ -300,6 +309,9 @@ input[type="range"]::-moz-range-thumb{
 <div id="ctrl-bar">
   <button class="ctrl-btn" id="btn-style">ORBIT</button>
   <div id="capture-cluster">
+    <button class="icon-btn gallery" id="btn-gallery" aria-label="Open gallery">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </button>
     <button class="icon-btn" id="btn-photo" aria-label="Photo">
       <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
     </button>
@@ -1405,7 +1417,8 @@ const CFG = {
   contSpread:     22,       // spread probability % per frame (5-60)
   contSeeds:      2,        // random seeds per tick (0-8)
   contReset:      6,        // seconds between border reset waves (2-15)
-  // ASCII MONO (N)
+  asciiMode:      0,        // 0=Grid (chromakey) 1=Mono (warm highlights)
+  // ASCII MONO (merged into J as Mode=Mono)
   amonoCell:      9,        // glyph cell px (7-16)
   amonoThresh:    35,       // brightness threshold for glyphs (0-100)
   // SEQUENCER (O)
@@ -1413,12 +1426,15 @@ const CFG = {
   seqSpeed:       40,       // playhead speed (5-200)
   seqVoice:       0,        // 0=Pluck 1=Bell 2=Bass 3=Pad
   seqThresh:      45,       // brightness threshold to fire a note (0-100)
+  // MIX — second style layered over the active one ('' = off)
+  mixStyle:       '',
   // THERMAL (P)
+  thermalPalette: 0,        // 0=Iron 1=Jet 2=Arctic 3=Night 4=X-Ray
   thermalSmooth:  1,        // 0=blocky 1=smooth
   // WAVEFIELD (Q)
-  waveLen:        40,       // ring wavelength px (18-120)
-  waveSpeed:      30,       // ring expansion speed (5-100)
-  waveRings:      5,        // rings per source (2-10)
+  waveLen:        40,       // wavelength (18-120)
+  waveSpeed:      30,       // wave speed (5-100)
+  waveAmp:        10,       // displacement depth (2-24)
   // PHOTOMOSAIC (R)
   mosaicTile:     14,       // glyph tile px (8-28)
   mosaicColor:    1,        // 0=mono 1=colour
@@ -1484,15 +1500,28 @@ function sourceFrame(){
 
 // ── Feedback form URL — paste your Google Form's public link here ─────────────
 // Get it from Google Forms: Send → Link tab → Copy. That's it, no other setup.
-const FEEDBACK_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSf1l0Q6f9-xg_b7Z1Qz72V2Ki5HqHSNYXWSiHLsQavz27Hrng/viewform?usp=publish-editor';
+const FEEDBACK_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSf1l0Q6f9-xg_b7Z1Qz72V2Ki5HqHSNYXWSiHLsQavz27Hrng/viewform';
 
-const STYLE_CYCLE = ['B','A','C','D','F','H','I','J','K','L','M','N','O','P','Q','R'];
+const STYLE_CYCLE = ['B','A','C','D','F','H','I','J','K','L','M','O','P','Q','R'];
 const STYLE_NAMES = {
   A:'SCAN', B:'ORBIT', C:'GHOST',
   D:'NEURAL', F:'PXSORT', H:'GRAIN', I:'EVAP', J:'ASCII',
   K:'SPECIMEN', L:'MOSAIC', M:'CONTAGION',
-  N:'ASCII MONO', O:'SEQUENCER',
+  O:'SEQUENCER',
   P:'THERMAL', Q:'WAVEFIELD', R:'PHOTOMOSAIC'
+};
+
+// ── MIX layer: overlay-friendly styles that composite well via 'screen' ──────
+// (Stateful/full-repaint styles like SEQUENCER or CONTAGION are excluded.)
+let _mixCanvas=null, _mixCtx=null;
+const MIX_NAMES = { '':'OFF', B:'ORBIT', A:'SCAN', D:'NEURAL', I:'EVAP', R:'PHOTOMOSAIC', P:'THERMAL' };
+const MIX_DRAW  = {
+  B:(c,w,h,n)=>drawStyleB(c,w,h),
+  A:(c,w,h,n)=>drawStyleA(c,w,h),
+  D:(c,w,h,n)=>drawStyleD(c,w,h,n),
+  I:(c,w,h,n)=>drawStyleI(c,w,h),
+  R:(c,w,h,n)=>drawStyleR(c,w,h),
+  P:(c,w,h,n)=>drawStyleP(c,w,h),
 };
 
 // ── Interface theming — driven by the active effect's PALETTE parameter ───────
@@ -1513,6 +1542,12 @@ const PALETTE_THEMES = {
   'evapPalette:0':{hex:'#c8d400',onAcc:'#0a0e0a'},
   'evapPalette:1':{hex:'#39d6ff',onAcc:'#0a0e0a'},
   'evapPalette:2':{hex:'#ff8c00',onAcc:'#0a0e0a'},
+  // THERMAL palettes
+  'thermalPalette:0':{hex:'#ff7a1e',onAcc:'#0a0e0a'},
+  'thermalPalette:1':{hex:'#28c8ff',onAcc:'#0a0e0a'},
+  'thermalPalette:2':{hex:'#63c8f5',onAcc:'#0a0e0a'},
+  'thermalPalette:3':{hex:'#46e05a',onAcc:'#0a0e0a'},
+  'thermalPalette:4':{hex:'#c8ddff',onAcc:'#0a0e0a'},
   // ASCII background: Blue / Black / White / Red
   'asciiBg:0':{hex:'#2b4cff',onAcc:'#ffffff'},
   'asciiBg:1':{hex:'#c8f01e',onAcc:'#0a0e0a'},
@@ -1992,6 +2027,8 @@ function drawStyleI(ctx, cW, cH) {
 // accent glyphs scattered on high-motion pixels for the glitch-art look.
 const _ASCII_RAMP = " .:-=+*#%@MW";  // 12 levels dark→bright
 function drawStyleJ(ctx, cW, cH) {
+  // Mode 1 = MONO: warm glyphs over greyscale highlights (former ASCII MONO)
+  if (CFG.asciiMode === 1) { drawStyleN(ctx, cW, cH); return; }
   // Flat field — background color from CFG
   const bgCol = ['#1a16e6','#050508','#f2f2f2','#c00010'][CFG.asciiBg] || '#1a16e6';
   ctx.fillStyle = bgCol;
@@ -2387,7 +2424,7 @@ function drawStyleN(ctx, cW, cH){
   ctx.globalAlpha=1;
 
   // ASCII overlay (warm orange) over bright regions
-  const cell=Math.max(7,CFG.amonoCell|0);
+  const cell=Math.max(6,(CFG.asciiCell|0)+3);   // share J's Cell Size slider
   const cols=(cW/cell)|0, rows=(cH/cell)|0;
   const sx=PROC_W/cW, sy=PROC_H/cH;
   ctx.fillStyle='#ff7a1e';   // warm orange
@@ -2508,17 +2545,8 @@ function drawStyleO(ctx, cW, cH, now){
 // Maps brightness onto a thermal ramp (black→purple→magenta→red→orange→yellow→
 // white). Reads the downsampled frame at PROC res, paints scaled-up blocks.
 // Thermal lookup table (256 entries) built once.
-const _THERMAL_LUT = (function(){
-  // control stops: pos[0..1] → [r,g,b]
-  const stops=[
-    [0.00,  5,  4, 16],
-    [0.18, 40,  8, 90],
-    [0.38,150, 12,150],
-    [0.55,235, 30, 60],
-    [0.72,255,130, 10],
-    [0.88,255,235, 60],
-    [1.00,255,255,255],
-  ];
+// Thermal palette bank — each entry is a 256×3 LUT built from colour stops.
+function _buildLut(stops){
   const lut=new Uint8Array(256*3);
   for(let i=0;i<256;i++){
     const t=i/255;
@@ -2530,9 +2558,22 @@ const _THERMAL_LUT = (function(){
     lut[i*3+2]=(a[3]+(b[3]-a[3])*f)|0;
   }
   return lut;
-})();
+}
+const _THERMAL_LUTS = [
+  // 0 IRON (classic infrared)
+  _buildLut([[0,5,4,16],[0.18,40,8,90],[0.38,150,12,150],[0.55,235,30,60],[0.72,255,130,10],[0.88,255,235,60],[1,255,255,255]]),
+  // 1 JET (rainbow science-viz)
+  _buildLut([[0,0,0,130],[0.25,0,120,255],[0.5,40,255,40],[0.75,255,220,0],[1,255,20,10]]),
+  // 2 ARCTIC (deep blue → cyan → white)
+  _buildLut([[0,4,8,30],[0.35,10,60,160],[0.65,30,180,230],[0.85,160,240,250],[1,255,255,255]]),
+  // 3 NIGHT VISION (black → green → white)
+  _buildLut([[0,0,8,0],[0.45,10,140,30],[0.8,90,255,110],[1,235,255,235]]),
+  // 4 X-RAY (inverted blue-white negative)
+  _buildLut([[0,240,248,255],[0.4,140,180,220],[0.75,40,70,130],[1,4,8,24]]),
+];
 function drawStyleP(ctx, cW, cH){
   if(!_effectCtx) return;
+  const _LUT=_THERMAL_LUTS[CFG.thermalPalette] || _THERMAL_LUTS[0];
   _effectCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
   let img; try{ img=_effectCtx.getImageData(0,0,PROC_W,PROC_H); }catch(e){ return; }
   const px=img.data;
@@ -2541,7 +2582,7 @@ function drawStyleP(ctx, cW, cH){
     // optional contrast boost so heat zones pop
     g=Math.max(0,Math.min(255,(g-90)*1.4+90))|0;
     const li=g*3;
-    px[i]=_THERMAL_LUT[li]; px[i+1]=_THERMAL_LUT[li+1]; px[i+2]=_THERMAL_LUT[li+2];
+    px[i]=_LUT[li]; px[i+1]=_LUT[li+1]; px[i+2]=_LUT[li+2];
   }
   _effectCtx.putImageData(img,0,0);
   ctx.imageSmoothingEnabled=(CFG.thermalSmooth===1);
@@ -2549,41 +2590,78 @@ function drawStyleP(ctx, cW, cH){
   ctx.imageSmoothingEnabled=true;
 }
 
-// ── 3.8l  Style Q — WAVEFIELD (concentric ripples from blobs, interfering) ────
-// Each tracked blob emits expanding concentric rings; their summed field is
-// rendered as bright interference contours. Audio-reactive: ring speed tracks
-// overall motion. Drawn over a dimmed frame so the rings read clearly.
+// ── 3.8l  Style Q — WAVEFIELD (water-mirror ripple distortion) ────────────────
+// Each tracked blob is a ripple source on a water surface: expanding waves
+// DISPLACE the image pixels, and waves from different sources interfere
+// (amplitudes sum) like on a real pond. Computed at reduced resolution on
+// pre-allocated buffers, then scaled up with smoothing for a liquid look.
+const RIP = { W:0, H:0, srcCanvas:null, srcCtx:null, outCanvas:null, outCtx:null, outImg:null };
+function _initRipple(cW, cH){
+  const w = 180, h = Math.max(90, Math.round(w * cH / cW));
+  RIP.W=w; RIP.H=h;
+  if(!RIP.srcCanvas){
+    RIP.srcCanvas=document.createElement('canvas'); RIP.srcCtx=RIP.srcCanvas.getContext('2d',{willReadFrequently:true});
+    RIP.outCanvas=document.createElement('canvas'); RIP.outCtx=RIP.outCanvas.getContext('2d');
+  }
+  RIP.srcCanvas.width=w;  RIP.srcCanvas.height=h;
+  RIP.outCanvas.width=w;  RIP.outCanvas.height=h;
+  RIP.outImg=RIP.outCtx.createImageData(w,h);
+}
 function drawStyleQ(ctx, cW, cH, now){
-  // dim base
-  ctx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,cW,cH);
-  ctx.fillStyle='rgba(5,6,12,0.62)'; ctx.fillRect(0,0,cW,cH);
+  if(!RIP.srcCanvas || RIP.H!==Math.max(90,Math.round(180*cH/cW))) _initRipple(cW,cH);
+  const W=RIP.W, H=RIP.H;
+  // 1. current frame at ripple resolution
+  RIP.srcCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,W,H);
+  let sImg; try{ sImg=RIP.srcCtx.getImageData(0,0,W,H); }catch(e){ return; }
+  const sd=sImg.data, od=RIP.outImg.data;
 
-  // gather active blob centres
-  const src=[];
-  for(let ti=0;ti<MAX_TRACKED;ti++){ const t=_tracked[ti]; if(t.active&&t.age>=2) src.push(t); }
-  if(src.length===0) return;
+  // 2. ripple sources: active blobs mapped to ripple-space (max 5); if none,
+  //    a gentle ambient source keeps the surface alive.
+  const sx=[], sy=[];
+  for(let ti=0;ti<MAX_TRACKED && sx.length<5;ti++){
+    const t=_tracked[ti];
+    if(t.active && t.age>=2){ sx.push(t.scx/cW*W); sy.push(t.scy/cH*H); }
+  }
+  if(sx.length===0){ sx.push(W*0.5 + Math.sin(now/2400)*W*0.2); sy.push(H*0.5 + Math.cos(now/3100)*H*0.2); }
+  const nS=sx.length;
 
   const t=now/1000;
-  const wlen=Math.max(18, CFG.waveLen);          // wavelength in px
-  const speed=CFG.waveSpeed/10;                   // ring expansion speed
-  const rings=CFG.waveRings|0;                     // rings drawn per source
-  ctx.lineWidth=1.6;
-  ctx.globalCompositeOperation='lighter';          // rings add → interference glow
-  for(let s=0;s<src.length;s++){
-    const b=src[s];
-    const hue=(s*47)%360;
-    for(let r=0;r<rings;r++){
-      // expanding radius with phase offset per ring
-      const rad=((t*speed*60 + r*wlen) % (wlen*rings));
-      if(rad<2) continue;
-      const fade=1-(rad/(wlen*rings));
-      ctx.strokeStyle='hsla('+hue+',90%,60%,'+(fade*0.5).toFixed(3)+')';
-      ctx.beginPath();
-      ctx.arc(b.scx, b.scy, rad, 0, Math.PI*2);
-      ctx.stroke();
+  const lam=Math.max(6, CFG.waveLen*W/900);      // wavelength in ripple px
+  const omega=CFG.waveSpeed/10;                   // temporal frequency
+  const amp=CFG.waveAmp*W/900;                    // displacement amplitude (ripple px)
+  const k=(Math.PI*2)/lam;
+
+  // 3. per-pixel displacement: sum of radial waves from each source
+  for(let y=0;y<H;y++){
+    const row=y*W;
+    for(let x=0;x<W;x++){
+      let ox=0, oy=0, shade=0;
+      for(let s=0;s<nS;s++){
+        const dx=x-sx[s], dy=y-sy[s];
+        const dist=Math.sqrt(dx*dx+dy*dy)+0.0001;
+        const fall=1/(1+dist*0.045);              // amplitude falloff with distance
+        const w=Math.cos(dist*k - t*omega*6)*fall; // wave value (interferes by summing)
+        const g=w*amp/dist;                        // radial displacement per unit
+        ox+=dx*g; oy+=dy*g; shade+=w;
+      }
+      // sample source at displaced position (clamped)
+      let px=x+ox, py=y+oy;
+      if(px<0)px=0; else if(px>W-1)px=W-1;
+      if(py<0)py=0; else if(py>H-1)py=H-1;
+      const si=(((py|0)*W)+(px|0))*4, oi=(row+x)*4;
+      // subtle specular shimmer from summed wave height
+      const l=1+shade*0.16;
+      let r=sd[si]*l, gch=sd[si+1]*l, b=sd[si+2]*l;
+      od[oi]  = r>255?255:r;
+      od[oi+1]= gch>255?255:gch;
+      od[oi+2]= b>255?255:b;
+      od[oi+3]=255;
     }
   }
-  ctx.globalCompositeOperation='source-over';
+  RIP.outCtx.putImageData(RIP.outImg,0,0);
+  // 4. scale up with smoothing → liquid look
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(RIP.outCanvas,0,0,cW,cH);
 }
 
 // ── 3.8m  Style R — PHOTOMOSAIC (Ken Knowlton-style symbol reconstruction) ────
@@ -2660,7 +2738,7 @@ function loop(now) {
   if (!_crop.valid) updateCrop(STATE.videoW,STATE.videoH,cW,cH);
 
   // A. Video base frame (some styles own their background)
-  if (CFG.style!=='C' && CFG.style!=='L' && CFG.style!=='M' && CFG.style!=='K' && CFG.style!=='N' && CFG.style!=='O' && CFG.style!=='P' && CFG.style!=='Q' && CFG.style!=='R') {
+  if (CFG.style!=='C' && CFG.style!=='L' && CFG.style!=='M' && CFG.style!=='K' && CFG.style!=='O' && CFG.style!=='P' && CFG.style!=='Q' && CFG.style!=='R') {
     compositeCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
   } else if (CFG.style==='K') {
     // SPECIMEN needs the live frame underneath (it dims it itself)
@@ -2706,11 +2784,22 @@ function loop(now) {
     case 'K': drawStyleK(compositeCtx,cW,cH,now);   break;
     case 'L': drawStyleL(compositeCtx,cW,cH);       break;
     case 'M': drawStyleM(compositeCtx,cW,cH,now);   break;
-    case 'N': drawStyleN(compositeCtx,cW,cH);       break;
     case 'O': drawStyleO(compositeCtx,cW,cH,now);   break;
     case 'P': drawStyleP(compositeCtx,cW,cH);       break;
     case 'Q': drawStyleQ(compositeCtx,cW,cH,now);   break;
     case 'R': drawStyleR(compositeCtx,cW,cH);       break;
+  }
+
+  // ── MIX layer: render a second style offscreen, composite with 'screen' ──
+  if (CFG.mixStyle && CFG.mixStyle!==CFG.style && MIX_DRAW[CFG.mixStyle]) {
+    if (!_mixCanvas){ _mixCanvas=document.createElement('canvas'); _mixCtx=_mixCanvas.getContext('2d'); }
+    if (_mixCanvas.width!==cW||_mixCanvas.height!==cH){ _mixCanvas.width=cW; _mixCanvas.height=cH; }
+    _mixCtx.clearRect(0,0,cW,cH);
+    try { MIX_DRAW[CFG.mixStyle](_mixCtx,cW,cH,now); } catch(e){}
+    compositeCtx.save();
+    compositeCtx.globalCompositeOperation='screen';   // black → transparent
+    compositeCtx.drawImage(_mixCanvas,0,0);
+    compositeCtx.restore();
   }
 
   // Noise overlay (on top of style, under HUD)
@@ -3375,9 +3464,11 @@ document.addEventListener('DOMContentLoaded', () => {
       ['evapPalette','Palette',0,2,1,true,['Lime/Red','Cyan/Mag','White/Org']],
     ],
     J: [
+      ['asciiMode','Mode',0,1,1,true,['Grid','Mono']],
       ['asciiCell','Cell Size',5,16,1],
       ['asciiBg','Background',0,3,1,true,['Blue','Black','White','Red']],
       ['asciiAccent','Red Accents',0,100,1],
+      ['amonoThresh','Mono Gate',0,100,1],
     ],
     K: [
       ['specMinR','Min Object Size',10,80,1],
@@ -3391,10 +3482,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ['contSeeds','Random Seeds',0,8,1],
       ['contReset','Reset Interval',2,15,1],
     ],
-    N: [
-      ['amonoCell','Glyph Size',7,16,1],
-      ['amonoThresh','Brightness Gate',0,100,1],
-    ],
     O: [
       ['seqRows','Tracks',4,32,1],
       ['seqSpeed','Playhead Speed',5,200,1],
@@ -3402,12 +3489,13 @@ document.addEventListener('DOMContentLoaded', () => {
       ['seqThresh','Note Gate',0,100,1],
     ],
     P: [
+      ['thermalPalette','Palette',0,4,1,true,['Iron','Jet','Arctic','Night','X-Ray']],
       ['thermalSmooth','Render',0,1,1,true,['Blocky','Smooth']],
     ],
     Q: [
       ['waveLen','Wavelength',18,120,1],
-      ['waveSpeed','Ring Speed',5,100,1],
-      ['waveRings','Ring Count',2,10,1],
+      ['waveSpeed','Wave Speed',5,100,1],
+      ['waveAmp','Depth',2,24,1],
     ],
     R: [
       ['mosaicTile','Tile Size',8,28,1],
@@ -3422,12 +3510,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!host) return;
     host.innerHTML = '';
     const specs = TUNE_SPECS[style] || [];
-    if (specs.length === 0) return;
-
-    const sect = document.createElement('div');
-    sect.className = 'tune-sect';
-    sect.textContent = (STYLE_NAMES[style]||'') + ' PARAMETERS';
-    host.appendChild(sect);
+    if (specs.length > 0) {
+      const sect = document.createElement('div');
+      sect.className = 'tune-sect';
+      sect.textContent = (STYLE_NAMES[style]||'') + ' PARAMETERS';
+      host.appendChild(sect);
+    }
 
     specs.forEach(spec => {
       const [key, label, min, max, step, isSelect, options] = spec;
@@ -3474,6 +3562,32 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       host.appendChild(row);
     });
+
+    // ── MIX section (always present): layer a second effect via screen blend ──
+    const mixSect = document.createElement('div');
+    mixSect.className = 'tune-sect';
+    mixSect.textContent = 'MIX LAYER';
+    host.appendChild(mixSect);
+    const mixRow = document.createElement('div');
+    mixRow.className = 'ctrl-row';
+    const mixGrp = document.createElement('div');
+    mixGrp.className = 'toggle-row';
+    mixGrp.style.flexWrap = 'wrap';
+    Object.keys(MIX_NAMES).forEach(k => {
+      if (k === style) return;                    // can't mix a style with itself
+      const b = document.createElement('button');
+      b.className = 'toggle-btn' + (CFG.mixStyle===k ? ' on' : '');
+      b.textContent = MIX_NAMES[k];
+      b.style.fontSize = '.5rem';
+      b.style.flex = '1 1 30%';
+      b.addEventListener('click', () => {
+        CFG.mixStyle = k;
+        mixGrp.querySelectorAll('.toggle-btn').forEach(x=>x.classList.toggle('on', x===b));
+      });
+      mixGrp.appendChild(b);
+    });
+    mixRow.appendChild(mixGrp);
+    host.appendChild(mixRow);
   }
 
   // Set the active style: update label, re-tint the interface, rebuild the
@@ -3616,13 +3730,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('touchstart', _resumeAudio, {once:false, passive:true});
 
   // ── Splash → main transition ───────────────────────────────────────────
-  document.getElementById('btn-start').addEventListener('click',async()=>{
-    // ❶ SYNCHRONOUS — must happen before any await to keep user-gesture context.
-    // iOS Safari revokes gesture privilege after the first await tick.
+  async function enterLiveMode(fromGesture){
+    // ❶ SYNCHRONOUS — inside a gesture this keeps the audio-unlock privilege.
+    // On auto-start (no gesture) the context is created suspended and resumed
+    // by the one-time unlock listener below.
     if (!AUDIO.ctx) {
       try {
         AUDIO.ctx = new (window.AudioContext || window.webkitAudioContext)();
-        AUDIO.ctx.resume().catch(()=>{});
+        if (fromGesture) AUDIO.ctx.resume().catch(()=>{});
       } catch(e) { console.warn('AudioContext pre-init failed:',e); }
     }
     STATE.uploadMode=false;   // ensure clean live mode (re-entrant)
@@ -3637,7 +3752,20 @@ document.addEventListener('DOMContentLoaded', () => {
     STATE.lastDetectT=performance.now(); STATE.fpsT=performance.now();
     if(rafId) cancelAnimationFrame(rafId);
     rafId=requestAnimationFrame(loop);
-  });
+  }
+  document.getElementById('btn-start').addEventListener('click',()=>enterLiveMode(true));
+
+  // ── Auto-start: open straight into the camera (native-app behaviour). If the
+  //    permission is denied the splash stays as the fallback entry screen.
+  enterLiveMode(false);
+
+  // One-time audio unlock: browsers keep an auto-created AudioContext suspended
+  // until a user gesture; the first tap anywhere resumes it.
+  const _audioUnlock=()=>{ 
+    if (AUDIO.ctx && AUDIO.ctx.state==='suspended') AUDIO.ctx.resume().catch(()=>{});
+    document.removeEventListener('pointerdown',_audioUnlock);
+  };
+  document.addEventListener('pointerdown',_audioUnlock);
 
   // ── HOME button: return to splash, switch modes without reload ─────────
   document.getElementById('btn-back').addEventListener('click',returnToHome);
@@ -3651,9 +3779,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     document.getElementById('file-input').click();
   });
+  document.getElementById('btn-gallery').addEventListener('click',()=>{
+    document.getElementById('file-input').click();
+  });
   document.getElementById('file-input').addEventListener('change',function(){
     const f=this.files&&this.files[0];
     if(!f) return;
+    // Switching live → upload: release the camera stream first
+    if (STATE.camStream){
+      STATE.camStream.getTracks().forEach(t=>{ try{t.stop();}catch(e){} });
+      STATE.camStream=null; videoEl.srcObject=null;
+    }
+    STILL.active=false; SRC.active=false;
     if(f.type.startsWith('image/'))      startUploadedImage(f);
     else if(f.type.startsWith('video/')) startUploadedVideo(f);
     else showError('Please choose a video or image file.');
