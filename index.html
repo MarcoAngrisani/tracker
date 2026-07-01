@@ -202,6 +202,14 @@ input[type="range"]::-moz-range-thumb{
 #settings-panel.open{transform:translateY(0);pointer-events:auto;}
 .tune-head{font-weight:900;font-size:1.1rem;letter-spacing:-.02em;margin-bottom:.5rem;color:var(--accent);}
 .tune-sect{font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-soft);margin:.6rem 0 .3rem;}
+#btn-feedback{
+  display:block;text-align:center;margin-top:1rem;padding:.6rem;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+  color:var(--accent-soft);text-decoration:none;border-top:1px solid var(--accent-dim);
+  -webkit-tap-highlight-color:transparent;
+}
+#btn-feedback:active{color:var(--accent);}
 #settings-panel .ctrl-row{margin-bottom:.55rem;}
 .toggle-row{display:flex;gap:.5rem;margin-top:.5rem;}
 .toggle-btn{
@@ -263,6 +271,8 @@ input[type="range"]::-moz-range-thumb{
   border-left:3px solid #ff2800;pointer-events:none;
 }
 </style>
+<!-- Privacy-friendly analytics (GoatCounter) — tracks page visits only, no cookies -->
+<script data-goatcounter="https://greeso.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </head>
 <body>
 
@@ -329,6 +339,7 @@ input[type="range"]::-moz-range-thumb{
     <button class="toggle-btn on" id="btn-audio">AUDIO</button>
     <button class="toggle-btn on" id="btn-vig">VIGNETTE</button>
   </div>
+  <a id="btn-feedback" href="#" target="_blank" rel="noopener">&#9998; SEND FEEDBACK</a>
 </div>
 
 <div id="touch-hint">
@@ -1470,6 +1481,10 @@ function sourceFrame(){
   }
   return videoEl;
 }
+
+// ── Feedback form URL — paste your Google Form's public link here ─────────────
+// Get it from Google Forms: Send → Link tab → Copy. That's it, no other setup.
+const FEEDBACK_FORM_URL = 'https://forms.google.com/YOUR-FORM-ID-HERE';
 
 const STYLE_CYCLE = ['B','A','C','D','F','H','I','J','K','L','M','N','O','P','Q','R'];
 const STYLE_NAMES = {
@@ -3566,6 +3581,16 @@ document.addEventListener('DOMContentLoaded', () => {
       AUDIO.masterGain.gain.setTargetAtTime(0.0,AUDIO.ctx.currentTime,0.15);
     }
     // When unmuted, updateAudio's volume link takes over automatically
+  });
+
+  // ── Feedback link: opens the Google Form (set FEEDBACK_FORM_URL above) ──
+  document.getElementById('btn-feedback').addEventListener('click',function(e){
+    if(!FEEDBACK_FORM_URL || FEEDBACK_FORM_URL.indexOf('YOUR-FORM-ID')>=0){
+      e.preventDefault();
+      showError('Feedback form not set up yet — add the link in the code.');
+      return;
+    }
+    this.href = FEEDBACK_FORM_URL;   // plain link; no prefill needed
   });
   // Noise slider (settings panel only — no splash twin)
   (function(){
