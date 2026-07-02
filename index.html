@@ -161,6 +161,13 @@ input[type="range"]::-moz-range-thumb{
   opacity:.85;transition:opacity .15s;
 }
 #btn-flip:active{opacity:.5;}
+#perf-hud{
+  position:fixed;top:calc(.6rem + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+  z-index:22;display:none;padding:.3rem .6rem;background:rgba(10,10,10,.75);
+  border:1px solid var(--hair);color:var(--fg);
+  font-family:"SF Mono",Menlo,monospace;font-size:.62rem;letter-spacing:.05em;
+  pointer-events:none;white-space:nowrap;
+}
 .ctrl-btn{
   background:rgba(10,10,10,.72);border:1px solid var(--hair);
   color:var(--fg);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
@@ -322,6 +329,7 @@ input[type="range"]::-moz-range-thumb{
 
 <!-- ── MAIN CONTROLS ───────────────────────────────────────────────────── -->
 <button id="btn-back" aria-label="Back to home">&#8249;</button>
+<div id="perf-hud"></div>
 <button id="btn-flip" aria-label="Flip camera">
   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v3"/><path d="M9 20H6a2 2 0 0 1-2-2v-3"/><path d="M4 9V6a2 2 0 0 1 2-2h3"/><path d="M20 15v3a2 2 0 0 1-2 2h-3"/><circle cx="12" cy="12" r="3"/></svg>
 </button>
@@ -1409,6 +1417,7 @@ const STATE = {
   isRecording:false, mediaRecorder:null, chunks:[],
   recordStartT:0, lastDlUrl:null,
   fps:0, fpsT:0, fpsFrames:0, warmup:0, lastDetectT:0,
+  perfOn:false, frameMs:0, frameMsEMA:0,
   uploadMode:false, uploadCancelled:false,
 };
 
@@ -1490,6 +1499,7 @@ const STYLE_NAMES = {
 //                                  the tracker annotates on top of it.
 //   active GRAPHIC + tracker mix → the tracker renders on a transparent layer
 //                                  ON TOP (light overlay, never covers the base).
+let _perfHud=null;
 let _mixCanvas=null, _mixCtx=null;
 let _underMix=false;         // true while the active style paints over a mix backdrop
 let _filterComposite=false;  // true → filter graphics (THERMAL/PXSORT) read the
@@ -1610,6 +1620,15 @@ function applyPaletteTheme(cfgKey, optionIndex){
 // ═══════════════════════════════════════════════════════════════════════════
 
 let compositeCanvas = null, compositeCtx = null;
+// Effect render resolution cap (longest side). CSS scales the canvas up to fill
+// the screen, so lowering this trades sharpness for a constant per-pixel budget.
+const RENDER_MAX = 960;
+// Compute capped backing-store size for a target CSS viewport.
+function renderSize(cssW, cssH){
+  const longest = Math.max(cssW, cssH);
+  const s = longest > RENDER_MAX ? RENDER_MAX/longest : 1;
+  return { w: Math.round(cssW*s), h: Math.round(cssH*s) };
+}
 let workCanvas      = null, workCtx      = null;
 let _effectCanvas   = null, _effectCtx   = null;  // for styles E and F
 let videoEl         = null, rafId        = null;
@@ -2384,7 +2403,7 @@ function drawStyleP(ctx, cW, cH){
 // pre-allocated buffers, then scaled up with smoothing for a liquid look.
 const RIP = { W:0, H:0, srcCanvas:null, srcCtx:null, outCanvas:null, outCtx:null, outImg:null };
 function _initRipple(cW, cH){
-  const w = 180, h = Math.max(90, Math.round(w * cH / cW));
+  const w = STATE.isRecording ? 128 : 180, h = Math.max(72, Math.round(w * cH / cW));
   RIP.W=w; RIP.H=h;
   if(!RIP.srcCanvas){
     RIP.srcCanvas=document.createElement('canvas'); RIP.srcCtx=RIP.srcCanvas.getContext('2d',{willReadFrequently:true});
@@ -2395,7 +2414,8 @@ function _initRipple(cW, cH){
   RIP.outImg=RIP.outCtx.createImageData(w,h);
 }
 function drawStyleQ(ctx, cW, cH, now){
-  if(!RIP.srcCanvas || RIP.H!==Math.max(90,Math.round(180*cH/cW))) _initRipple(cW,cH);
+  const _tw=STATE.isRecording?128:180, _th=Math.max(72,Math.round(_tw*cH/cW));
+  if(!RIP.srcCanvas || RIP.W!==_tw || RIP.H!==_th) _initRipple(cW,cH);
   const W=RIP.W, H=RIP.H;
   // 1. current frame at ripple resolution
   RIP.srcCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,W,H);
@@ -2405,7 +2425,8 @@ function drawStyleQ(ctx, cW, cH, now){
   // 2. ripple sources: active blobs mapped to ripple-space (max 5); if none,
   //    a gentle ambient source keeps the surface alive.
   const sx=[], sy=[];
-  for(let ti=0;ti<MAX_TRACKED && sx.length<5;ti++){
+  const _maxSrc = STATE.isRecording ? 3 : 5;
+  for(let ti=0;ti<MAX_TRACKED && sx.length<_maxSrc;ti++){
     const t=_tracked[ti];
     if(t.active && t.age>=2){ sx.push(t.scx/cW*W); sy.push(t.scy/cH*H); }
   }
@@ -2509,6 +2530,13 @@ function loop(now) {
   if (!STATE.cameraOk || (!STILL.active && videoEl.readyState < 2)) return;
   STATE.fpsFrames++;
   if (now-STATE.fpsT>=1000){STATE.fps=STATE.fpsFrames;STATE.fpsFrames=0;STATE.fpsT=now;}
+  if (STATE.perfOn){
+    const dt = now - (STATE._perfPrev||now); STATE._perfPrev = now;
+    STATE.frameMs = dt;
+    STATE.frameMsEMA += (dt - STATE.frameMsEMA) * 0.12;   // smoothed, zero-GC
+    if (_perfHud) _perfHud.textContent =
+      STATE.fps+'fps  '+STATE.frameMsEMA.toFixed(1)+'ms  '+cW+'x'+cH+'  proc:'+PROC_W+'x'+PROC_H;
+  }
   const cW=compositeCanvas.width, cH=compositeCanvas.height;
   if (!_crop.valid) updateCrop(STATE.videoW,STATE.videoH,cW,cH);
 
@@ -2642,7 +2670,8 @@ async function _startCameraFallback() {
   } catch(e) { showError('Cannot access any camera: '+e.message); return false; }
 }
 function _finaliseCamera() {
-  const cW=window.innerWidth, cH=window.innerHeight;
+  const _rs=renderSize(window.innerWidth,window.innerHeight);
+  const cW=_rs.w, cH=_rs.h;
   compositeCanvas.width=cW; compositeCanvas.height=cH;
   let pW=240, pH=Math.round(pW*cH/cW);
   if (pW*pH>150000){const s=Math.sqrt(150000/(pW*pH));pW=(pW*s)|0;pH=(pH*s)|0;}
@@ -2694,7 +2723,8 @@ function startUploadedVideo(file) {
     STATE.uploadMode = true;
 
     // Mirror _finaliseCamera setup
-    const cW=window.innerWidth, cH=window.innerHeight;
+    const _rs=renderSize(window.innerWidth,window.innerHeight);
+    const cW=_rs.w, cH=_rs.h;
     compositeCanvas.width=cW; compositeCanvas.height=cH;
     let pW=240, pH=Math.round(pW*cH/cW);
     if (pW*pH>150000){const s=Math.sqrt(150000/(pW*pH));pW=(pW*s)|0;pH=(pH*s)|0;}
@@ -2743,7 +2773,8 @@ function startUploadedImage(file){
     STATE.uploadMode=true;   // record button → re-export the styled still as PNG? keep photo flow
     SRC.active=false;
 
-    const cW=window.innerWidth, cH=window.innerHeight;
+    const _rs=renderSize(window.innerWidth,window.innerHeight);
+    const cW=_rs.w, cH=_rs.h;
     compositeCanvas.width=cW; compositeCanvas.height=cH;
     let pW=240, pH=Math.round(pW*cH/cW);
     if (pW*pH>150000){const s=Math.sqrt(150000/(pW*pH));pW=(pW*s)|0;pH=(pH*s)|0;}
@@ -2787,7 +2818,7 @@ async function renderUploadedClip() {
   }
 
   // Build combined stream: canvas video + synth audio
-  const videoStream = compositeCanvas.captureStream(30);
+  const videoStream = compositeCanvas.captureStream(24);
   let stream = videoStream;
   if (AUDIO.ready && AUDIO.streamDest) {
     try {
@@ -2990,7 +3021,7 @@ function startRecording() {
     for (const mt of _mimeTypeCandidates) if(MediaRecorder.isTypeSupported(mt)){mimeType=mt;break;}
   }
   try {
-    const videoStream=compositeCanvas.captureStream(30);
+    const videoStream=compositeCanvas.captureStream(24);
     // Mix video + synthesized audio into a single combined stream.
     // If audio is unavailable (initAudio failed or inactive), record video-only.
     let combinedStream = videoStream;
@@ -3585,6 +3616,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── HOME button: return to splash, switch modes without reload ─────────
   document.getElementById('btn-back').addEventListener('click',returnToHome);
   document.getElementById('btn-flip').addEventListener('click',flipCamera);
+  _perfHud = document.getElementById('perf-hud');
+  // Triple-tap the HUD area (top-centre) toggles the performance overlay.
+  let _tapCount=0, _tapT=0;
+  document.addEventListener('pointerdown', (e)=>{
+    if (e.clientY>60 || Math.abs(e.clientX-window.innerWidth/2)>80) return;
+    const t=performance.now();
+    _tapCount = (t-_tapT<450) ? _tapCount+1 : 1; _tapT=t;
+    if (_tapCount>=3){
+      STATE.perfOn=!STATE.perfOn; _tapCount=0;
+      _perfHud.style.display = STATE.perfOn?'block':'none';
+      STATE._perfPrev=performance.now();
+    }
+  });
 
   // ── Upload video flow ──────────────────────────────────────────────────
   document.getElementById('btn-upload-splash').addEventListener('click',()=>{
@@ -3625,7 +3669,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Window resize ──────────────────────────────────────────────────────
   window.addEventListener('resize',()=>{
     if(!STATE.cameraOk) return;
-    const cW=window.innerWidth, cH=window.innerHeight;
+    const _rs=renderSize(window.innerWidth,window.innerHeight);
+    const cW=_rs.w, cH=_rs.h;
     compositeCanvas.width=cW; compositeCanvas.height=cH;
     updateCrop(STATE.videoW,STATE.videoH,cW,cH);
     _vigGrad=null; _vigW=0; _vigH=0;
