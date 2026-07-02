@@ -14,8 +14,11 @@
    palette option inside an effect. It persists (last chosen). --bg stays fixed.
    ════════════════════════════════════════════════════════════════════════ */
 :root{
-  --bg:#0a0e0a;
-  --accent:#c8f01e;          /* default lime — overwritten per active style */
+  --bg:#0a0a0a;
+  --fg:#ffffff;              /* mono foreground */
+  --mut:rgba(255,255,255,.55);
+  --hair:rgba(255,255,255,.22); /* hairline borders */
+  --accent:#c8f01e;          /* single accent — overwritten per palette choice */
   --accent-soft:rgba(200,240,30,.45);
   --accent-dim:rgba(200,240,30,.25);
   --accent-line:rgba(200,240,30,.35);
@@ -53,34 +56,34 @@ body{
 }
 .spl-brand{display:flex;flex-direction:column;align-items:center;gap:.5rem;}
 .spl-title{
-  font-size:5.4rem;font-weight:900;letter-spacing:-.06em;line-height:.9;
-  color:#c8f01e;
-  text-shadow:0 2px 30px rgba(200,240,30,.35);
+  font-size:clamp(3.2rem,20vw,7rem);font-weight:900;letter-spacing:-.05em;line-height:.86;
+  color:var(--fg);
+  border-bottom:6px solid var(--accent);padding-bottom:.1em;
 }
 .spl-sub{
-  font-size:.7rem;letter-spacing:.42em;text-transform:uppercase;
-  color:rgba(200,240,30,.65);font-weight:700;
+  font-size:.68rem;letter-spacing:.5em;text-transform:uppercase;
+  color:var(--mut);font-weight:700;margin-left:.5em;
 }
 .spl-actions{
   display:flex;flex-direction:column;align-items:center;gap:1rem;width:100%;max-width:340px;
 }
 /* Squircle buttons with gradient */
 .sq-btn{
-  width:100%;padding:1.05rem 1.5rem;
-  border:none;border-radius:28px;        /* squircle feel */
-  background:#c8f01e;                     /* flat lime — poster style */
-  color:#0a0e0a;
+  width:100%;padding:1.15rem 1.5rem;
+  border:1px solid var(--accent);border-radius:0;   /* brutalist */
+  background:var(--accent);
+  color:var(--bg);
   font-family:"Helvetica Neue",Helvetica,"Arial Black",Arial,sans-serif;
-  font-size:.92rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase;
-  cursor:pointer;transition:transform .15s,filter .15s;
+  font-size:.9rem;font-weight:900;letter-spacing:.18em;text-transform:uppercase;
+  cursor:pointer;transition:background .12s,color .12s;
   -webkit-tap-highlight-color:transparent;
-  box-shadow:0 6px 24px rgba(200,240,30,.25);
 }
-.sq-btn:active{transform:scale(.97);filter:brightness(1.08);}
+.sq-btn:active{background:var(--fg);border-color:var(--fg);}
 .sq-ghost{
-  background:transparent;border:2px solid rgba(200,240,30,.55);
-  color:rgba(200,240,30,.9);box-shadow:none;
+  background:transparent;border:1px solid var(--hair);
+  color:var(--fg);
 }
+.sq-ghost:active{background:rgba(255,255,255,.08);}
 #spl-feedback{
   margin-top:.4rem;color:rgba(200,240,30,.5);text-decoration:none;
   font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
@@ -92,7 +95,7 @@ body{
 .ctrl-row{display:flex;flex-direction:column;gap:.35rem;}
 .ctrl-label{
   font-size:.57rem;letter-spacing:.15em;text-transform:uppercase;
-  color:var(--accent-soft);display:flex;justify-content:space-between;
+  color:var(--mut);display:flex;justify-content:space-between;
 }
 .ctrl-label span{color:var(--accent);font-weight:900;}
 input[type="range"]{
@@ -124,16 +127,20 @@ input[type="range"]::-moz-range-thumb{
 #ctrl-bar{
   position:fixed;bottom:0;left:0;right:0;z-index:20;
   display:grid;
-  grid-template-columns:1fr auto 1fr;   /* symmetric: cluster pinned centre */
-  align-items:center;
-  padding:1rem 1.4rem;padding-bottom:calc(1rem + env(safe-area-inset-bottom));
-  background:linear-gradient(to top,rgba(10,14,10,.88) 0%,transparent 100%);
+  /* Side columns are flexible but capped; the centre cluster takes exactly the
+     space it needs and stays perfectly centred. Side buttons shrink/ellipsis
+     before they can ever reach the cluster. */
+  grid-template-columns:minmax(0,1fr) max-content minmax(0,1fr);
+  align-items:end;
+  gap:.6rem;
+  padding:clamp(.7rem,3vw,1.2rem);
+  padding-bottom:calc(clamp(.7rem,3vw,1.2rem) + env(safe-area-inset-bottom));
+  background:linear-gradient(to top,rgba(10,10,10,.9) 0%,transparent 100%);
+  pointer-events:none;   /* only children capture taps → transparent gaps */
 }
-/* STYLE button left-aligned, TUNE right-aligned, fixed-width so text length
-   never pushes the centre cluster off-centre */
-#btn-style{justify-self:start;}
+#ctrl-bar > *{pointer-events:auto;}
+#btn-style{justify-self:start;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #btn-settings{justify-self:end;}
-#ctrl-bar .ctrl-btn{min-width:84px;text-align:center;}
 #capture-cluster{justify-self:center;}
 /* Discreet back arrow — transparent, top-left, outside the control bar */
 #btn-back{
@@ -146,15 +153,15 @@ input[type="range"]::-moz-range-thumb{
 }
 #btn-back:active{opacity:.5;}
 .ctrl-btn{
-  background:rgba(10,14,10,.7);border:1px solid var(--accent-line);
-  color:var(--accent);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
-  font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;font-weight:900;
-  padding:.6rem 1rem;cursor:pointer;border-radius:16px;
+  background:rgba(10,10,10,.72);border:1px solid var(--hair);
+  color:var(--fg);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;font-weight:800;
+  padding:.7rem 1rem;cursor:pointer;border-radius:0;   /* brutalist: no rounding */
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  transition:all .15s;touch-action:manipulation;
+  transition:background .12s,color .12s;touch-action:manipulation;
 }
 .ctrl-btn:active{transform:scale(.95);filter:brightness(1.12);}
-.ctrl-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+.ctrl-btn.active{background:var(--accent);border-color:var(--accent);color:var(--bg);}
 #btn-record{
   width:64px;height:64px;border-radius:50%;
   background:rgba(5,5,8,.8);border:2px solid rgba(255,255,255,.3);
@@ -195,9 +202,9 @@ input[type="range"]::-moz-range-thumb{
 #settings-panel{
   position:fixed;bottom:0;left:0;right:0;z-index:19;
   /* Semi-transparent so the live effect stays visible while tuning */
-  background:linear-gradient(to top, rgba(10,14,10,.82) 0%, rgba(10,14,10,.36) 100%);
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  border-top:1px solid var(--accent-line);
+  background:rgba(10,10,10,.94);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-top:1px solid var(--accent);
   padding:1rem 1.3rem;
   padding-bottom:calc(5.8rem + env(safe-area-inset-bottom));
   max-height:62vh;overflow-y:auto;
@@ -207,8 +214,8 @@ input[type="range"]::-moz-range-thumb{
   text-shadow:0 1px 3px rgba(0,0,0,.7);
 }
 #settings-panel.open{transform:translateY(0);pointer-events:auto;}
-.tune-head{font-weight:900;font-size:1.1rem;letter-spacing:-.02em;margin-bottom:.5rem;color:var(--accent);}
-.tune-sect{font-size:.5rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-soft);margin:.6rem 0 .3rem;}
+.tune-head{font-weight:900;font-size:1rem;letter-spacing:.02em;text-transform:uppercase;margin-bottom:.5rem;color:var(--fg);}
+.tune-sect{font-size:.52rem;letter-spacing:.22em;text-transform:uppercase;color:var(--fg);margin:.9rem 0 .3rem;border-bottom:1px solid var(--hair);padding-bottom:.25rem;}
 #btn-feedback{
   display:block;text-align:center;margin-top:1rem;padding:.6rem;
   font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
@@ -220,12 +227,12 @@ input[type="range"]::-moz-range-thumb{
 #settings-panel .ctrl-row{margin-bottom:.55rem;}
 .toggle-row{display:flex;gap:.5rem;margin-top:.5rem;}
 .toggle-btn{
-  flex:1;padding:.5rem;background:transparent;border-radius:12px;
-  border:1px solid var(--accent-dim);color:var(--accent-soft);
+  flex:1;padding:.55rem;background:transparent;
+  border:1px solid var(--hair);color:var(--mut);border-radius:0;
   font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-size:.55rem;font-weight:700;
-  letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .15s;
+  letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:background .12s,color .12s;
 }
-.toggle-btn.on{border-color:var(--accent);color:var(--on-accent);background:var(--accent);}
+.toggle-btn.on{border-color:var(--accent);color:var(--bg);background:var(--accent);}
 /* ── TOUCH HINT ────────────────────────────────────────────────────────── */
 #touch-hint{
   position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
@@ -241,12 +248,12 @@ input[type="range"]::-moz-range-thumb{
 
 /* Icon capture buttons (photo + video) — matching round style */
 #capture-cluster{display:flex;align-items:center;gap:.9rem;}
-.icon-btn.gallery{width:44px;height:44px;border-radius:14px;opacity:.85;}
+.icon-btn.gallery{width:44px;height:44px;border-radius:0;opacity:.7;}
 .icon-btn{
-  width:60px;height:60px;border-radius:20px;   /* squircle */
-  background:rgba(10,14,10,.8);
-  border:2px solid var(--accent-soft);
-  color:var(--accent);cursor:pointer;flex-shrink:0;
+  width:58px;height:58px;border-radius:0;   /* brutalist square */
+  background:rgba(10,10,10,.8);
+  border:1px solid var(--hair);
+  color:var(--fg);cursor:pointer;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 4px 16px var(--accent-dim);
   transition:all .15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
@@ -832,46 +839,6 @@ function textureGlint(t, vel=0.5) {
 }
 
 
-// ── Sequencer voices — pitched timbres triggered by the SEQUENCER style ──────
-// voice index: 0=Pluck 1=Bell 2=Bass 3=Pad. vel 0..1, dur seconds.
-function seqVoice(voiceIdx, freq, t, vel, dur){
-  const ctx=AUDIO.ctx; if(!ctx) return;
-  const g=ctx.createGain(); g.connect(AUDIO.masterGain);
-  if (voiceIdx===0){            // Pluck — short triangle with fast decay
-    const o=ctx.createOscillator(); o.type='triangle'; o.frequency.value=freq;
-    o.connect(g);
-    g.gain.setValueAtTime(0.0001,t);
-    g.gain.exponentialRampToValueAtTime(0.22*vel,t+0.005);
-    g.gain.exponentialRampToValueAtTime(0.0005,t+Math.min(dur,0.4));
-    o.start(t); o.stop(t+Math.min(dur,0.45));
-  } else if (voiceIdx===1){     // Bell — two sine partials, long decay
-    [1,2.76].forEach((m,k)=>{
-      const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=freq*m;
-      const gg=ctx.createGain(); o.connect(gg); gg.connect(g);
-      gg.gain.value=k?0.35:1;
-      o.start(t); o.stop(t+dur+0.4);
-    });
-    g.gain.setValueAtTime(0.0001,t);
-    g.gain.exponentialRampToValueAtTime(0.18*vel,t+0.006);
-    g.gain.exponentialRampToValueAtTime(0.0005,t+dur+0.35);
-  } else if (voiceIdx===2){     // Bass — low sine, rounded
-    const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=freq*0.5;
-    o.connect(g);
-    g.gain.setValueAtTime(0.0001,t);
-    g.gain.linearRampToValueAtTime(0.30*vel,t+0.02);
-    g.gain.exponentialRampToValueAtTime(0.0005,t+Math.min(dur,0.5));
-    o.start(t); o.stop(t+Math.min(dur,0.55));
-  } else {                      // Pad — soft saw through gentle lowpass, slow env
-    const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=freq;
-    const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=1400;
-    o.connect(f); f.connect(g);
-    g.gain.setValueAtTime(0.0001,t);
-    g.gain.linearRampToValueAtTime(0.14*vel,t+0.06);
-    g.gain.exponentialRampToValueAtTime(0.0005,t+dur+0.2);
-    o.start(t); o.stop(t+dur+0.25);
-  }
-}
-
 // ── Melody scheduler: picks a nearby scale note, gentle random walk ───────────
 function scheduleMelody(ctx) {
   while (DRUM.melTime < ctx.currentTime + 0.3) {
@@ -975,30 +942,21 @@ function updateAudio(cW, cH, nowMs) {
     const targetInt = Math.max(speedNorm, countNorm * 0.7);
     DRUM.intensity = DRUM.intensity * 0.85 + targetInt * 0.15;   // responsive
 
-    // ── SEQUENCER mode: duck the ambient bed so the image-as-music is clear ──
-    const seqMode = (CFG.style === 'O');
-
     // ── Master volume: ambient always audible, swells with presence ──
-    let baseVol = 0.18 + Math.min(m.nBlobs / 5, 1) * 0.62;
-    if (seqMode) baseVol = 0.85;   // keep master open; bed buses ducked below
+    const baseVol = 0.18 + Math.min(m.nBlobs / 5, 1) * 0.62;
     AUDIO.masterGain.gain.setTargetAtTime(
       AUDIO.userMuted ? 0.0 : baseVol, now, 0.4);
 
     // ── Progressive drum entrance: each bus fades with intensity thresholds ──
     const I = DRUM.intensity;
-    const duck = seqMode ? 0.12 : 1.0;   // near-silence the bed in sequencer mode
-    const hatLvl    = Math.max(0, (I - 0.06) / 0.94) * 0.7 * duck;
-    const kickLvl   = Math.max(0, (I - 0.16) / 0.84) * 1.0 * duck;
-    const snareLvl  = Math.max(0, (I - 0.34) / 0.66) * 0.9 * duck;
-    const glitchLvl = Math.max(0, (I - 0.55) / 0.45) * 0.8 * duck;
+    const hatLvl    = Math.max(0, (I - 0.06) / 0.94) * 0.7;
+    const kickLvl   = Math.max(0, (I - 0.16) / 0.84) * 1.0;
+    const snareLvl  = Math.max(0, (I - 0.34) / 0.66) * 0.9;
+    const glitchLvl = Math.max(0, (I - 0.55) / 0.45) * 0.8;
     AUDIO.hatBus.gain.setTargetAtTime(hatLvl,       now, 0.5);
     AUDIO.kickBus.gain.setTargetAtTime(kickLvl,     now, 0.5);
     AUDIO.snareBus.gain.setTargetAtTime(snareLvl,   now, 0.6);
     AUDIO.glitchBus.gain.setTargetAtTime(glitchLvl, now, 0.6);
-    // Pad also ducked in sequencer mode
-    if (AUDIO.padGain) AUDIO.padGain.gain.setTargetAtTime(seqMode ? 0.06 : 0.34, now, 0.5);
-    // Melody voice off in sequencer mode (the image drives the notes instead)
-    if (seqMode && AUDIO.melGain) AUDIO.melGain.gain.setTargetAtTime(0.0, now, 0.3);
 
     // ── Tempo: wide expressive range, slewed for musical transitions ──
     // Still scenes drift very slow (~58 BPM, half-time feel); frantic scenes
@@ -1040,7 +998,6 @@ function initBuffers(pW, pH) {
   _segLuma    = new Float32Array(pH);
   // Invalidate contagion grid so it rebuilds at new resolution
   if (typeof CONT !== 'undefined') { CONT.W = 0; CONT.state = null; }
-  if (typeof SPEC !== 'undefined') { SPEC.lW = 0; SPEC.lH = 0; }
   // _dstImgData requires an active 2d context; created after effectCanvas exists
   if (_effectCtx) {
     _effectCanvas.width  = pW;
@@ -1408,8 +1365,6 @@ const CFG = {
   // NEURAL
   neuralNodes:    9,        // nodes per blob (4-16)
   neuralCurve:    30,       // connection curvature % (0-60)
-  // SPECIMEN (K)
-  specMinR:       28,       // min blob radius to grab (10-80)
   // MOSAIC (L)
   mosaicCols:     8,        // grid columns (4-16)
   mosaicChunk:    6,        // block chunkiness factor (2-12)
@@ -1421,11 +1376,6 @@ const CFG = {
   // ASCII MONO (merged into J as Mode=Mono)
   amonoCell:      9,        // glyph cell px (7-16)
   amonoThresh:    35,       // brightness threshold for glyphs (0-100)
-  // SEQUENCER (O)
-  seqRows:        12,       // horizontal tracks (4-32)
-  seqSpeed:       40,       // playhead speed (5-200)
-  seqVoice:       0,        // 0=Pluck 1=Bell 2=Bass 3=Pad
-  seqThresh:      45,       // brightness threshold to fire a note (0-100)
   // MIX — second style layered over the active one ('' = off)
   mixStyle:       '',
   // THERMAL (P)
@@ -1434,10 +1384,7 @@ const CFG = {
   // WAVEFIELD (Q)
   waveLen:        40,       // wavelength (18-120)
   waveSpeed:      30,       // wave speed (5-100)
-  waveAmp:        10,       // displacement depth (2-24)
-  // PHOTOMOSAIC (R)
-  mosaicTile:     14,       // glyph tile px (8-28)
-  mosaicColor:    1,        // 0=mono 1=colour
+  waveAmp:        22,       // displacement depth (2-60) — destructive
 };
 
 const TOUCH = {
@@ -1502,27 +1449,60 @@ function sourceFrame(){
 // Get it from Google Forms: Send → Link tab → Copy. That's it, no other setup.
 const FEEDBACK_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSf1l0Q6f9-xg_b7Z1Qz72V2Ki5HqHSNYXWSiHLsQavz27Hrng/viewform';
 
-const STYLE_CYCLE = ['B','A','C','D','F','H','I','J','K','L','M','O','P','Q','R'];
+const STYLE_CYCLE = ['B','A','C','D','F','H','I','J','L','M','P','Q'];
 const STYLE_NAMES = {
   A:'SCAN', B:'ORBIT', C:'GHOST',
   D:'NEURAL', F:'PXSORT', H:'GRAIN', I:'EVAP', J:'ASCII',
-  K:'SPECIMEN', L:'MOSAIC', M:'CONTAGION',
-  O:'SEQUENCER',
-  P:'THERMAL', Q:'WAVEFIELD', R:'PHOTOMOSAIC'
+  L:'MOSAIC', M:'CONTAGION',
+  P:'THERMAL', Q:'WAVEFIELD'
 };
 
-// ── MIX layer: overlay-friendly styles that composite well via 'screen' ──────
-// (Stateful/full-repaint styles like SEQUENCER or CONTAGION are excluded.)
+// ── MIX layer — category-based compositing ────────────────────────────────────
+// Styles split into two families:
+//   TRACKER — overlay styles that annotate what the camera sees (ORBIT, SCAN,
+//             NEURAL, MOSAIC). They never mix with each other.
+//   GRAPHIC — full-frame image treatments (all the rest).
+// Mixing is CROSS-CATEGORY only:
+//   active TRACKER + graphic mix → the graphic renders UNDER as the base image,
+//                                  the tracker annotates on top of it.
+//   active GRAPHIC + tracker mix → the tracker renders on a transparent layer
+//                                  ON TOP (light overlay, never covers the base).
 let _mixCanvas=null, _mixCtx=null;
-const MIX_NAMES = { '':'OFF', B:'ORBIT', A:'SCAN', D:'NEURAL', I:'EVAP', R:'PHOTOMOSAIC', P:'THERMAL' };
-const MIX_DRAW  = {
+let _underMix=false;   // true while a tracker is drawing over a graphic base
+// TRACKER styles = annotation overlays over the live frame (blob-driven).
+// GRAPHIC styles = full-frame image transforms.
+const STYLE_KIND = {
+  B:'tracker', A:'tracker', D:'tracker', L:'tracker',
+  C:'graphic', F:'graphic', H:'graphic', I:'graphic', J:'graphic',
+  M:'graphic', P:'graphic', Q:'graphic',
+};
+// Every style can be a mix layer EXCEPT stateful ones that repaint/own timing.
+// (CONTAGION M is stateful/touch-reactive → excluded as a layer.)
+const MIX_ALL = {
+  '':'OFF',
+  B:'ORBIT', A:'SCAN', D:'NEURAL', L:'MOSAIC',           // trackers
+  C:'GHOST', F:'PXSORT', H:'GRAIN', I:'EVAP', J:'ASCII', // graphics
+  P:'THERMAL', Q:'WAVEFIELD',
+};
+const MIX_DRAW = {
   B:(c,w,h,n)=>drawStyleB(c,w,h),
   A:(c,w,h,n)=>drawStyleA(c,w,h),
   D:(c,w,h,n)=>drawStyleD(c,w,h,n),
+  L:(c,w,h,n)=>drawStyleL(c,w,h),
+  C:(c,w,h,n)=>drawStyleC(c,w,h,n),
+  F:(c,w,h,n)=>drawStyleF(c,w,h),
+  H:(c,w,h,n)=>drawStyleH(c,w,h),
   I:(c,w,h,n)=>drawStyleI(c,w,h),
-  R:(c,w,h,n)=>drawStyleR(c,w,h),
+  J:(c,w,h,n)=>drawStyleJ(c,w,h),
   P:(c,w,h,n)=>drawStyleP(c,w,h),
+  Q:(c,w,h,n)=>drawStyleQ(c,w,h,n),
 };
+// Mix is legal for any pair EXCEPT tracker+tracker (and not a style with itself).
+function mixIsValid(){
+  if (!CFG.mixStyle || CFG.mixStyle===CFG.style || !MIX_DRAW[CFG.mixStyle]) return false;
+  if (STYLE_KIND[CFG.style]==='tracker' && STYLE_KIND[CFG.mixStyle]==='tracker') return false;
+  return true;
+}
 
 // ── Interface theming — driven by the active effect's PALETTE parameter ───────
 // The UI accent does NOT change per style automatically. It only changes when
@@ -2135,142 +2115,11 @@ function drawNoise(ctx, cW, cH, amount) {
 let _noiseScratch = null, _noiseScratchCtx = null;
 
 
-// ── 3.8f  Style K — SPECIMEN (extract object → centre → dissolve) ─────────────
-// Detects a stable blob, copies its bounding-box pixels from the live frame with
-// a zig-zag (90° stepped) cut edge, animates it to screen centre scaled up like
-// a specimen under examination, holds with a scanner frame, then dissolves.
-// One specimen at a time, driven by a small state machine.
-// ── 3.8f  Style K — SPECIMEN COLLAGE (abstract fragments accumulate) ──────────
-// Detects stable blobs, cuts each as an abstract stepped-polygon fragment, and
-// drops it onto an accumulating collage at a random position + slight rotation.
-// Fragments pile up like a growing visual database; when full, the oldest fades
-// out as a new one enters. The collage persists on its own layer between frames.
-const SPEC = {
-  layer:    null, lctx:null,    // persistent collage canvas
-  lW:0, lH:0,
-  frags:    [],                 // active fragments {age,maxAge,...} for fade tracking
-  srcCanvas:null, srcCtx:null,
-  lastGrab: 0,
-  GAP_MS:   190,                // min time between new fragments (faster)
-  MAX_FRAGS:30,                 // denser collage
-};
-function _ensureSpecCanvas() {
-  if (!SPEC.srcCanvas) {
-    SPEC.srcCanvas = document.createElement('canvas');
-    SPEC.srcCtx = SPEC.srcCanvas.getContext('2d');
-  }
-}
-// Abstract stepped polygon (irregular fragment, 90° glitch edges), relative 0..1.
-function _makeAbstractPoly(seed) {
-  const verts=[]; const n=7+(seed%6);
-  let rng=(seed*2654435761)>>>0;
-  const rand=()=>{rng=(rng*1664525+1013904223)>>>0;return rng/0xFFFFFFFF;};
-  for (let i=0;i<n;i++){
-    const ang=(i/n)*Math.PI*2;
-    const r=0.30+rand()*0.22;
-    let vx=0.5+Math.cos(ang)*r, vy=0.5+Math.sin(ang)*r;
-    vx=Math.round(vx*8)/8; vy=Math.round(vy*8)/8;
-    verts.push([vx,vy]);
-  }
-  return verts;
-}
-function _polyClipStepped(ctx, verts, x, y, w, h) {
-  ctx.beginPath();
-  for (let i=0;i<verts.length;i++){
-    const [vx,vy]=verts[i];
-    const px=x+vx*w, py=y+vy*h;
-    if (i===0) ctx.moveTo(px,py);
-    else { const prev=verts[i-1]; const ppy=y+prev[1]*h; ctx.lineTo(px,ppy); ctx.lineTo(px,py); }
-  }
-  ctx.closePath();
-}
-function _ensureSpecLayer(cW, cH){
-  if (!SPEC.layer){ SPEC.layer=document.createElement('canvas'); SPEC.lctx=SPEC.layer.getContext('2d'); }
-  if (SPEC.lW!==cW||SPEC.lH!==cH){
-    SPEC.layer.width=cW; SPEC.layer.height=cH; SPEC.lW=cW; SPEC.lH=cH;
-    SPEC.lctx.clearRect(0,0,cW,cH); SPEC.frags.length=0;
-  }
-}
-function drawStyleK(ctx, cW, cH, now) {
-  _ensureSpecCanvas();
-  _ensureSpecLayer(cW, cH);
-  const L=SPEC.lctx;
-
-  // Dark base
-  ctx.fillStyle='#070709'; ctx.fillRect(0,0,cW,cH);
-
-  // ── Grab a new fragment when a good blob exists ──
-  if (now-SPEC.lastGrab > SPEC.GAP_MS){
-    let best=-1,bestR=CFG.specMinR;
-    for (let ti=0;ti<MAX_TRACKED;ti++){const t=_tracked[ti];if(t.active&&t.age>=3&&t.sr>bestR){bestR=t.sr;best=ti;}}
-    if (best>=0){
-      const t=_tracked[best], pad=10;
-      let bx=Math.max(0,t.bx-pad), by=Math.max(0,t.by-pad);
-      let bw=Math.min(cW-bx,t.bw+pad*2), bh=Math.min(cH-by,t.bh+pad*2);
-      if (bw>20&&bh>20){
-        SPEC.srcCanvas.width=bw; SPEC.srcCanvas.height=bh;
-        const fx=_crop.sx+(bx/cW)*_crop.sw, fy=_crop.sy+(by/cH)*_crop.sh;
-        const fw=(bw/cW)*_crop.sw, fh=(bh/cH)*_crop.sh;
-        SPEC.srcCtx.clearRect(0,0,bw,bh);
-        try{ SPEC.srcCtx.drawImage(videoEl,fx,fy,fw,fh,0,0,bw,bh);}catch(e){}
-        const poly=_makeAbstractPoly((now|0)^(t.id*97));
-
-        // Choose collage placement: scaled, random pos, slight rotation
-        const sc=0.5+Math.random()*0.5;
-        const dw=bw*sc, dh=bh*sc;
-        const px=Math.random()*(cW-dw), py=Math.random()*(cH-dh);
-        const rot=(Math.random()-0.5)*0.5;   // ±0.25 rad
-
-        // Draw the fragment onto the persistent collage layer
-        L.save();
-        L.translate(px+dw*0.5, py+dh*0.5);
-        L.rotate(rot);
-        L.translate(-dw*0.5,-dh*0.5);
-        _polyClipStepped(L, poly, 0, 0, dw, dh);
-        L.save(); L.clip();
-        L.imageSmoothingEnabled=false;
-        L.drawImage(SPEC.srcCanvas, 0,0,dw,dh);
-        L.restore();
-        // outline
-        _polyClipStepped(L, poly, 0,0,dw,dh);
-        L.strokeStyle='rgba(180,255,55,0.8)'; L.lineWidth=2; L.stroke();
-        L.restore();
-
-        SPEC.frags.push({t:now});
-        SPEC.lastGrab=now;
-
-        // When too many, fade the whole layer a touch so old ones recede
-        if (SPEC.frags.length>SPEC.MAX_FRAGS){
-          SPEC.frags.shift();
-          L.globalCompositeOperation='destination-out';
-          L.fillStyle='rgba(0,0,0,0.22)';
-          L.fillRect(0,0,cW,cH);
-          L.globalCompositeOperation='source-over';
-        }
-      }
-    }
-  }
-
-  // Slow continuous fade so the collage breathes / very old frags vanish
-  L.globalCompositeOperation='destination-out';
-  L.fillStyle='rgba(0,0,0,0.012)';
-  L.fillRect(0,0,cW,cH);
-  L.globalCompositeOperation='source-over';
-
-  // Composite the collage layer onto the screen
-  ctx.drawImage(SPEC.layer, 0, 0);
-
-  if (!STATE.isRecording){
-    ctx.font='900 12px Helvetica,Arial,sans-serif';
-    ctx.fillStyle='rgba(180,255,55,0.85)';
-    ctx.fillText('SPECIMEN ['+SPEC.frags.length+']', 14, cH-20);
-  }
-}
-
 // ── 3.8g  Style L — MOSAIC (pixelate only inside detected blob frames) ───────
 const MOSAIC_LETTERS = 'ROACDEFGHKLMNPSTUVXYZ';
 function drawStyleL(ctx, cW, cH) {
-  ctx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,cW,cH);
+  // Under a graphic mix the base is already painted — pixelate THAT instead.
+  if (!_underMix) ctx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,cW,cH);
   const blobs=[];
   for (let ti=0; ti<MAX_TRACKED; ti++){const t=_tracked[ti];if(t.active&&t.age>=2)blobs.push(t);}
   blobs.sort((a,b)=>b.sr-a.sr);
@@ -2450,97 +2299,6 @@ function drawStyleN(ctx, cW, cH){
   ctx.textBaseline='alphabetic';
 }
 
-// ── 3.8j  Style O — SEQUENCER (image rows = tracks, playhead triggers notes) ──
-// The image IS the score. Rows = tracks; a vertical playhead sweeps L→R. As it
-// crosses each column, every row whose brightness passes a gate fires a note:
-//   row position  → pitch (top = high)
-//   brightness    → velocity AND timbre brightness (filter open)
-// The bed is ducked (see updateAudio) so the image-music is clearly audible.
-// Strong visual feedback: the active column lights up, triggered cells flash.
-const SEQ = { lastCol:-1, flashes:[] };
-function drawStyleO(ctx, cW, cH, now){
-  if (!_effectCtx) return;
-  // High-contrast greyscale base so bright structures (the "notes") are obvious
-  _effectCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
-  let img; try{ img=_effectCtx.getImageData(0,0,PROC_W,PROC_H); }catch(e){ return; }
-  const px=img.data;
-  for (let i=0;i<px.length;i+=4){
-    let g=(px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114);
-    g=Math.max(0,Math.min(255,(g-110)*1.6+110));   // boost contrast
-    px[i]=px[i+1]=px[i+2]=g;
-  }
-  _effectCtx.putImageData(img,0,0);
-  ctx.fillStyle='#08080a'; ctx.fillRect(0,0,cW,cH);
-  ctx.imageSmoothingEnabled=false;
-  ctx.globalAlpha=0.7; ctx.drawImage(_effectCanvas,0,0,cW,cH); ctx.globalAlpha=1;
-
-  const rows=Math.max(4, CFG.seqRows|0);
-  const rowH=cH/rows;
-
-  // Track lines + row index ticks
-  ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=1;
-  for (let r=1;r<rows;r++){ ctx.beginPath(); ctx.moveTo(0,r*rowH); ctx.lineTo(cW,r*rowH); ctx.stroke(); }
-
-  // Playhead position
-  const speed=CFG.seqSpeed/100;
-  const sweepDur=Math.max(0.5, 4.0/(speed*2+0.2));
-  const cols=PROC_W;
-  const phase=((now/1000)/sweepDur)%1;
-  const playX=phase*cW;
-  const pcol=(phase*cols)|0;
-
-  // Active column highlight band (so you SEE what's being read)
-  ctx.fillStyle='rgba(255,220,40,0.07)';
-  ctx.fillRect(playX-cW*0.02, 0, cW*0.04, cH);
-
-  // Trigger notes on column change
-  if (pcol!==SEQ.lastCol && AUDIO.ready && !AUDIO.userMuted){
-    SEQ.lastCol=pcol;
-    const voice=CFG.seqVoice;
-    const thr=CFG.seqThresh*2.55;
-    const noteDur=sweepDur/cols*8;
-    for (let r=0;r<rows;r++){
-      const py=Math.min(PROC_H-1, ((r+0.5)*rowH*(PROC_H/cH))|0);
-      const g=_grayBuf[py*PROC_W + Math.min(PROC_W-1,pcol)];
-      if (g<thr) continue;
-      const idx=Math.round((1-r/(rows-1))*(SCALE_HZ.length-1));
-      const freq=SCALE_HZ[Math.max(0,Math.min(SCALE_HZ.length-1,idx))];
-      const bright=(g-thr)/(255-thr);          // 0..1
-      const vel=0.35+0.65*bright;
-      seqVoice(voice, freq, AUDIO.ctx.currentTime+0.01, vel, noteDur);
-      // brightness also adds a high-octave sparkle for very bright cells
-      if (bright>0.7) seqVoice(1, freq*2, AUDIO.ctx.currentTime+0.01, bright*0.4, noteDur*0.6);
-      // queue a visual flash for this cell
-      SEQ.flashes.push({x:playX, y:r*rowH, h:rowH, t:now, vel:vel});
-    }
-  }
-
-  // Render flashes (fade over 350ms) — the image visibly "playing"
-  ctx.textBaseline='middle';
-  for (let i=SEQ.flashes.length-1;i>=0;i--){
-    const fl=SEQ.flashes[i];
-    const age=(now-fl.t)/350;
-    if (age>=1){ SEQ.flashes.splice(i,1); continue; }
-    const a=(1-age)*fl.vel;
-    ctx.fillStyle='rgba(255,220,40,'+(a*0.8)+')';
-    ctx.fillRect(0, fl.y, cW, fl.h);            // light the whole ROW (track) it triggered
-    ctx.fillStyle='rgba(255,255,255,'+a+')';
-    ctx.fillRect(fl.x-3, fl.y, 7, fl.h);        // bright marker at the trigger point
-  }
-  ctx.textBaseline='alphabetic';
-
-  // Playhead line (bold)
-  ctx.strokeStyle='#ffdc28'; ctx.lineWidth=3;
-  ctx.beginPath(); ctx.moveTo(playX,0); ctx.lineTo(playX,cH); ctx.stroke();
-
-  if (!STATE.isRecording){
-    ctx.font='900 12px Helvetica,Arial,sans-serif';
-    ctx.fillStyle='#ffdc28';
-    const vname=['PLUCK','BELL','BASS','PAD'][CFG.seqVoice]||'';
-    ctx.fillText('\u266A SEQUENCER \u00b7 '+rows+' TRACKS \u00b7 '+vname, 12, cH-18);
-  }
-}
-
 // ── 3.8k  Style P — THERMAL (luminance → infrared palette) ────────────────────
 // Maps brightness onto a thermal ramp (black→purple→magenta→red→orange→yellow→
 // white). Reads the downsampled frame at PROC res, paints scaled-up blocks.
@@ -2628,30 +2386,54 @@ function drawStyleQ(ctx, cW, cH, now){
   const t=now/1000;
   const lam=Math.max(6, CFG.waveLen*W/900);      // wavelength in ripple px
   const omega=CFG.waveSpeed/10;                   // temporal frequency
-  const amp=CFG.waveAmp*W/900;                    // displacement amplitude (ripple px)
+  // Amplitude is pushed hard: quadratic scaling so high "Depth" truly shreds the
+  // image. Falloff is gentler so waves travel far and interfere destructively.
+  const amp=(CFG.waveAmp*CFG.waveAmp)*W/2400;
   const k=(Math.PI*2)/lam;
+  const CA=Math.min(6, amp*0.5);                   // chromatic-aberration split (px)
 
-  // 3. per-pixel displacement: sum of radial waves from each source
+  // 3. per-pixel displacement: sum of radial waves from each source.
+  //    R/G/B are sampled at slightly different displaced positions → the ridges
+  //    of each wave tear into colour fringes, like light refracting through
+  //    disturbed water.
   for(let y=0;y<H;y++){
     const row=y*W;
     for(let x=0;x<W;x++){
-      let ox=0, oy=0, shade=0;
+      let ox=0, oy=0, shade=0, grad=0;
       for(let s=0;s<nS;s++){
         const dx=x-sx[s], dy=y-sy[s];
         const dist=Math.sqrt(dx*dx+dy*dy)+0.0001;
-        const fall=1/(1+dist*0.045);              // amplitude falloff with distance
-        const w=Math.cos(dist*k - t*omega*6)*fall; // wave value (interferes by summing)
-        const g=w*amp/dist;                        // radial displacement per unit
-        ox+=dx*g; oy+=dy*g; shade+=w;
+        const fall=1/(1+dist*0.020);               // slower falloff → waves reach further
+        const phase=dist*k - t*omega*6;
+        const w=Math.cos(phase)*fall;              // wave height (interferes by summing)
+        const dw=-Math.sin(phase)*k*fall;          // spatial gradient → steep ridges push more
+        const g=(w+dw*0.6)*amp/dist;               // displacement, biased by slope
+        ox+=dx*g; oy+=dy*g; shade+=w; grad+=Math.abs(dw);
       }
-      // sample source at displaced position (clamped)
-      let px=x+ox, py=y+oy;
-      if(px<0)px=0; else if(px>W-1)px=W-1;
-      if(py<0)py=0; else if(py>H-1)py=H-1;
-      const si=(((py|0)*W)+(px|0))*4, oi=(row+x)*4;
-      // subtle specular shimmer from summed wave height
-      const l=1+shade*0.16;
-      let r=sd[si]*l, gch=sd[si+1]*l, b=sd[si+2]*l;
+      // chromatic split along the displacement direction
+      const mag=Math.sqrt(ox*ox+oy*oy)+0.0001;
+      const nx=ox/mag, ny=oy/mag;
+      const caX=nx*CA, caY=ny*CA;
+
+      // clamp helper inline
+      let bx=x+ox, by=y+oy;
+      if(bx<0)bx=0; else if(bx>W-1)bx=W-1;
+      if(by<0)by=0; else if(by>H-1)by=H-1;
+      // R sampled ahead, B sampled behind → colour fringe on ridges
+      let rx=x+ox+caX, ry=y+oy+caY;
+      if(rx<0)rx=0; else if(rx>W-1)rx=W-1;
+      if(ry<0)ry=0; else if(ry>H-1)ry=H-1;
+      let bbx=x+ox-caX, bby=y+oy-caY;
+      if(bbx<0)bbx=0; else if(bbx>W-1)bbx=W-1;
+      if(bby<0)bby=0; else if(bby>H-1)bby=H-1;
+
+      const siR=(((ry|0)*W)+(rx|0))*4;
+      const siG=(((by|0)*W)+(bx|0))*4;
+      const siB=(((bby|0)*W)+(bbx|0))*4;
+      const oi=(row+x)*4;
+      // specular glint on steep ridges
+      const l=1+shade*0.20+grad*0.05;
+      let r=sd[siR]*l, gch=sd[siG+1]*l, b=sd[siB+2]*l;
       od[oi]  = r>255?255:r;
       od[oi+1]= gch>255?255:gch;
       od[oi+2]= b>255?255:b;
@@ -2662,42 +2444,6 @@ function drawStyleQ(ctx, cW, cH, now){
   // 4. scale up with smoothing → liquid look
   ctx.imageSmoothingEnabled=true;
   ctx.drawImage(RIP.outCanvas,0,0,cW,cH);
-}
-
-// ── 3.8m  Style R — PHOTOMOSAIC (Ken Knowlton-style symbol reconstruction) ────
-// Rebuilds the image from a grid of glyph tiles; glyph chosen by local
-// brightness (dense glyph = dark, light glyph = bright), tinted by the cell's
-// average colour. Reads PROC frame for speed.
-const _MOSAIC_GLYPHS = "@#W$9876543210?!abc;:+=-,._ ";  // dense→sparse
-function drawStyleR(ctx, cW, cH){
-  if(!_effectCtx) return;
-  _effectCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
-  let img; try{ img=_effectCtx.getImageData(0,0,PROC_W,PROC_H); }catch(e){ return; }
-  const px=img.data;
-
-  ctx.fillStyle='#070708'; ctx.fillRect(0,0,cW,cH);
-  const cell=Math.max(8, CFG.mosaicTile|0);
-  const cols=(cW/cell)|0, rows=(cH/cell)|0;
-  const sx=PROC_W/cW, sy=PROC_H/cH;
-  ctx.textBaseline='middle'; ctx.textAlign='center';
-  ctx.font='700 '+(cell)+'px Helvetica,Arial,monospace';
-  const colored=(CFG.mosaicColor===1);
-  for(let r=0;r<rows;r++){
-    const pyc=Math.min(PROC_H-1, (((r+0.5)*cell)*sy)|0);
-    for(let c=0;c<cols;c++){
-      const pxc=Math.min(PROC_W-1, (((c+0.5)*cell)*sx)|0);
-      const si=(pyc*PROC_W+pxc)*4;
-      const R=px[si], G=px[si+1], B=px[si+2];
-      const lum=(R*0.299+G*0.587+B*0.114)/255;
-      const gi=Math.min(_MOSAIC_GLYPHS.length-1, ((1-lum)*(_MOSAIC_GLYPHS.length-1))|0);
-      const ch=_MOSAIC_GLYPHS[gi];
-      if(ch===' ') continue;
-      if(colored) ctx.fillStyle='rgb('+R+','+G+','+B+')';
-      else { const v=(60+lum*195)|0; ctx.fillStyle='rgb('+v+','+v+','+v+')'; }
-      ctx.fillText(ch, c*cell+cell*0.5, r*cell+cell*0.5);
-    }
-  }
-  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
 }
 
 // Brief zoom-level badge shown while/just after pinching.
@@ -2737,11 +2483,25 @@ function loop(now) {
   const cW=compositeCanvas.width, cH=compositeCanvas.height;
   if (!_crop.valid) updateCrop(STATE.videoW,STATE.videoH,cW,cH);
 
-  // A. Video base frame (some styles own their background)
-  if (CFG.style!=='C' && CFG.style!=='L' && CFG.style!=='M' && CFG.style!=='K' && CFG.style!=='O' && CFG.style!=='P' && CFG.style!=='Q' && CFG.style!=='R') {
-    compositeCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
-  } else if (CFG.style==='K') {
-    // SPECIMEN needs the live frame underneath (it dims it itself)
+  // A. Base layer.
+  //    • TRACKER active + valid mix → the mix (graphic or tracker overlay base)
+  //      renders first as the backdrop, then the tracker annotates on top.
+  //    • GRAPHIC active + valid mix → the MIX renders first (UNDER); the active
+  //      graphic then paints over it, so the mix is never seen on top.
+  //    • No mix → raw video frame, unless the style owns its own background.
+  const _mixOn = mixIsValid();
+  const _selfBg = (CFG.style==='C'||CFG.style==='L'||CFG.style==='M'||CFG.style==='P'||CFG.style==='Q');
+  _underMix = false;
+  if (_mixOn) {
+    // The mixed layer is always drawn UNDER the active style here.
+    try { MIX_DRAW[CFG.mixStyle](compositeCtx,cW,cH,now); } catch(e){}
+    _underMix = true;
+    // If the active style does NOT own its background, we still need the video
+    // frame over the mix for it to transform — but that would hide the mix.
+    // So for graphic-over-graphic where the active style reads the live frame
+    // (F,H,I,J), the style samples sourceFrame() itself; we skip the base draw
+    // and let the style composite over the mix.
+  } else if (!_selfBg) {
     compositeCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
   }
   // B. Vignette (skip for C/D/E/F which manage their own backgrounds)
@@ -2781,26 +2541,13 @@ function loop(now) {
     case 'H': drawStyleH(compositeCtx,cW,cH);       break;
     case 'I': drawStyleI(compositeCtx,cW,cH);       break;
     case 'J': drawStyleJ(compositeCtx,cW,cH);       break;
-    case 'K': drawStyleK(compositeCtx,cW,cH,now);   break;
     case 'L': drawStyleL(compositeCtx,cW,cH);       break;
     case 'M': drawStyleM(compositeCtx,cW,cH,now);   break;
-    case 'O': drawStyleO(compositeCtx,cW,cH,now);   break;
     case 'P': drawStyleP(compositeCtx,cW,cH);       break;
     case 'Q': drawStyleQ(compositeCtx,cW,cH,now);   break;
-    case 'R': drawStyleR(compositeCtx,cW,cH);       break;
   }
 
-  // ── MIX layer: render a second style offscreen, composite with 'screen' ──
-  if (CFG.mixStyle && CFG.mixStyle!==CFG.style && MIX_DRAW[CFG.mixStyle]) {
-    if (!_mixCanvas){ _mixCanvas=document.createElement('canvas'); _mixCtx=_mixCanvas.getContext('2d'); }
-    if (_mixCanvas.width!==cW||_mixCanvas.height!==cH){ _mixCanvas.width=cW; _mixCanvas.height=cH; }
-    _mixCtx.clearRect(0,0,cW,cH);
-    try { MIX_DRAW[CFG.mixStyle](_mixCtx,cW,cH,now); } catch(e){}
-    compositeCtx.save();
-    compositeCtx.globalCompositeOperation='screen';   // black → transparent
-    compositeCtx.drawImage(_mixCanvas,0,0);
-    compositeCtx.restore();
-  }
+  // (Mix is always composited UNDER the active style — handled in step A.)
 
   // Noise overlay (on top of style, under HUD)
   if (CFG.noise > 0) drawNoise(compositeCtx, cW, cH, CFG.noise);
@@ -3383,7 +3130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cvs=document.getElementById('splash-bg');
     if(!cvs) return;
     const sctx=cvs.getContext('2d');
-    const LIME='#c8f01e', BLUE='#2b4cff';
+    const ACCENT='#c8f01e';   // single accent; rest is monochrome
     const SYMS=['\u25CB','\u25A1','\u25C7','+','\u00B7','\u25AB','\u25E6'];  // ○ □ ◇ + · ▫ ◦
     let raf=null, t0=performance.now();
     let cols=0, rows=0; const cell=20;
@@ -3407,7 +3154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function frame(now){
       const t=(now-t0)/1000;
       const w=cvs.width, h=cvs.height;
-      sctx.fillStyle='#0a0e0a'; sctx.fillRect(0,0,w,h);
+      sctx.fillStyle='#0a0a0a'; sctx.fillRect(0,0,w,h);
       sctx.textBaseline='middle'; sctx.textAlign='center';
       // global slow drift of the whole field
       const dx=Math.sin(t*0.15)*3, dy=t*0.4;
@@ -3417,10 +3164,10 @@ document.addEventListener('DOMContentLoaded', () => {
           if (v < 0.6) continue;            // sparse — only lit cells drawn
           const lit=(v-0.6)/3.4;            // 0..1 intensity
           const x=c*cell+cell*0.5, y=r*cell+cell*0.5;
-          // colour: high field → lime, mid → blue
-          const isLime = v > 2.0 || ((c*7+r*13) & 3)===0;
-          sctx.globalAlpha=0.25+lit*0.7;
-          sctx.fillStyle=isLime?LIME:BLUE;
+          // mono field with sparse accent hits (only the brightest cells)
+          const isAccent = v > 2.6;
+          sctx.globalAlpha=0.14+lit*0.6;
+          sctx.fillStyle=isAccent?ACCENT:'#ffffff';
           const sym=SYMS[((c*3+r*5+(t*2|0))%SYMS.length+SYMS.length)%SYMS.length];
           sctx.font='700 '+(11+lit*6|0)+'px Helvetica,Arial,sans-serif';
           sctx.fillText(sym, x, y);
@@ -3470,9 +3217,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ['asciiAccent','Red Accents',0,100,1],
       ['amonoThresh','Mono Gate',0,100,1],
     ],
-    K: [
-      ['specMinR','Min Object Size',10,80,1],
-    ],
     L: [
       ['mosaicCols','Grid Columns',4,16,1],
       ['mosaicChunk','Block Chunk',2,12,1],
@@ -3482,12 +3226,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ['contSeeds','Random Seeds',0,8,1],
       ['contReset','Reset Interval',2,15,1],
     ],
-    O: [
-      ['seqRows','Tracks',4,32,1],
-      ['seqSpeed','Playhead Speed',5,200,1],
-      ['seqVoice','Voice',0,3,1,true,['Pluck','Bell','Bass','Pad']],
-      ['seqThresh','Note Gate',0,100,1],
-    ],
     P: [
       ['thermalPalette','Palette',0,4,1,true,['Iron','Jet','Arctic','Night','X-Ray']],
       ['thermalSmooth','Render',0,1,1,true,['Blocky','Smooth']],
@@ -3495,11 +3233,7 @@ document.addEventListener('DOMContentLoaded', () => {
     Q: [
       ['waveLen','Wavelength',18,120,1],
       ['waveSpeed','Wave Speed',5,100,1],
-      ['waveAmp','Depth',2,24,1],
-    ],
-    R: [
-      ['mosaicTile','Tile Size',8,28,1],
-      ['mosaicColor','Colour',0,1,1,true,['Mono','Colour']],
+      ['waveAmp','Depth',2,60,1],
     ],
   };
 
@@ -3563,21 +3297,25 @@ document.addEventListener('DOMContentLoaded', () => {
       host.appendChild(row);
     });
 
-    // ── MIX section (always present): layer a second effect via screen blend ──
+    // ── MIX section: any style can be layered UNDER the active one, except a
+    //    tracker cannot be mixed with another tracker. The mix always renders
+    //    beneath the active effect.
+    const kind = STYLE_KIND[style];
     const mixSect = document.createElement('div');
     mixSect.className = 'tune-sect';
-    mixSect.textContent = 'MIX LAYER';
+    mixSect.textContent = '/ MIX — LAYER UNDER';
     host.appendChild(mixSect);
     const mixRow = document.createElement('div');
     mixRow.className = 'ctrl-row';
     const mixGrp = document.createElement('div');
     mixGrp.className = 'toggle-row';
     mixGrp.style.flexWrap = 'wrap';
-    Object.keys(MIX_NAMES).forEach(k => {
-      if (k === style) return;                    // can't mix a style with itself
+    Object.keys(MIX_ALL).forEach(k => {
+      if (k === style) return;                                   // not itself
+      if (k && kind==='tracker' && STYLE_KIND[k]==='tracker') return; // no tracker+tracker
       const b = document.createElement('button');
       b.className = 'toggle-btn' + (CFG.mixStyle===k ? ' on' : '');
-      b.textContent = MIX_NAMES[k];
+      b.textContent = MIX_ALL[k];
       b.style.fontSize = '.5rem';
       b.style.flex = '1 1 30%';
       b.addEventListener('click', () => {
@@ -3594,6 +3332,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // contextual TUNE panel. (Style is chosen via the cycle button now.)
   function setSplashStyle(s) {
     CFG.style=s;
+    // Drop a mix selection that is no longer cross-category for the new style
+    if (CFG.mixStyle && (CFG.mixStyle===s ||
+        (STYLE_KIND[s]==='tracker' && STYLE_KIND[CFG.mixStyle]==='tracker'))) CFG.mixStyle='';
     const bs=document.getElementById('btn-style');
     if(bs) bs.innerHTML=STYLE_NAMES[s];
     buildTunePanel(s);   // rebuild contextual params (theme persists, unchanged)
