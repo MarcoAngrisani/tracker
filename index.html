@@ -42,6 +42,7 @@ body{
   position:fixed;inset:0;width:100%;height:100%;
   display:block;touch-action:none;cursor:crosshair;
 }
+#composite.mirrored{transform:scaleX(-1);}
 /* ── SPLASH ─────────────────────────────────────────────────────────────── */
 #splash{
   position:fixed;inset:0;z-index:300;overflow:hidden;
@@ -152,6 +153,14 @@ input[type="range"]::-moz-range-thumb{
   opacity:.85;transition:opacity .15s;
 }
 #btn-back:active{opacity:.5;}
+#btn-flip{
+  position:fixed;top:calc(.6rem + env(safe-area-inset-top));right:.7rem;z-index:22;
+  width:44px;height:44px;display:none;align-items:center;justify-content:center;
+  background:transparent;border:none;color:#fff;cursor:pointer;
+  text-shadow:0 1px 6px rgba(0,0,0,.6);-webkit-tap-highlight-color:transparent;
+  opacity:.85;transition:opacity .15s;
+}
+#btn-flip:active{opacity:.5;}
 .ctrl-btn{
   background:rgba(10,10,10,.72);border:1px solid var(--hair);
   color:var(--fg);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
@@ -313,6 +322,9 @@ input[type="range"]::-moz-range-thumb{
 
 <!-- ── MAIN CONTROLS ───────────────────────────────────────────────────── -->
 <button id="btn-back" aria-label="Back to home">&#8249;</button>
+<button id="btn-flip" aria-label="Flip camera">
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v3"/><path d="M9 20H6a2 2 0 0 1-2-2v-3"/><path d="M4 9V6a2 2 0 0 1 2-2h3"/><path d="M20 15v3a2 2 0 0 1-2 2h-3"/><circle cx="12" cy="12" r="3"/></svg>
+</button>
 <div id="ctrl-bar">
   <button class="ctrl-btn" id="btn-style">ORBIT</button>
   <div id="capture-cluster">
@@ -1392,7 +1404,7 @@ const TOUCH = {
 };
 
 const STATE = {
-  cameraOk:false, camStream:null,
+  cameraOk:false, camStream:null, facingMode:'environment',
   videoW:1280, videoH:720,
   isRecording:false, mediaRecorder:null, chunks:[],
   recordStartT:0, lastDlUrl:null,
@@ -1435,6 +1447,17 @@ function setupSourceDownsample(srcW, srcH){
   SRC.canvas.width=SRC.w; SRC.canvas.height=SRC.h;
   SRC.active=true;
 }
+// For filter graphics under a mix: sample the live composite (frame + mixed
+// tracker) so the filter recolors everything. Draws into the given ctx target.
+function drawFilterSource(effCtx, cW, cH){
+  if (_filterComposite) {
+    // composite already holds base frame + tracker strokes → downscale it
+    effCtx.drawImage(compositeCanvas, 0,0,cW,cH, 0,0,PROC_W,PROC_H);
+  } else {
+    effCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
+  }
+}
+
 // Returns the element to sample from this frame (downscaled canvas or raw video).
 function sourceFrame(){
   if (STILL.active) return STILL.canvas;          // uploaded photo
@@ -1468,7 +1491,13 @@ const STYLE_NAMES = {
 //   active GRAPHIC + tracker mix → the tracker renders on a transparent layer
 //                                  ON TOP (light overlay, never covers the base).
 let _mixCanvas=null, _mixCtx=null;
-let _underMix=false;   // true while a tracker is drawing over a graphic base
+let _underMix=false;         // true while the active style paints over a mix backdrop
+let _filterComposite=false;  // true → filter graphics (THERMAL/PXSORT) read the
+                             // already-composited canvas (frame+mix) instead of the
+                             // raw camera, so they recolor the mixed tracker too.
+// Graphic styles that are true IMAGE FILTERS (read pixels & remap them). These
+// can filter a tracker drawn underneath. The rest are generative (mask-based).
+const FILTER_GRAPHICS = { P:true, F:true };
 // TRACKER styles = annotation overlays over the live frame (blob-driven).
 // GRAPHIC styles = full-frame image transforms.
 const STYLE_KIND = {
@@ -1781,8 +1810,8 @@ function drawStyleD(ctx, cW, cH, t) {
 
 function drawStyleF(ctx, cW, cH) {
   if (!_effectCtx || !_dstImgData) return;
-  // Capture video at proc resolution
-  _effectCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
+  // Capture at proc resolution (composite when filtering a mix, else raw source)
+  drawFilterSource(_effectCtx, cW, cH);
   const imgData = _effectCtx.getImageData(0, 0, PROC_W, PROC_H);
   const px = imgData.data;   // Uint8ClampedArray — direct write-back in place
 
@@ -2332,7 +2361,7 @@ const _THERMAL_LUTS = [
 function drawStyleP(ctx, cW, cH){
   if(!_effectCtx) return;
   const _LUT=_THERMAL_LUTS[CFG.thermalPalette] || _THERMAL_LUTS[0];
-  _effectCtx.drawImage(sourceFrame(), _crop.sx,_crop.sy,_crop.sw,_crop.sh, 0,0,PROC_W,PROC_H);
+  drawFilterSource(_effectCtx, cW, cH);
   let img; try{ img=_effectCtx.getImageData(0,0,PROC_W,PROC_H); }catch(e){ return; }
   const px=img.data;
   for(let i=0;i<px.length;i+=4){
@@ -2483,24 +2512,36 @@ function loop(now) {
   const cW=compositeCanvas.width, cH=compositeCanvas.height;
   if (!_crop.valid) updateCrop(STATE.videoW,STATE.videoH,cW,cH);
 
-  // A. Base layer.
-  //    • TRACKER active + valid mix → the mix (graphic or tracker overlay base)
-  //      renders first as the backdrop, then the tracker annotates on top.
-  //    • GRAPHIC active + valid mix → the MIX renders first (UNDER); the active
-  //      graphic then paints over it, so the mix is never seen on top.
-  //    • No mix → raw video frame, unless the style owns its own background.
+  // A. Base layer + MIX compositing.
+  //    Four cases, from two facts (tracker vs graphic for each layer, and whether
+  //    the active graphic is an image FILTER):
+  //      1. active TRACKER + any mix → mix is the base (drawn now); the active
+  //         tracker annotates on top later in the switch.  (_underMix)
+  //      2. active FILTER graphic (THERMAL/PXSORT) + tracker mix → draw frame +
+  //         tracker now, then the filter reads the COMPOSITE and recolors it all,
+  //         so e.g. THERMAL tints ORBIT's strokes too.  (_filterComposite)
+  //      3. active generative graphic + tracker mix → tracker drawn ON TOP after
+  //         the switch (generative styles can't filter it).  (_mixOnTop)
+  //      4. graphic + graphic mix → mix under, active paints over.  (_underMix)
   const _mixOn = mixIsValid();
+  const _mixIsTracker    = _mixOn && STYLE_KIND[CFG.mixStyle]==='tracker';
+  const _activeIsTracker = STYLE_KIND[CFG.style]==='tracker';
   const _selfBg = (CFG.style==='C'||CFG.style==='L'||CFG.style==='M'||CFG.style==='P'||CFG.style==='Q');
-  _underMix = false;
-  if (_mixOn) {
-    // The mixed layer is always drawn UNDER the active style here.
+  _underMix = false; _filterComposite = false;
+  let _mixOnTop = false;
+  if (_mixOn && _activeIsTracker) {
+    try { MIX_DRAW[CFG.mixStyle](compositeCtx,cW,cH,now); } catch(e){}   // case 1
+    _underMix = true;
+  } else if (_mixOn && _mixIsTracker && FILTER_GRAPHICS[CFG.style]) {     // case 2
+    compositeCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
+    try { MIX_DRAW[CFG.mixStyle](compositeCtx,cW,cH,now); } catch(e){}
+    _filterComposite = true;
+  } else if (_mixOn && _mixIsTracker) {                                  // case 3
+    if (!_selfBg) compositeCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
+    _mixOnTop = true;
+  } else if (_mixOn) {                                                   // case 4
     try { MIX_DRAW[CFG.mixStyle](compositeCtx,cW,cH,now); } catch(e){}
     _underMix = true;
-    // If the active style does NOT own its background, we still need the video
-    // frame over the mix for it to transform — but that would hide the mix.
-    // So for graphic-over-graphic where the active style reads the live frame
-    // (F,H,I,J), the style samples sourceFrame() itself; we skip the base draw
-    // and let the style composite over the mix.
   } else if (!_selfBg) {
     compositeCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
   }
@@ -2547,7 +2588,12 @@ function loop(now) {
     case 'Q': drawStyleQ(compositeCtx,cW,cH,now);   break;
   }
 
-  // (Mix is always composited UNDER the active style — handled in step A.)
+  // G. Case 3 — a tracker mix over a generative graphic is drawn ON TOP here,
+  //    so its annotations sit above the graphic instead of being covered.
+  if (_mixOnTop) {
+    _underMix = true;   // MOSAIC uses the already-painted canvas as its base
+    try { MIX_DRAW[CFG.mixStyle](compositeCtx,cW,cH,now); } catch(e){}
+  }
 
   // Noise overlay (on top of style, under HUD)
   if (CFG.noise > 0) drawNoise(compositeCtx, cW, cH, CFG.noise);
@@ -2565,7 +2611,7 @@ function loop(now) {
 async function startCamera() {
   try {
     const stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},
+      video:{facingMode:{ideal:STATE.facingMode},width:{ideal:1280},height:{ideal:720}},
       audio:false
     });
     videoEl.srcObject=stream; STATE.camStream=stream;
@@ -2667,6 +2713,7 @@ function startUploadedVideo(file) {
     // triggers a full-clip render+save instead of free recording.
     document.getElementById('btn-record').setAttribute('data-upload','1');
     const bk=document.getElementById('btn-back'); if(bk) bk.style.display='flex';
+    const fl=document.getElementById('btn-flip'); if(fl) fl.style.display='none';
     STATE.lastDetectT=performance.now();
     if(!rafId) rafId=requestAnimationFrame(loop);
     showError('Video loaded — tap the video button to render & save with this effect.');
@@ -2710,6 +2757,7 @@ function startUploadedImage(file){
     splash.style.opacity='0'; splash.style.transition='opacity .4s ease';
     setTimeout(()=>{splash.style.display='none'; if(window._splashAnimStop)window._splashAnimStop();},400);
     const bk=document.getElementById('btn-back'); if(bk) bk.style.display='flex';
+    const fl=document.getElementById('btn-flip'); if(fl) fl.style.display='none';
     // In photo mode the record button is irrelevant; PHOTO button saves the styled frame.
     document.getElementById('btn-record').removeAttribute('data-upload');
     STATE.lastDetectT=performance.now();
@@ -2996,6 +3044,28 @@ function stopRecording() {
 
 // ── 3.12  Error display ───────────────────────────────────────────────────────
 
+// ── Flip between back and front camera (live mode only) ──────────────────────
+async function flipCamera(){
+  if (STATE.uploadMode || !STATE.cameraOk) return;   // only in live mode
+  STATE.facingMode = (STATE.facingMode==='environment') ? 'user' : 'environment';
+  // Stop the current stream before requesting the other camera
+  if (STATE.camStream){
+    STATE.camStream.getTracks().forEach(t=>{ try{t.stop();}catch(e){} });
+    STATE.camStream=null;
+  }
+  const ok = await startCamera();
+  if (!ok){
+    // revert on failure
+    STATE.facingMode = (STATE.facingMode==='environment') ? 'user' : 'environment';
+    showError('Could not switch camera.');
+    return;
+  }
+  // Mirror the view for the front camera (natural selfie feel). Touch coords are
+  // unaffected because the mirror is a display-only CSS transform; tracking still
+  // runs on the un-mirrored pixels, which stays consistent for the user.
+  compositeCanvas.classList.toggle('mirrored', STATE.facingMode==='user');
+}
+
 // ── Return to home: stop current mode, free resources, allow switching modes ──
 function returnToHome() {
   // Stop any recording in flight
@@ -3021,6 +3091,8 @@ function returnToHome() {
   STATE.uploadCancelled = false;
   SRC.active = false;
   STILL.active = false;
+  STATE.facingMode = 'environment';
+  if (compositeCanvas) compositeCanvas.classList.remove('mirrored');
   ZOOM.factor = 1;
   _crop.valid = false;
   // Lower audio so the home is quiet
@@ -3029,6 +3101,7 @@ function returnToHome() {
   const prog=document.getElementById('upload-progress'); if(prog) prog.classList.remove('show');
   // Hide back arrow, show splash + restart its animation
   const bk=document.getElementById('btn-back'); if(bk) bk.style.display='none';
+  const fl=document.getElementById('btn-flip'); if(fl) fl.style.display='none';
   const splash=document.getElementById('splash');
   splash.style.display='flex'; splash.style.opacity='1'; splash.style.transition='none';
   if (window._splashAnimStart) window._splashAnimStart();
@@ -3490,6 +3563,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ok=await startCamera();
     if(!ok){splash.style.display='flex';splash.style.opacity='1';splash.style.transition='none';return;}
     const bk=document.getElementById('btn-back'); if(bk) bk.style.display='flex';
+    const fl=document.getElementById('btn-flip'); if(fl) fl.style.display='flex';
     STATE.lastDetectT=performance.now(); STATE.fpsT=performance.now();
     if(rafId) cancelAnimationFrame(rafId);
     rafId=requestAnimationFrame(loop);
@@ -3510,6 +3584,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── HOME button: return to splash, switch modes without reload ─────────
   document.getElementById('btn-back').addEventListener('click',returnToHome);
+  document.getElementById('btn-flip').addEventListener('click',flipCamera);
 
   // ── Upload video flow ──────────────────────────────────────────────────
   document.getElementById('btn-upload-splash').addEventListener('click',()=>{
