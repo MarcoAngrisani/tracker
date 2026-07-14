@@ -338,6 +338,8 @@ input[type="range"]::-moz-range-thumb{
     </div>
   </div>
   <input type="file" id="file-input" accept="video/*,image/*" style="display:none">
+  <input type="file" id="file-input-b" accept="video/*" style="display:none">
+  <video id="camB" playsinline muted loop style="display:none"></video>
 </div>
 
 <video id="cam" autoplay playsinline muted></video>
@@ -1029,6 +1031,16 @@ function updateAudio(cW, cH, nowMs) {
 // MOSH — datamosh state (Phase 2). Block-match motion field drives a persistent
 // feedback canvas; pixels bleed along motion vectors and never fully reset
 // ("perpetual mosh"). All arrays pre-allocated in initBuffers (Zero-GC).
+// TRANS — datamosh transition A→B. During the transition the motion vectors of
+// clip B are applied to clip A's pixels (the classic "no I-frame" cut), while B
+// bleeds in over `dur`. After it completes the pipeline sources B.
+const TRANS = {
+  ready:false,      // clip B loaded
+  active:false,     // transition running
+  useB:false,       // pipeline reads B (post-transition)
+  t0:0,             // start timestamp
+  elB:null,         // video element for B
+};
 const MOSH = {
   BS: 16,            // block size in proc px
   bw: 0, bh: 0,      // grid dims
@@ -1414,7 +1426,7 @@ const SETTINGS_KEY = 'raster.settings.v1';
 const PERSIST_KEYS = ['style','mixStyle','noise','showVignette',
   'asciiMode','asciiCell','asciiBg','asciiAccent','amonoThresh',
   'thermalPalette','thermalSmooth','waveLen','waveSpeed','waveAmp',
-  'grainPalette','mosaicCols','mosaicChunk','moshBleed','moshRefresh','showConnectors','showLabels','neuralNodes','neuralCurve'];
+  'grainPalette','mosaicCols','mosaicChunk','moshBleed','moshRefresh','transDur','transPower','showConnectors','showLabels','neuralNodes','neuralCurve'];
 function saveSettings(){
   try{
     const o={perfOn:STATE.perfOn, previewOn:STATE.previewOn, audioMuted:AUDIO.userMuted};
@@ -1489,6 +1501,8 @@ const CFG = {
   // MOSH (N)
   moshBleed:      12,       // motion-vector bleed gain (2-40)
   moshRefresh:    18,       // fresh-frame injection % (0-100)
+  transDur:       1200,     // transition length ms (200-4000)
+  transPower:     24,       // transition bleed intensity (4-60)
 };
 
 const TOUCH = {
@@ -1551,8 +1565,18 @@ function drawFilterSource(effCtx, cW, cH){
   }
 }
 
+// Draw a media element covering the target box, centred, preserving aspect.
+function drawCover(dctx, el, tw, th){
+  const sw=el.videoWidth||el.width||1, sh=el.videoHeight||el.height||1;
+  const sr=sw/sh, tr=tw/th;
+  let cw, ch;
+  if (sr>tr) { ch=sh; cw=sh*tr; } else { cw=sw; ch=sw/tr; }
+  dctx.drawImage(el, (sw-cw)*0.5, (sh-ch)*0.5, cw, ch, 0, 0, tw, th);
+}
+
 // Returns the element to sample from this frame (downscaled canvas or raw video).
 function sourceFrame(){
+  if (TRANS.useB && TRANS.elB && TRANS.elB.readyState>=2) return TRANS.elB;  // post-transition: clip B
   if (STILL.active) return STILL.canvas;          // uploaded photo
   if (SRC.active && videoEl.readyState>=2){
     SRC.ctx.drawImage(videoEl, 0,0, SRC.w, SRC.h);
@@ -2670,7 +2694,11 @@ function drawStyleG(ctx, cW, cH, now){
   // MOSH samples its OWN grayscale every frame (the shared detector is throttled
   // and would zero-out motion). Small canvas → proc-res gray.
   if(!MOSH.gcanvas){ MOSH.gcanvas=document.createElement('canvas'); MOSH.gcanvas.width=PROC_W; MOSH.gcanvas.height=PROC_H; MOSH.gctx=MOSH.gcanvas.getContext('2d',{willReadFrequently:true}); }
-  MOSH.gctx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,PROC_W,PROC_H);
+  // During a transition the motion field is taken from clip B: B's vectors get
+  // applied to A's pixels, which is exactly what a datamosh cut does.
+  const _tOn = TRANS.active && TRANS.elB && TRANS.elB.readyState>=2;
+  if(_tOn) drawCover(MOSH.gctx, TRANS.elB, PROC_W, PROC_H);
+  else     MOSH.gctx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,PROC_W,PROC_H);
   let _md; try{ _md=MOSH.gctx.getImageData(0,0,PROC_W,PROC_H).data; }catch(e){ ctx.drawImage(MOSH.fb||MOSH.gcanvas,0,0,cW,cH); return; }
   for(let i=0,j=0;i<PROC_N;i++,j+=4){ MOSH.g[i]=(_md[j]*0.299+_md[j+1]*0.587+_md[j+2]*0.114)|0; }
   // (1) Per-block motion field (block-match SAD, subsampled) + per-block motion
@@ -2727,7 +2755,7 @@ function drawStyleG(ctx, cW, cH, now){
   }
   if (!TOUCH.active) MOSH._touchLatch = false;
   const sxr=cW/PROC_W, syr=cH/PROC_H;
-  const gain=CFG.moshBleed/10;
+  const gain=(_tOn?CFG.transPower:CFG.moshBleed)/10;
   // overlap blocks so displaced copies bleed into neighbours (no hard squares)
   const DBX=Math.ceil(cW/bw), DBY=Math.ceil(cH/bh);
   const OV=Math.round(Math.max(DBX,DBY)*0.5);           // overlap margin
@@ -2759,6 +2787,19 @@ function drawStyleG(ctx, cW, cH, now){
   // (4) P-frame refresh: stamp the LIVE frame back ONLY where motion is low, so
   //     still areas stay crisp while moving areas keep moshing. Refresh scales
   //     how strongly static blocks update.
+  if(_tOn){
+    // Progressive reveal of B while its vectors keep tearing A's pixels.
+    const prog=Math.min(1,(now-TRANS.t0)/Math.max(200,CFG.transDur));
+    const a=prog*prog;                       // ease-in: mosh first, B resolves later
+    fbx.globalAlpha=a;
+    drawCover(fbx, TRANS.elB, cW, cH);
+    fbx.globalAlpha=1;
+    if(prog>=1){ TRANS.active=false; TRANS.useB=true; }   // hand over to B
+    MOSH.pg.set(MOSH.g);
+    ctx.imageSmoothingEnabled=true;
+    ctx.drawImage(MOSH.fb,0,0,cW,cH);
+    return;
+  }
   const fresh=CFG.moshRefresh/100;
   if(fresh>0 && MOSH.en){
     for(let by=0;by<bh;by++){
@@ -3361,6 +3402,32 @@ async function flipCamera(){
   compositeCanvas.classList.toggle('mirrored', STATE.facingMode==='user');
 }
 
+// ── Datamosh transition A→B ─────────────────────────────────────────────────
+function startTransition(){
+  if(!TRANS.ready || !TRANS.elB){ showError('Load clip B first.'); return; }
+  TRANS.useB=false;
+  TRANS.active=true;
+  TRANS.t0=performance.now();
+  MOSH.fbW=0;                       // reseed buffer from A's current pixels
+  if(MOSH.ax){ MOSH.ax.fill(0); MOSH.ay.fill(0); }
+  TRANS.elB.currentTime=0;
+  TRANS.elB.play().catch(()=>{});   // B must be running to yield motion vectors
+}
+function loadClipB(file){
+  const url=URL.createObjectURL(file);
+  if(!TRANS.elB) TRANS.elB=document.getElementById('camB');
+  if(TRANS._url) URL.revokeObjectURL(TRANS._url);
+  TRANS._url=url;
+  TRANS.elB.src=url; TRANS.elB.loop=true; TRANS.elB.muted=true; TRANS.elB.playsInline=true;
+  TRANS.elB.addEventListener('loadeddata',()=>{
+    TRANS.ready=true;
+    TRANS.elB.play().catch(()=>{});   // keep it decoding so vectors are live
+    buildTunePanel(CFG.style);         // refresh button label
+    showError('Clip B loaded — tap RUN to mosh into it.');
+  },{once:true});
+  TRANS.elB.addEventListener('error',()=>{ showError('Could not load clip B.'); },{once:true});
+}
+
 // ── Return to home: stop current mode, free resources, allow switching modes ──
 function returnToHome() {
   // Stop any recording in flight
@@ -3386,6 +3453,8 @@ function returnToHome() {
   STATE.uploadCancelled = false;
   SRC.active = false;
   STILL.active = false;
+  TRANS.active=false; TRANS.useB=false;
+  if(TRANS.elB){ try{TRANS.elB.pause();}catch(e){} }
   if (compositeCanvas) compositeCanvas.classList.remove('fit-contain');
   STATE.facingMode = 'environment';
   if (compositeCanvas) compositeCanvas.classList.remove('mirrored');
@@ -3661,6 +3730,8 @@ document.addEventListener('DOMContentLoaded', () => {
     G: [
       ['moshBleed','Bleed',2,40,1],
       ['moshRefresh','Refresh',0,100,1],
+      ['transDur','Transition Length',200,4000,50],
+      ['transPower','Transition Power',4,60,1],
     ],
   };
 
@@ -3734,6 +3805,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── MIX section: only GRAIN and THERMAL can host an UNDER-layer (they read
     //    the composited canvas and show/recolor what's beneath). Every other
     //    style repaints opaquely and would hide the layer, so MIX is hidden.
+    // ── MOSH: A→B datamosh transition controls ──
+    if (style==='G') {
+      const tSect=document.createElement('div');
+      tSect.className='tune-sect';
+      tSect.textContent='/ TRANSITION A → B';
+      host.appendChild(tSect);
+      const tRow=document.createElement('div');
+      tRow.className='toggle-row';
+      const bLoad=document.createElement('button');
+      bLoad.className='toggle-btn'+(TRANS.ready?' on':'');
+      bLoad.textContent=TRANS.ready?'CLIP B ✓':'LOAD CLIP B';
+      bLoad.addEventListener('click',()=>document.getElementById('file-input-b').click());
+      const bRun=document.createElement('button');
+      bRun.className='toggle-btn';
+      bRun.textContent='RUN';
+      bRun.addEventListener('click',()=>{
+        if(!TRANS.ready){ showError('Load clip B first.'); return; }
+        startTransition();
+      });
+      tRow.appendChild(bLoad); tRow.appendChild(bRun);
+      host.appendChild(tRow);
+    }
     if (MIX_HOSTS[style]) {
       // Collapsible dropdown pinned at the bottom of TUNE. Header shows current
       // mix; tapping it expands the options and scrolls them into view.
@@ -3999,6 +4092,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('btn-gallery').addEventListener('click',()=>{
     document.getElementById('file-input').click();
+  });
+  document.getElementById('file-input-b').addEventListener('change',function(){
+    const f=this.files&&this.files[0];
+    if(f && f.type.startsWith('video/')) loadClipB(f);
+    else if(f) showError('Clip B must be a video.');
+    this.value='';
   });
   document.getElementById('file-input').addEventListener('change',function(){
     const f=this.files&&this.files[0];
