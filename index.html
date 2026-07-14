@@ -43,6 +43,8 @@ body{
   display:block;touch-action:none;cursor:crosshair;
 }
 #composite.mirrored{transform:scaleX(-1);}
+/* Uploads: show the media at its own proportions instead of stretching. */
+#composite.fit-contain{object-fit:contain;background:#000;}
 /* ── SPLASH ─────────────────────────────────────────────────────────────── */
 #splash{
   position:fixed;inset:0;z-index:300;overflow:hidden;
@@ -161,6 +163,18 @@ input[type="range"]::-moz-range-thumb{
   opacity:.85;transition:opacity .15s;
 }
 #btn-flip:active{opacity:.5;}
+#save-preview{
+  position:fixed;inset:0;z-index:40;display:none;flex-direction:column;
+  background:rgba(10,10,10,.94);padding:calc(1rem + env(safe-area-inset-top)) 1rem
+    calc(1rem + env(safe-area-inset-bottom));gap:1rem;
+}
+#save-preview.show{display:flex;}
+#save-preview-media{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;}
+#save-preview-media img,#save-preview-media video{
+  max-width:100%;max-height:100%;object-fit:contain;border:1px solid var(--hair);
+}
+#save-preview-actions{display:flex;gap:.8rem;}
+#save-preview-actions .sq-btn{flex:1;}
 #perf-hud{
   position:fixed;top:calc(.6rem + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
   z-index:22;display:none;padding:.3rem .6rem;background:rgba(10,10,10,.75);
@@ -223,7 +237,7 @@ input[type="range"]::-moz-range-thumb{
   border-top:1px solid var(--accent);
   padding:1rem 1.3rem;
   padding-bottom:calc(5.8rem + env(safe-area-inset-bottom));
-  max-height:62vh;overflow-y:auto;
+  max-height:35vh;overflow-y:auto;   /* never cover more than 35% of the image */
   transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
   pointer-events:none;
   /* readability: subtle text shadow against bright video behind */
@@ -231,6 +245,8 @@ input[type="range"]::-moz-range-thumb{
 }
 #settings-panel.open{transform:translateY(0);pointer-events:auto;}
 .tune-head{font-weight:900;font-size:1rem;letter-spacing:.02em;text-transform:uppercase;margin-bottom:.5rem;color:var(--fg);}
+.mix-header{cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.mix-header.open{color:var(--accent);}
 .tune-sect{font-size:.52rem;letter-spacing:.22em;text-transform:uppercase;color:var(--fg);margin:.9rem 0 .3rem;border-bottom:1px solid var(--hair);padding-bottom:.25rem;}
 #btn-feedback{
   display:block;text-align:center;margin-top:1rem;padding:.6rem;
@@ -330,6 +346,13 @@ input[type="range"]::-moz-range-thumb{
 <!-- ── MAIN CONTROLS ───────────────────────────────────────────────────── -->
 <button id="btn-back" aria-label="Back to home">&#8249;</button>
 <div id="perf-hud"></div>
+<div id="save-preview">
+  <div id="save-preview-media"></div>
+  <div id="save-preview-actions">
+    <button class="sq-btn sq-ghost" id="sp-discard">DISCARD</button>
+    <button class="sq-btn" id="sp-save">SAVE</button>
+  </div>
+</div>
 <button id="btn-flip" aria-label="Flip camera">
   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v3"/><path d="M9 20H6a2 2 0 0 1-2-2v-3"/><path d="M4 9V6a2 2 0 0 1 2-2h3"/><path d="M20 15v3a2 2 0 0 1-2 2h-3"/><circle cx="12" cy="12" r="3"/></svg>
 </button>
@@ -355,18 +378,20 @@ input[type="range"]::-moz-range-thumb{
 <div id="settings-panel">
   <!-- Effect name header -->
   <div class="tune-head" id="tune-head">ORBIT</div>
-  <!-- Common controls (always visible) -->
-  <div class="ctrl-row">
-    <div class="ctrl-label">Motion Sensitivity <span id="lv-mot">20</span></div>
-    <input type="range" id="lr-mot" min="5" max="60" value="20" step="1">
-  </div>
-  <div class="ctrl-row">
-    <div class="ctrl-label">Brightness Pickup <span id="lv-bri">245</span></div>
-    <input type="range" id="lr-bri" min="140" max="254" value="245" step="1">
-  </div>
-  <div class="ctrl-row">
-    <div class="ctrl-label">Min Blob Size <span id="lv-min">12</span></div>
-    <input type="range" id="lr-min" min="4" max="120" value="12" step="1">
+  <!-- Detection controls: shown only for styles that use blob/mask detection -->
+  <div id="detect-controls">
+    <div class="ctrl-row">
+      <div class="ctrl-label">Motion Sensitivity <span id="lv-mot">20</span></div>
+      <input type="range" id="lr-mot" min="5" max="60" value="20" step="1">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Brightness Pickup <span id="lv-bri">245</span></div>
+      <input type="range" id="lr-bri" min="140" max="254" value="245" step="1">
+    </div>
+    <div class="ctrl-row" id="row-minblob">
+      <div class="ctrl-label">Min Blob Size <span id="lv-min">12</span></div>
+      <input type="range" id="lr-min" min="4" max="120" value="12" step="1">
+    </div>
   </div>
   <div class="ctrl-row">
     <div class="ctrl-label">Noise <span id="lv-noise">0</span></div>
@@ -377,6 +402,10 @@ input[type="range"]::-moz-range-thumb{
   <div class="toggle-row">
     <button class="toggle-btn on" id="btn-audio">AUDIO</button>
     <button class="toggle-btn on" id="btn-vig">VIGNETTE</button>
+  </div>
+  <div class="toggle-row">
+    <button class="toggle-btn" id="btn-perf">PERF HUD</button>
+    <button class="toggle-btn on" id="btn-preview">SAVE PREVIEW</button>
   </div>
   <a id="btn-feedback" href="#" target="_blank" rel="noopener">&#9998; SEND FEEDBACK</a>
 </div>
@@ -997,6 +1026,23 @@ function updateAudio(cW, cH, nowMs) {
 
 // Allocate (or reallocate) all typed-array buffers.
 // effectCtx must be valid when called so _dstImgData can be created.
+// MOSH — datamosh state (Phase 2). Block-match motion field drives a persistent
+// feedback canvas; pixels bleed along motion vectors and never fully reset
+// ("perpetual mosh"). All arrays pre-allocated in initBuffers (Zero-GC).
+const MOSH = {
+  BS: 16,            // block size in proc px
+  bw: 0, bh: 0,      // grid dims
+  vx: null, vy: null,// per-block motion vectors (proc px/frame)
+  fb: null, fbctx: null, fbW: 0, fbH: 0,   // feedback canvas @ display res
+  search: 6,         // block-match search radius (proc px)
+  en: null,          // per-block motion energy [0..1]
+  ax: null, ay: null,// accumulated per-block displacement
+  tmp: null, tmpctx: null,   // scratch canvas for advection (no per-frame alloc)
+  g: null, pg: null, // MOSH-owned grayscale (independent of throttled detector)
+  gctx: null, gcanvas: null, // small sampling canvas
+  live: null, livectx: null, // live-frame snapshot for P-frame refresh
+  _touchLatch: false,
+};
 function initBuffers(pW, pH) {
   PROC_W = pW; PROC_H = pH; PROC_N = pW * pH;
   _grayBuf     = new Uint8Array(PROC_N);
@@ -1016,6 +1062,16 @@ function initBuffers(pW, pH) {
   _ghG        = new Uint8Array(MAX_GHOST_PX);  // sized to updated MAX_GHOST_PX
   _segColBuf  = new Uint8Array(pH * 4);
   _segLuma    = new Float32Array(pH);
+  // MOSH: coarse motion-vector field over an NxM block grid + reusable scratch.
+  MOSH.bw = Math.max(1, (pW / MOSH.BS) | 0);
+  MOSH.bh = Math.max(1, (pH / MOSH.BS) | 0);
+  const nb = MOSH.bw * MOSH.bh;
+  MOSH.vx = new Float32Array(nb);
+  MOSH.vy = new Float32Array(nb);
+  MOSH.en = new Float32Array(nb);
+  MOSH.ax = new Float32Array(nb); MOSH.ay = new Float32Array(nb);
+  MOSH.g  = new Uint8Array(PROC_N); MOSH.pg = new Uint8Array(PROC_N);
+  MOSH.fb = null; MOSH.tmp = null;   // canvases (re)created lazily at display res
   // Invalidate contagion grid so it rebuilds at new resolution
   if (typeof CONT !== 'undefined') { CONT.W = 0; CONT.state = null; }
   // _dstImgData requires an active 2d context; created after effectCanvas exists
@@ -1352,6 +1408,31 @@ function updateNeuralNodes(t) {
 // PHASE 2 — APP STATE & GLOBAL CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════
 
+// ── Settings persistence (Phase 2) ───────────────────────────────────────────
+const SETTINGS_KEY = 'raster.settings.v1';
+// Only these CFG keys are persisted (style + per-effect params + mix + toggles).
+const PERSIST_KEYS = ['style','mixStyle','noise','showVignette',
+  'asciiMode','asciiCell','asciiBg','asciiAccent','amonoThresh',
+  'thermalPalette','thermalSmooth','waveLen','waveSpeed','waveAmp',
+  'grainPalette','mosaicCols','mosaicChunk','moshBleed','moshRefresh','showConnectors','showLabels','neuralNodes','neuralCurve'];
+function saveSettings(){
+  try{
+    const o={perfOn:STATE.perfOn, previewOn:STATE.previewOn, audioMuted:AUDIO.userMuted};
+    for(const k of PERSIST_KEYS) if(k in CFG) o[k]=CFG[k];
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(o));
+  }catch(e){/* storage disabled / private mode → ignore */}
+}
+function loadSettings(){
+  try{
+    const raw=localStorage.getItem(SETTINGS_KEY); if(!raw) return;
+    const o=JSON.parse(raw);
+    for(const k of PERSIST_KEYS) if(k in o) CFG[k]=o[k];
+    if('perfOn' in o) STATE.perfOn=!!o.perfOn;
+    if('previewOn' in o) STATE.previewOn=!!o.previewOn;
+    if('audioMuted' in o) AUDIO.userMuted=!!o.audioMuted;
+  }catch(e){/* corrupt / disabled → ignore, use defaults */}
+}
+
 const CFG = {
   motionThresh:   20,
   brightThresh:   245,
@@ -1405,6 +1486,9 @@ const CFG = {
   waveLen:        40,       // wavelength (18-120)
   waveSpeed:      30,       // wave speed (5-100)
   waveAmp:        22,       // displacement depth (2-60) — destructive
+  // MOSH (N)
+  moshBleed:      12,       // motion-vector bleed gain (2-40)
+  moshRefresh:    18,       // fresh-frame injection % (0-100)
 };
 
 const TOUCH = {
@@ -1417,7 +1501,7 @@ const STATE = {
   isRecording:false, mediaRecorder:null, chunks:[],
   recordStartT:0, lastDlUrl:null,
   fps:0, fpsT:0, fpsFrames:0, warmup:0, lastDetectT:0,
-  perfOn:false, frameMs:0, frameMsEMA:0,
+  perfOn:false, frameMs:0, frameMsEMA:0, previewOn:true,
   uploadMode:false, uploadCancelled:false,
 };
 
@@ -1481,12 +1565,12 @@ function sourceFrame(){
 // Get it from Google Forms: Send → Link tab → Copy. That's it, no other setup.
 const FEEDBACK_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSf1l0Q6f9-xg_b7Z1Qz72V2Ki5HqHSNYXWSiHLsQavz27Hrng/viewform';
 
-const STYLE_CYCLE = ['B','A','C','D','F','H','I','J','L','M','P','Q'];
+const STYLE_CYCLE = ['B','A','C','D','F','H','I','J','L','M','P','Q','G'];
 const STYLE_NAMES = {
   A:'SCAN', B:'ORBIT', C:'GHOST',
   D:'NEURAL', F:'PXSORT', H:'GRAIN', I:'EVAP', J:'ASCII',
   L:'MOSAIC', M:'CONTAGION',
-  P:'THERMAL', Q:'WAVEFIELD'
+  P:'THERMAL', Q:'WAVEFIELD', G:'MOSH'
 };
 
 // ── MIX layer — category-based compositing ────────────────────────────────────
@@ -1507,13 +1591,19 @@ let _filterComposite=false;  // true → filter graphics (THERMAL/PXSORT) read t
                              // raw camera, so they recolor the mixed tracker too.
 // Graphic styles that are true IMAGE FILTERS (read pixels & remap them). These
 // can filter a tracker drawn underneath. The rest are generative (mask-based).
-const FILTER_GRAPHICS = { P:true, F:true };
+const FILTER_GRAPHICS = { P:true, F:true, H:true, G:true };
+// Only these styles expose a MIX under-layer (they read the composited canvas).
+const MIX_HOSTS = { H:true, P:true, G:true };
 // TRACKER styles = annotation overlays over the live frame (blob-driven).
 // GRAPHIC styles = full-frame image transforms.
+// Which global detection params each style actually consumes → drives which
+// sliders are shown. USES_DETECT: motion+brightness; USES_MINBLOB: + min size.
+const USES_DETECT  = { A:1,B:1,D:1,H:1,I:1,J:1,L:1,Q:1 };
+const USES_MINBLOB = { A:1,B:1,D:1,H:1,L:1,Q:1 };  // depth-only (I,J) don't need it
 const STYLE_KIND = {
   B:'tracker', A:'tracker', D:'tracker', L:'tracker',
   C:'graphic', F:'graphic', H:'graphic', I:'graphic', J:'graphic',
-  M:'graphic', P:'graphic', Q:'graphic',
+  M:'graphic', P:'graphic', Q:'graphic', G:'graphic',
 };
 // Every style can be a mix layer EXCEPT stateful ones that repaint/own timing.
 // (CONTAGION M is stateful/touch-reactive → excluded as a layer.)
@@ -1622,12 +1712,20 @@ function applyPaletteTheme(cfgKey, optionIndex){
 let compositeCanvas = null, compositeCtx = null;
 // Effect render resolution cap (longest side). CSS scales the canvas up to fill
 // the screen, so lowering this trades sharpness for a constant per-pixel budget.
-const RENDER_MAX = 960;
+const RENDER_MAX = 1200;
 // Compute capped backing-store size for a target CSS viewport.
 function renderSize(cssW, cssH){
   const longest = Math.max(cssW, cssH);
   const s = longest > RENDER_MAX ? RENDER_MAX/longest : 1;
   return { w: Math.round(cssW*s), h: Math.round(cssH*s) };
+}
+// For uploads: build a backing store that matches the MEDIA aspect (capped), so
+// nothing is cropped. The canvas is letterboxed on screen by object-fit:contain.
+function renderSizeFor(mediaW, mediaH){
+  if(!mediaW || !mediaH) return renderSize(window.innerWidth, window.innerHeight);
+  const longest = Math.max(mediaW, mediaH);
+  const s = longest > RENDER_MAX ? RENDER_MAX/longest : 1;
+  return { w: Math.max(2, Math.round(mediaW*s)), h: Math.max(2, Math.round(mediaH*s)) };
 }
 let workCanvas      = null, workCtx      = null;
 let _effectCanvas   = null, _effectCtx   = null;  // for styles E and F
@@ -1913,6 +2011,13 @@ function drawStyleF(ctx, cW, cH) {
 function drawStyleH(ctx, cW, cH) {
   if (!_effectCtx || !_dstImgData) return;
   const d   = _dstImgData.data;
+  // If a mix layer is underneath, seed the buffer with the composited canvas so
+  // non-silhouette pixels reveal it instead of being painted black.
+  let _bg=null;
+  if (_filterComposite) {
+    try { _effectCtx.drawImage(compositeCanvas,0,0,cW,cH,0,0,PROC_W,PROC_H);
+      _bg=_effectCtx.getImageData(0,0,PROC_W,PROC_H).data; } catch(e){ _bg=null; }
+  }
   const frm = CFG.grainSpeed <= 0 ? 0 : ((performance.now() * CFG.grainSpeed * 0.0015) | 0);
   const scale = Math.max(1, CFG.grainScale|0);
   const densityCut = CFG.grainDensity / 100;        // 0..1
@@ -1933,7 +2038,7 @@ function drawStyleH(ctx, cW, cH) {
         let h = (((blockX * 73856093) ^ (blockY * 19349663) ^ (frm * 0x6C62272E)) >>> 0);
         const noise = (h & 0xFF) / 255;
         // Density: some blocks stay dark
-        if (((h >>> 8) & 0xFF) / 255 > densityCut) { d[di]=0; d[di+1]=0; d[di+2]=0; d[di+3]=255; continue; }
+        if (((h >>> 8) & 0xFF) / 255 > densityCut) { if(_bg){d[di]=_bg[di];d[di+1]=_bg[di+1];d[di+2]=_bg[di+2];}else{d[di]=0;d[di+1]=0;d[di+2]=0;} d[di+3]=255; continue; }
         let r, g, b;
         switch (pal) {
           case 1: // amber
@@ -1950,7 +2055,7 @@ function drawStyleH(ctx, cW, cH) {
             r = (100 + noise*60)*flick; g = (185 + noise*55)*flick; b = (45 + noise*38)*flick;
         }
         d[di]=r|0; d[di+1]=g|0; d[di+2]=b|0; d[di+3]=255;
-      } else { d[di]=0; d[di+1]=0; d[di+2]=0; d[di+3]=255; }
+      } else { if(_bg){d[di]=_bg[di];d[di+1]=_bg[di+1];d[di+2]=_bg[di+2];}else{d[di]=0;d[di+1]=0;d[di+2]=0;} d[di+3]=255; }
     }
   }
 
@@ -2402,8 +2507,23 @@ function drawStyleP(ctx, cW, cH){
 // (amplitudes sum) like on a real pond. Computed at reduced resolution on
 // pre-allocated buffers, then scaled up with smoothing for a liquid look.
 const RIP = { W:0, H:0, srcCanvas:null, srcCtx:null, outCanvas:null, outCtx:null, outImg:null };
+// Persistent ripple pool — pre-allocated, reused every frame (Zero-GC). A slot
+// stays alive and keeps radiating after its blob vanishes; env decays over
+// RIPPLE_DECAY seconds so the wave "dies with a delay", like a stone in water.
+const RIPPLE_MAX = 8;
+const RIPPLE_DECAY = 2.6;                 // seconds for a released ripple to fade
+const RIPPLE_LINK_D2 = 0.10;              // squared norm-dist to bind a blob to a slot
+const _rip = {
+  x:   new Float32Array(RIPPLE_MAX),      // ripple-space x
+  y:   new Float32Array(RIPPLE_MAX),      // ripple-space y
+  env: new Float32Array(RIPPLE_MAX),      // amplitude envelope [0..1]
+  t0:  new Float32Array(RIPPLE_MAX),      // birth time (s) → phase origin
+  live:new Uint8Array(RIPPLE_MAX),        // 1 while a blob is feeding this slot
+  used:new Uint8Array(RIPPLE_MAX),        // 1 if slot active (env>0)
+};
 function _initRipple(cW, cH){
-  const w = STATE.isRecording ? 128 : 180, h = Math.max(72, Math.round(w * cH / cW));
+  const _rec = STATE.isRecording && !STATE.uploadMode;   // degrade live-record only, keep export sharp
+  const w = _rec ? 128 : 180, h = Math.max(72, Math.round(w * cH / cW));
   RIP.W=w; RIP.H=h;
   if(!RIP.srcCanvas){
     RIP.srcCanvas=document.createElement('canvas'); RIP.srcCtx=RIP.srcCanvas.getContext('2d',{willReadFrequently:true});
@@ -2414,7 +2534,7 @@ function _initRipple(cW, cH){
   RIP.outImg=RIP.outCtx.createImageData(w,h);
 }
 function drawStyleQ(ctx, cW, cH, now){
-  const _tw=STATE.isRecording?128:180, _th=Math.max(72,Math.round(_tw*cH/cW));
+  const _tw=(STATE.isRecording&&!STATE.uploadMode)?128:180, _th=Math.max(72,Math.round(_tw*cH/cW));
   if(!RIP.srcCanvas || RIP.W!==_tw || RIP.H!==_th) _initRipple(cW,cH);
   const W=RIP.W, H=RIP.H;
   // 1. current frame at ripple resolution
@@ -2422,24 +2542,55 @@ function drawStyleQ(ctx, cW, cH, now){
   let sImg; try{ sImg=RIP.srcCtx.getImageData(0,0,W,H); }catch(e){ return; }
   const sd=sImg.data, od=RIP.outImg.data;
 
-  // 2. ripple sources: active blobs mapped to ripple-space (max 5); if none,
-  //    a gentle ambient source keeps the surface alive.
-  const sx=[], sy=[];
-  const _maxSrc = STATE.isRecording ? 3 : 5;
-  for(let ti=0;ti<MAX_TRACKED && sx.length<_maxSrc;ti++){
-    const t=_tracked[ti];
-    if(t.active && t.age>=2){ sx.push(t.scx/cW*W); sy.push(t.scy/cH*H); }
-  }
-  if(sx.length===0){ sx.push(W*0.5 + Math.sin(now/2400)*W*0.2); sy.push(H*0.5 + Math.cos(now/3100)*H*0.2); }
-  const nS=sx.length;
-
+  // 2. Update the persistent ripple pool (Zero-GC).
   const t=now/1000;
   const lam=Math.max(6, CFG.waveLen*W/900);      // wavelength in ripple px
   const omega=CFG.waveSpeed/10;                   // temporal frequency
+  const k=(Math.PI*2)/lam;
+  const _dtS=Math.min(0.1, (now-(RIP._prev||now))/1000); RIP._prev=now;
+  // (a) mark all live slots stale; live blobs will refresh the ones they own.
+  for(let i=0;i<RIPPLE_MAX;i++) _rip.live[i]=0;
+  const _maxSrc = (STATE.isRecording && !STATE.uploadMode) ? 3 : 5;
+  let _bound=0;
+  for(let ti=0;ti<MAX_TRACKED && _bound<_maxSrc;ti++){
+    const tr=_tracked[ti];
+    if(!(tr.active && tr.age>=2)) continue;
+    const bx=tr.scx/cW*W, by=tr.scy/cH*H;
+    // find nearest existing slot within link radius, else claim a free/weakest one
+    let best=-1, bestD=1e9;
+    for(let i=0;i<RIPPLE_MAX;i++){
+      if(!_rip.used[i]) continue;
+      const dx=(_rip.x[i]-bx)/W, dy=(_rip.y[i]-by)/H, d=dx*dx+dy*dy;
+      if(d<bestD){ bestD=d; best=i; }
+    }
+    if(best<0 || bestD>RIPPLE_LINK_D2){
+      best=-1; let weakest=1e9;
+      for(let i=0;i<RIPPLE_MAX;i++){ if(!_rip.used[i]){best=i;break;} if(_rip.env[i]<weakest){weakest=_rip.env[i];best=i;} }
+      _rip.t0[best]=t;                    // new impact → fresh phase origin
+    }
+    _rip.x[best]=bx; _rip.y[best]=by; _rip.env[best]=1; _rip.live[best]=1; _rip.used[best]=1;
+    _bound++;
+  }
+  // (b) released ripples keep radiating at full strength; free a slot only once
+  //     its expanding front has passed the screen diagonal (fully off-screen).
+  const _diag=Math.sqrt(W*W+H*H);
+  for(let i=0;i<RIPPLE_MAX;i++){
+    if(!_rip.used[i]) continue;
+    if(!_rip.live[i]){
+      const front=(t-_rip.t0[i])*omega*6/k;
+      if(front-lam>_diag){ _rip.env[i]=0; _rip.used[i]=0; }   // whole ring left the view
+    }
+  }
+  // (c) ambient source keeps the surface alive when the pool is empty.
+  let nUsed=0; for(let i=0;i<RIPPLE_MAX;i++) if(_rip.used[i]) nUsed++;
+  if(nUsed===0){
+    _rip.x[0]=W*0.5+Math.sin(now/2400)*W*0.2; _rip.y[0]=H*0.5+Math.cos(now/3100)*H*0.2;
+    _rip.env[0]=0.5; _rip.t0[0]=0; _rip.used[0]=1;
+  }
+
   // Amplitude is pushed hard: quadratic scaling so high "Depth" truly shreds the
   // image. Falloff is gentler so waves travel far and interfere destructively.
   const amp=(CFG.waveAmp*CFG.waveAmp)*W/2400;
-  const k=(Math.PI*2)/lam;
   const CA=Math.min(6, amp*0.5);                   // chromatic-aberration split (px)
 
   // 3. per-pixel displacement: sum of radial waves from each source.
@@ -2450,14 +2601,27 @@ function drawStyleQ(ctx, cW, cH, now){
     const row=y*W;
     for(let x=0;x<W;x++){
       let ox=0, oy=0, shade=0, grad=0;
-      for(let s=0;s<nS;s++){
-        const dx=x-sx[s], dy=y-sy[s];
+      for(let si=0;si<RIPPLE_MAX;si++){
+        if(!_rip.used[si]) continue;
+        const e=_rip.env[si]; if(e<=0.001) continue;
+        const dx=x-_rip.x[si], dy=y-_rip.y[si];
         const dist=Math.sqrt(dx*dx+dy*dy)+0.0001;
-        const fall=1/(1+dist*0.020);               // slower falloff → waves reach further
-        const phase=dist*k - t*omega*6;
-        const w=Math.cos(phase)*fall;              // wave height (interferes by summing)
-        const dw=-Math.sin(phase)*k*fall;          // spatial gradient → steep ridges push more
-        const g=(w+dw*0.6)*amp/dist;               // displacement, biased by slope
+        const age=t-_rip.t0[si];
+        // Leading wavefront radius: grows with age at the wave speed. A released
+        // ripple keeps expanding (front moves outward) while env fades, so it
+        // dies by spreading, not by collapsing at the source.
+        const front=age*omega*6/k;                 // radius of the outermost crest
+        if(dist>front+lam) continue;               // ahead of the front → still calm
+        // annulus window: full weight behind the front, feathered over one λ at
+        // the leading edge.
+        const edge=front-dist;
+        const ring=edge<lam ? (edge<0?0:edge/lam) : 1;
+        if(ring<=0) continue;
+        const fall=1/(1+dist*0.020);
+        const phase=dist*k - age*omega*6;
+        const w=Math.cos(phase)*fall*e*ring;
+        const dw=-Math.sin(phase)*k*fall*e*ring;
+        const g=(w+dw*0.6)*amp/dist;
         ox+=dx*g; oy+=dy*g; shade+=w; grad+=Math.abs(dw);
       }
       // chromatic split along the displacement direction
@@ -2496,6 +2660,126 @@ function drawStyleQ(ctx, cW, cH, now){
   ctx.drawImage(RIP.outCanvas,0,0,cW,cH);
 }
 
+// ── Style N — MOSH (motion-vector datamosh, perpetual bloom) ──────────────────
+// Coarse block-matching between prev/current grayscale yields a motion field;
+// the persistent feedback canvas is torn block-by-block along those vectors, so
+// moving regions smear and "bloom" without ever resetting. Zero-GC.
+function drawStyleG(ctx, cW, cH, now){
+  if(!MOSH.vx || !MOSH.g){ ctx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH); return; }
+  const BS=MOSH.BS, bw=MOSH.bw, bh=MOSH.bh, R=MOSH.search;
+  // MOSH samples its OWN grayscale every frame (the shared detector is throttled
+  // and would zero-out motion). Small canvas → proc-res gray.
+  if(!MOSH.gcanvas){ MOSH.gcanvas=document.createElement('canvas'); MOSH.gcanvas.width=PROC_W; MOSH.gcanvas.height=PROC_H; MOSH.gctx=MOSH.gcanvas.getContext('2d',{willReadFrequently:true}); }
+  MOSH.gctx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,PROC_W,PROC_H);
+  let _md; try{ _md=MOSH.gctx.getImageData(0,0,PROC_W,PROC_H).data; }catch(e){ ctx.drawImage(MOSH.fb||MOSH.gcanvas,0,0,cW,cH); return; }
+  for(let i=0,j=0;i<PROC_N;i++,j+=4){ MOSH.g[i]=(_md[j]*0.299+_md[j+1]*0.587+_md[j+2]*0.114)|0; }
+  // (1) Per-block motion field (block-match SAD, subsampled) + per-block motion
+  //     energy. This is only used to STEER the mosh, not to copy blocks.
+  for(let by=0;by<bh;by++){
+    for(let bx=0;bx<bw;bx++){
+      const ox=bx*BS, oy=by*BS;
+      let bestDx=0,bestDy=0,best=1e12,energy=0;
+      for(let dy=-R;dy<=R;dy+=2){
+        for(let dx=-R;dx<=R;dx+=2){
+          let sad=0;
+          for(let yy=2;yy<BS;yy+=4){
+            const sy=oy+yy; if(sy>=PROC_H) break;
+            const ty=sy+dy; if(ty<0||ty>=PROC_H){ sad=1e12; break; }
+            for(let xx=2;xx<BS;xx+=4){
+              const sx=ox+xx; if(sx>=PROC_W) continue;
+              const tx=sx+dx; if(tx<0||tx>=PROC_W){ sad+=255; continue; }
+              const a=MOSH.g[sy*PROC_W+sx], b=MOSH.pg[ty*PROC_W+tx];
+              sad += a>b?a-b:b-a;
+            }
+          }
+          if(sad<best){ best=sad; bestDx=dx; bestDy=dy; }
+        }
+      }
+      // energy = how much this block changed frame-to-frame (0 static → 1 moving)
+      const bi=by*bw+bx;
+      let diff=0;
+      for(let yy=2;yy<BS;yy+=4){ const sy=oy+yy; if(sy>=PROC_H)break;
+        for(let xx=2;xx<BS;xx+=4){ const sx=ox+xx; if(sx>=PROC_W)continue;
+          const i=sy*PROC_W+sx; const a=MOSH.g[i],b=MOSH.pg[i]; diff+=a>b?a-b:b-a; } }
+      MOSH.vx[bi]=MOSH.vx[bi]*0.4 + bestDx*0.6;
+      MOSH.vy[bi]=MOSH.vy[bi]*0.4 + bestDy*0.6;
+      MOSH.en ? (MOSH.en[bi]=Math.min(1,diff/1400)) : 0;
+    }
+  }
+  // (2) persistent feedback buffer (this is the datamosh accumulator).
+  if(!MOSH.fb || MOSH.fbW!==cW || MOSH.fbH!==cH){
+    MOSH.fb=document.createElement('canvas'); MOSH.fb.width=cW; MOSH.fb.height=cH;
+    MOSH.fbctx=MOSH.fb.getContext('2d'); MOSH.fbW=cW; MOSH.fbH=cH;
+    if(_filterComposite){ MOSH.fbctx.drawImage(compositeCanvas,0,0,cW,cH,0,0,cW,cH); } else { MOSH.fbctx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH); }
+    MOSH.tmp=document.createElement('canvas'); MOSH.tmp.width=cW; MOSH.tmp.height=cH;
+    MOSH.tmpctx=MOSH.tmp.getContext('2d');
+    MOSH.live=document.createElement('canvas'); MOSH.live.width=cW; MOSH.live.height=cH;
+    MOSH.livectx=MOSH.live.getContext('2d');
+  }
+  const fbx=MOSH.fbctx;
+  // Tap = clean cut: reseed buffer from the live frame, clear the mosh (one reset
+  // per touch via a latch), so references aren't lost after heavy smearing.
+  if (TOUCH.active && !MOSH._touchLatch){
+    MOSH._touchLatch = true;
+    MOSH.ax.fill(0); MOSH.ay.fill(0); if(MOSH.en) MOSH.en.fill(0);
+    fbx.clearRect(0,0,cW,cH);
+    if(_filterComposite){ fbx.drawImage(compositeCanvas,0,0,cW,cH,0,0,cW,cH); } else { fbx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH); }
+  }
+  if (!TOUCH.active) MOSH._touchLatch = false;
+  const sxr=cW/PROC_W, syr=cH/PROC_H;
+  const gain=CFG.moshBleed/10;
+  // overlap blocks so displaced copies bleed into neighbours (no hard squares)
+  const DBX=Math.ceil(cW/bw), DBY=Math.ceil(cH/bh);
+  const OV=Math.round(Math.max(DBX,DBY)*0.5);           // overlap margin
+
+  // snapshot the live frame once
+  if (_filterComposite){ MOSH.livectx.drawImage(compositeCanvas,0,0,cW,cH,0,0,cW,cH); }
+  else { MOSH.livectx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH); }
+
+  // (3) DATAMOSH core: displace the PERSISTENT buffer by each block's motion
+  //     vector. Pixels already in the buffer get pushed along the new frame's
+  //     vectors (P-frame applied to wrong content) → smearing that compounds.
+  MOSH.tmpctx.clearRect(0,0,cW,cH);
+  MOSH.tmpctx.drawImage(MOSH.fb,0,0);                   // source = previous output
+  fbx.clearRect(0,0,cW,cH);
+  for(let by=0;by<bh;by++){
+    for(let bx=0;bx<bw;bx++){
+      const bi=by*bw+bx;
+      const mvx=MOSH.vx[bi]*sxr*gain, mvy=MOSH.vy[bi]*syr*gain;
+      const dx=bx*DBX, dy=by*DBY;
+      // source region (with overlap) pulled from BEHIND the motion vector
+      let sX=dx-mvx-OV, sY=dy-mvy-OV;
+      const sW=DBX+OV*2, sH=DBY+OV*2;
+      if(sX<0)sX=0; else if(sX>cW-sW)sX=cW-sW;
+      if(sY<0)sY=0; else if(sY>cH-sH)sY=cH-sH;
+      fbx.drawImage(MOSH.tmp, sX,sY,sW,sH, dx-OV,dy-OV,sW,sH);
+    }
+  }
+
+  // (4) P-frame refresh: stamp the LIVE frame back ONLY where motion is low, so
+  //     still areas stay crisp while moving areas keep moshing. Refresh scales
+  //     how strongly static blocks update.
+  const fresh=CFG.moshRefresh/100;
+  if(fresh>0 && MOSH.en){
+    for(let by=0;by<bh;by++){
+      for(let bx=0;bx<bw;bx++){
+        const bi=by*bw+bx;
+        const a=(1-MOSH.en[bi])*fresh;                  // still → strong refresh
+        if(a<=0.03) continue;
+        fbx.globalAlpha=Math.min(1,a);
+        const dx=bx*DBX, dy=by*DBY;
+        fbx.drawImage(MOSH.live, dx,dy,DBX,DBY, dx,dy,DBX,DBY);
+      }
+    }
+    fbx.globalAlpha=1;
+  }
+
+  // (5) present + store this frame's gray for next diff
+  MOSH.pg.set(MOSH.g);
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(MOSH.fb,0,0,cW,cH);
+}
+
 // Brief zoom-level badge shown while/just after pinching.
 function drawZoomBadge(ctx, cW, cH, now){
   if (STATE.isRecording) return;
@@ -2530,6 +2814,7 @@ function loop(now) {
   if (!STATE.cameraOk || (!STILL.active && videoEl.readyState < 2)) return;
   STATE.fpsFrames++;
   if (now-STATE.fpsT>=1000){STATE.fps=STATE.fpsFrames;STATE.fpsFrames=0;STATE.fpsT=now;}
+  const cW=compositeCanvas.width, cH=compositeCanvas.height;
   if (STATE.perfOn){
     const dt = now - (STATE._perfPrev||now); STATE._perfPrev = now;
     STATE.frameMs = dt;
@@ -2537,39 +2822,20 @@ function loop(now) {
     if (_perfHud) _perfHud.textContent =
       STATE.fps+'fps  '+STATE.frameMsEMA.toFixed(1)+'ms  '+cW+'x'+cH+'  proc:'+PROC_W+'x'+PROC_H;
   }
-  const cW=compositeCanvas.width, cH=compositeCanvas.height;
   if (!_crop.valid) updateCrop(STATE.videoW,STATE.videoH,cW,cH);
 
   // A. Base layer + MIX compositing.
-  //    Four cases, from two facts (tracker vs graphic for each layer, and whether
-  //    the active graphic is an image FILTER):
-  //      1. active TRACKER + any mix → mix is the base (drawn now); the active
-  //         tracker annotates on top later in the switch.  (_underMix)
-  //      2. active FILTER graphic (THERMAL/PXSORT) + tracker mix → draw frame +
-  //         tracker now, then the filter reads the COMPOSITE and recolors it all,
-  //         so e.g. THERMAL tints ORBIT's strokes too.  (_filterComposite)
-  //      3. active generative graphic + tracker mix → tracker drawn ON TOP after
-  //         the switch (generative styles can't filter it).  (_mixOnTop)
-  //      4. graphic + graphic mix → mix under, active paints over.  (_underMix)
-  const _mixOn = mixIsValid();
-  const _mixIsTracker    = _mixOn && STYLE_KIND[CFG.mixStyle]==='tracker';
-  const _activeIsTracker = STYLE_KIND[CFG.style]==='tracker';
-  const _selfBg = (CFG.style==='C'||CFG.style==='L'||CFG.style==='M'||CFG.style==='P'||CFG.style==='Q');
+  //    MIX host compositing:
+  // MIX is only offered when the active style is a host (GRAIN/THERMAL). The mix
+  //  layer is drawn onto the frame first, then the host reads the COMPOSITE and
+  //  shows/recolors whatever is beneath it. All other styles get the plain frame.
+  const _mixOn = mixIsValid() && MIX_HOSTS[CFG.style];
+  const _selfBg = (CFG.style==='C'||CFG.style==='L'||CFG.style==='M'||CFG.style==='P'||CFG.style==='Q'||CFG.style==='G');
   _underMix = false; _filterComposite = false;
-  let _mixOnTop = false;
-  if (_mixOn && _activeIsTracker) {
-    try { MIX_DRAW[CFG.mixStyle](compositeCtx,cW,cH,now); } catch(e){}   // case 1
-    _underMix = true;
-  } else if (_mixOn && _mixIsTracker && FILTER_GRAPHICS[CFG.style]) {     // case 2
+  if (_mixOn) {
     compositeCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
     try { MIX_DRAW[CFG.mixStyle](compositeCtx,cW,cH,now); } catch(e){}
-    _filterComposite = true;
-  } else if (_mixOn && _mixIsTracker) {                                  // case 3
-    if (!_selfBg) compositeCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
-    _mixOnTop = true;
-  } else if (_mixOn) {                                                   // case 4
-    try { MIX_DRAW[CFG.mixStyle](compositeCtx,cW,cH,now); } catch(e){}
-    _underMix = true;
+    _filterComposite = true;   // host (H/P) will read the composited canvas
   } else if (!_selfBg) {
     compositeCtx.drawImage(sourceFrame(),_crop.sx,_crop.sy,_crop.sw,_crop.sh,0,0,cW,cH);
   }
@@ -2614,14 +2880,9 @@ function loop(now) {
     case 'M': drawStyleM(compositeCtx,cW,cH,now);   break;
     case 'P': drawStyleP(compositeCtx,cW,cH);       break;
     case 'Q': drawStyleQ(compositeCtx,cW,cH,now);   break;
+    case 'G': drawStyleG(compositeCtx,cW,cH,now);   break;
   }
 
-  // G. Case 3 — a tracker mix over a generative graphic is drawn ON TOP here,
-  //    so its annotations sit above the graphic instead of being covered.
-  if (_mixOnTop) {
-    _underMix = true;   // MOSAIC uses the already-painted canvas as its base
-    try { MIX_DRAW[CFG.mixStyle](compositeCtx,cW,cH,now); } catch(e){}
-  }
 
   // Noise overlay (on top of style, under HUD)
   if (CFG.noise > 0) drawNoise(compositeCtx, cW, cH, CFG.noise);
@@ -2639,7 +2900,7 @@ function loop(now) {
 async function startCamera() {
   try {
     const stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:STATE.facingMode},width:{ideal:1280},height:{ideal:720}},
+      video:{facingMode:{ideal:STATE.facingMode},width:{ideal:1920},height:{ideal:1080}},
       audio:false
     });
     videoEl.srcObject=stream; STATE.camStream=stream;
@@ -2670,6 +2931,7 @@ async function _startCameraFallback() {
   } catch(e) { showError('Cannot access any camera: '+e.message); return false; }
 }
 function _finaliseCamera() {
+  compositeCanvas.classList.remove('fit-contain');   // live fills the screen
   const _rs=renderSize(window.innerWidth,window.innerHeight);
   const cW=_rs.w, cH=_rs.h;
   compositeCanvas.width=cW; compositeCanvas.height=cH;
@@ -2722,10 +2984,11 @@ function startUploadedVideo(file) {
     if (SRC.active){ STATE.videoW=SRC.w; STATE.videoH=SRC.h; }
     STATE.uploadMode = true;
 
-    // Mirror _finaliseCamera setup
-    const _rs=renderSize(window.innerWidth,window.innerHeight);
+    // Mirror _finaliseCamera setup, but keep the clip's own proportions
+    const _rs=renderSizeFor(STATE.videoW,STATE.videoH);
     const cW=_rs.w, cH=_rs.h;
     compositeCanvas.width=cW; compositeCanvas.height=cH;
+    compositeCanvas.classList.add('fit-contain');
     let pW=240, pH=Math.round(pW*cH/cW);
     if (pW*pH>150000){const s=Math.sqrt(150000/(pW*pH));pW=(pW*s)|0;pH=(pH*s)|0;}
     workCanvas.width=pW; workCanvas.height=pH;
@@ -2773,9 +3036,10 @@ function startUploadedImage(file){
     STATE.uploadMode=true;   // record button → re-export the styled still as PNG? keep photo flow
     SRC.active=false;
 
-    const _rs=renderSize(window.innerWidth,window.innerHeight);
+    const _rs=renderSizeFor(w,h);            // keep the photo's own proportions
     const cW=_rs.w, cH=_rs.h;
     compositeCanvas.width=cW; compositeCanvas.height=cH;
+    compositeCanvas.classList.add('fit-contain');
     let pW=240, pH=Math.round(pW*cH/cW);
     if (pW*pH>150000){const s=Math.sqrt(150000/(pW*pH));pW=(pW*s)|0;pH=(pH*s)|0;}
     workCanvas.width=pW; workCanvas.height=pH;
@@ -2818,7 +3082,7 @@ async function renderUploadedClip() {
   }
 
   // Build combined stream: canvas video + synth audio
-  const videoStream = compositeCanvas.captureStream(24);
+  const videoStream = compositeCanvas.captureStream(60);
   let stream = videoStream;
   if (AUDIO.ready && AUDIO.streamDest) {
     try {
@@ -2886,7 +3150,7 @@ async function renderUploadedClip() {
     const durMs = performance.now() - startT;
     if (eff.includes('webm')) { try { blob = await fixWebmDuration(blob, durMs); } catch(_){} }
     const ext = eff.includes('mp4')?'mp4':'webm';
-    saveBlob(blob, 'raster_styled_'+Date.now()+'.'+ext);
+    presentSave(blob, 'raster_styled_'+Date.now()+'.'+ext, true);
   };
 }
 
@@ -3021,7 +3285,7 @@ function startRecording() {
     for (const mt of _mimeTypeCandidates) if(MediaRecorder.isTypeSupported(mt)){mimeType=mt;break;}
   }
   try {
-    const videoStream=compositeCanvas.captureStream(24);
+    const videoStream=compositeCanvas.captureStream(60);
     // Mix video + synthesized audio into a single combined stream.
     // If audio is unavailable (initAudio failed or inactive), record video-only.
     let combinedStream = videoStream;
@@ -3055,7 +3319,7 @@ function startRecording() {
         try { blob = await fixWebmDuration(blob, durMs); } catch(_) {}
       }
       const ext=eff.includes('mp4')?'mp4':'webm';
-      saveBlob(blob, 'raster_'+Date.now()+'.'+ext);
+      presentSave(blob, 'raster_'+Date.now()+'.'+ext, true);
     };
     STATE.mediaRecorder.onerror=e=>{showError('Recording error: '+(e.error?e.error.message:'unknown'));stopRecording();};
     STATE.mediaRecorder.start(100);
@@ -3122,6 +3386,7 @@ function returnToHome() {
   STATE.uploadCancelled = false;
   SRC.active = false;
   STILL.active = false;
+  if (compositeCanvas) compositeCanvas.classList.remove('fit-contain');
   STATE.facingMode = 'environment';
   if (compositeCanvas) compositeCanvas.classList.remove('mirrored');
   ZOOM.factor = 1;
@@ -3142,6 +3407,49 @@ function returnToHome() {
 // If the user granted a folder once (from the home screen), every file writes
 // straight into it with NO further prompts. Otherwise: showSaveFilePicker (one
 // prompt) or, as a last resort, a direct anchor download.
+// Preview gate: if enabled, show the result with Save/Discard before committing.
+// Pre-allocated element refs; object URL reused/revoked to avoid leaks (zero-GC
+// intent — one URL string lives at a time).
+let _spBlob=null, _spName='', _spURL=null, _spWired=false;
+function _spCleanup(){
+  if(_spURL){ URL.revokeObjectURL(_spURL); _spURL=null; }
+  const m=document.getElementById('save-preview-media'); if(m) m.textContent='';
+  _spBlob=null;
+}
+function presentSave(blob, filename, isVideo){
+  if(!STATE.previewOn){ saveBlob(blob, filename); return; }
+  const wrap=document.getElementById('save-preview');
+  const media=document.getElementById('save-preview-media');
+  if(!wrap||!media){ saveBlob(blob, filename); return; }
+  _spBlob=blob; _spName=filename;
+  if(_spURL) URL.revokeObjectURL(_spURL);
+  _spURL=URL.createObjectURL(blob);
+  media.textContent='';
+  let el;
+  if(isVideo){ el=document.createElement('video'); el.src=_spURL; el.controls=true;
+    el.autoplay=true; el.loop=true; el.playsInline=true;
+    el.muted=true; el.setAttribute('muted','');            // iOS: unmuted autoplay is blocked
+    el.setAttribute('playsinline','');
+    el.play().catch(()=>{});                                // best-effort kick
+  }
+  else { el=document.createElement('img'); el.src=_spURL; }
+  media.appendChild(el);
+  wrap.classList.add('show');
+  if(!_spWired){
+    _spWired=true;
+    document.getElementById('sp-save').addEventListener('click',()=>{
+      const b=_spBlob, n=_spName;
+      document.getElementById('save-preview').classList.remove('show');
+      _spCleanup();
+      if(b) saveBlob(b, n);
+    });
+    document.getElementById('sp-discard').addEventListener('click',()=>{
+      document.getElementById('save-preview').classList.remove('show');
+      _spCleanup();
+    });
+  }
+}
+
 async function saveBlob(blob, filename) {
   const type = blob.type || (filename.endsWith('.png') ? 'image/png' : 'video/webm');
 
@@ -3215,6 +3523,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   compositeCanvas=document.getElementById('composite');
   compositeCtx=compositeCanvas.getContext('2d',{willReadFrequently:false,alpha:false});
+
+  loadSettings();   // restore persisted style/params/toggles before UI is built
 
   workCanvas=document.createElement('canvas');
   workCtx=workCanvas.getContext('2d',{willReadFrequently:true});
@@ -3291,10 +3601,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Contextual TUNE panel: per-effect parameters ──────────────────────────
   // Spec format: [cfgKey, label, min, max, step, isSelect?, options?]
   const TUNE_SPECS = {
-    B: [],  // ORBIT — no extra params
-    A: [],  // SCAN  — no extra params
-    C: [],  // GHOST — no extra params
+    B: [
+      ['showConnectors','Connectors',0,1,1,true,['Off','On']],
+      ['showLabels','Labels',0,1,1,true,['Off','On']],
+    ],
+    A: [
+      ['showConnectors','Connectors',0,1,1,true,['Off','On']],
+      ['showLabels','Labels',0,1,1,true,['Off','On']],
+    ],
+    C: [
+      ['neuralCurve','Trail Curve',0,60,1],
+    ],
     D: [
+      ['neuralNodes','Nodes',3,14,1],
       ['neuralCurve','Curvature',0,60,1],
     ],
     F: [
@@ -3339,11 +3658,20 @@ document.addEventListener('DOMContentLoaded', () => {
       ['waveSpeed','Wave Speed',5,100,1],
       ['waveAmp','Depth',2,60,1],
     ],
+    G: [
+      ['moshBleed','Bleed',2,40,1],
+      ['moshRefresh','Refresh',0,100,1],
+    ],
   };
 
   function buildTunePanel(style) {
     const head = document.getElementById('tune-head');
     if (head) head.textContent = STYLE_NAMES[style] || '';
+    // Show detection sliders only for styles that consume them.
+    const dc = document.getElementById('detect-controls');
+    if (dc) dc.style.display = USES_DETECT[style] ? '' : 'none';
+    const mb = document.getElementById('row-minblob');
+    if (mb) mb.style.display = USES_MINBLOB[style] ? '' : 'none';
     const host = document.getElementById('tune-dynamic');
     if (!host) return;
     host.innerHTML = '';
@@ -3377,6 +3705,7 @@ document.addEventListener('DOMContentLoaded', () => {
             CFG[key] = oi;
             grp.querySelectorAll('.toggle-btn').forEach((x,xi)=>x.classList.toggle('on',xi===oi));
             applyPaletteTheme(key, oi);   // palette choice re-tints the interface
+            saveSettings();
           });
           grp.appendChild(b);
         });
@@ -3396,55 +3725,71 @@ document.addEventListener('DOMContentLoaded', () => {
           CFG[key] = parseInt(this.value, 10);
           valSpan.textContent = this.value;
         });
+        inp.addEventListener('change', saveSettings);   // persist when slider released
         row.appendChild(inp);
       }
       host.appendChild(row);
     });
 
-    // ── MIX section: any style can be layered UNDER the active one, except a
-    //    tracker cannot be mixed with another tracker. The mix always renders
-    //    beneath the active effect.
-    const kind = STYLE_KIND[style];
-    const mixSect = document.createElement('div');
-    mixSect.className = 'tune-sect';
-    mixSect.textContent = '/ MIX — LAYER UNDER';
-    host.appendChild(mixSect);
-    const mixRow = document.createElement('div');
-    mixRow.className = 'ctrl-row';
-    const mixGrp = document.createElement('div');
-    mixGrp.className = 'toggle-row';
-    mixGrp.style.flexWrap = 'wrap';
-    Object.keys(MIX_ALL).forEach(k => {
-      if (k === style) return;                                   // not itself
-      if (k && kind==='tracker' && STYLE_KIND[k]==='tracker') return; // no tracker+tracker
-      const b = document.createElement('button');
-      b.className = 'toggle-btn' + (CFG.mixStyle===k ? ' on' : '');
-      b.textContent = MIX_ALL[k];
-      b.style.fontSize = '.5rem';
-      b.style.flex = '1 1 30%';
-      b.addEventListener('click', () => {
-        CFG.mixStyle = k;
-        mixGrp.querySelectorAll('.toggle-btn').forEach(x=>x.classList.toggle('on', x===b));
+    // ── MIX section: only GRAIN and THERMAL can host an UNDER-layer (they read
+    //    the composited canvas and show/recolor what's beneath). Every other
+    //    style repaints opaquely and would hide the layer, so MIX is hidden.
+    if (MIX_HOSTS[style]) {
+      // Collapsible dropdown pinned at the bottom of TUNE. Header shows current
+      // mix; tapping it expands the options and scrolls them into view.
+      const mixHdr = document.createElement('div');
+      mixHdr.className = 'tune-sect mix-header';
+      const cur = CFG.mixStyle ? MIX_ALL[CFG.mixStyle] : 'OFF';
+      mixHdr.textContent = '/ MIX ▸ ' + cur;
+      host.appendChild(mixHdr);
+      const mixWrap = document.createElement('div');
+      mixWrap.className = 'mix-options';
+      mixWrap.style.display = 'none';
+      const mixGrp = document.createElement('div');
+      mixGrp.className = 'toggle-row';
+      mixGrp.style.flexWrap = 'wrap';
+      Object.keys(MIX_ALL).forEach(k => {
+        if (k === style) return;
+        const b = document.createElement('button');
+        b.className = 'toggle-btn' + (CFG.mixStyle===k ? ' on' : '');
+        b.textContent = MIX_ALL[k];
+        b.style.fontSize = '.5rem';
+        b.style.flex = '1 1 30%';
+        b.addEventListener('click', () => {
+          CFG.mixStyle = k;
+          mixGrp.querySelectorAll('.toggle-btn').forEach(x=>x.classList.toggle('on', x===b));
+          mixHdr.textContent = '/ MIX ▸ ' + (k ? MIX_ALL[k] : 'OFF');
+          saveSettings();
+        });
+        mixGrp.appendChild(b);
       });
-      mixGrp.appendChild(b);
-    });
-    mixRow.appendChild(mixGrp);
-    host.appendChild(mixRow);
+      mixWrap.appendChild(mixGrp);
+      mixHdr.addEventListener('click', () => {
+        const open = mixWrap.style.display === 'none';
+        mixWrap.style.display = open ? '' : 'none';
+        mixHdr.classList.toggle('open', open);
+        if (open) mixWrap.scrollIntoView({block:'nearest', behavior:'smooth'});
+      });
+      host.appendChild(mixWrap);
+    }
   }
 
   // Set the active style: update label, re-tint the interface, rebuild the
   // contextual TUNE panel. (Style is chosen via the cycle button now.)
   function setSplashStyle(s) {
     CFG.style=s;
-    // Drop a mix selection that is no longer cross-category for the new style
-    if (CFG.mixStyle && (CFG.mixStyle===s ||
-        (STYLE_KIND[s]==='tracker' && STYLE_KIND[CFG.mixStyle]==='tracker'))) CFG.mixStyle='';
+    if(s==='G'){ MOSH.fbW=0; if(MOSH.ax){MOSH.ax.fill(0);MOSH.ay.fill(0);} }   // force MOSH feedback reset on (re)entry
+    // MIX only applies to host styles (GRAIN/THERMAL); clear it otherwise or if
+    // the mix equals the new active style.
+    if (CFG.mixStyle && (!MIX_HOSTS[s] || CFG.mixStyle===s)) CFG.mixStyle='';
     const bs=document.getElementById('btn-style');
     if(bs) bs.innerHTML=STYLE_NAMES[s];
     buildTunePanel(s);   // rebuild contextual params (theme persists, unchanged)
+    saveSettings();
   }
   // (Splash style buttons removed — style is chosen via the STYLE cycle button + TUNE)
-  buildTunePanel(CFG.style);   // build params for the default style on load
+  { const bs=document.getElementById('btn-style'); if(bs) bs.innerHTML=STYLE_NAMES[CFG.style]||'ORBIT'; }
+  buildTunePanel(CFG.style);   // build params for the (possibly restored) style
 
   // ── Splash ↔ live settings sliders (bidirectional sync) ────────────────
   // Panel sliders are now standalone (splash no longer carries duplicates)
@@ -3516,9 +3861,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Record / stop ──────────────────────────────────────────────────────
   document.getElementById('btn-record').addEventListener('click',()=>{
     if(!STATE.cameraOk){showError('Not ready yet.');return;}
-    if(STATE.uploadMode){
-      renderUploadedClip();   // upload mode → render the whole clip with effect
+    if(STATE.uploadMode && !STILL.active){
+      renderUploadedClip();   // uploaded VIDEO → render the whole clip with effect
     } else {
+      // Live camera OR uploaded PHOTO: record the animated canvas. Effects keep
+      // moving over a still frame (noise, mosh, wavefield), so a photo exports
+      // as a video rather than a frozen image.
       STATE.isRecording?stopRecording():startRecording();
     }
   });
@@ -3531,7 +3879,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(_settingsOpen) TOUCH.active=false;
   });
   document.getElementById('btn-vig').addEventListener('click',function(){
-    CFG.showVignette=!CFG.showVignette;this.classList.toggle('on',CFG.showVignette);
+    CFG.showVignette=!CFG.showVignette;this.classList.toggle('on',CFG.showVignette);saveSettings();
   });
   document.getElementById('btn-audio').addEventListener('click',function(){
     AUDIO.userMuted=!AUDIO.userMuted;
@@ -3539,6 +3887,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(AUDIO.ready && AUDIO.userMuted){
       AUDIO.masterGain.gain.setTargetAtTime(0.0,AUDIO.ctx.currentTime,0.15);
     }
+    saveSettings();
     // When unmuted, updateAudio's volume link takes over automatically
   });
 
@@ -3554,7 +3903,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Noise slider (settings panel only — no splash twin)
   (function(){
     const lr=document.getElementById('lr-noise'), lv=document.getElementById('lv-noise');
-    if(lr&&lv) lr.addEventListener('input',function(){CFG.noise=parseInt(this.value,10);lv.textContent=this.value;});
+    if(lr&&lv){ lr.addEventListener('input',function(){CFG.noise=parseInt(this.value,10);lv.textContent=this.value;}); lr.addEventListener('change',saveSettings); }
   })();
   // Photo capture — grabs the composite canvas as PNG
   document.getElementById('btn-photo').addEventListener('click',()=>{
@@ -3562,7 +3911,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try{
       compositeCanvas.toBlob((blob)=>{
         if(!blob){showError('Photo capture failed.');return;}
-        saveBlob(blob, 'raster_'+Date.now()+'.png');
+        presentSave(blob, 'raster_'+Date.now()+'.png', false);
       },'image/png');
     }catch(e){showError('Photo capture failed: '+e.message);}
   });
@@ -3617,17 +3966,26 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-back').addEventListener('click',returnToHome);
   document.getElementById('btn-flip').addEventListener('click',flipCamera);
   _perfHud = document.getElementById('perf-hud');
-  // Triple-tap the HUD area (top-centre) toggles the performance overlay.
-  let _tapCount=0, _tapT=0;
-  document.addEventListener('pointerdown', (e)=>{
-    if (e.clientY>60 || Math.abs(e.clientX-window.innerWidth/2)>80) return;
-    const t=performance.now();
-    _tapCount = (t-_tapT<450) ? _tapCount+1 : 1; _tapT=t;
-    if (_tapCount>=3){
-      STATE.perfOn=!STATE.perfOn; _tapCount=0;
-      _perfHud.style.display = STATE.perfOn?'block':'none';
-      STATE._perfPrev=performance.now();
-    }
+  // Reflect restored toggle states in the UI
+  { const pb=document.getElementById('btn-perf');
+    if(pb){ pb.classList.toggle('on',STATE.perfOn); if(_perfHud) _perfHud.style.display=STATE.perfOn?'block':'none'; }
+    const pv=document.getElementById('btn-preview');
+    if(pv) pv.classList.toggle('on',STATE.previewOn);
+    const vg=document.getElementById('btn-vig');
+    if(vg) vg.classList.toggle('on',CFG.showVignette);
+    const au=document.getElementById('btn-audio');
+    if(au) au.classList.toggle('on',!AUDIO.userMuted); }
+  document.getElementById('btn-perf').addEventListener('click',function(){
+    STATE.perfOn=!STATE.perfOn;
+    this.classList.toggle('on',STATE.perfOn);
+    _perfHud.style.display=STATE.perfOn?'block':'none';
+    STATE._perfPrev=performance.now();
+    saveSettings();
+  });
+  document.getElementById('btn-preview').addEventListener('click',function(){
+    STATE.previewOn=!STATE.previewOn;
+    this.classList.toggle('on',STATE.previewOn);
+    saveSettings();
   });
 
   // ── Upload video flow ──────────────────────────────────────────────────
@@ -3669,6 +4027,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Window resize ──────────────────────────────────────────────────────
   window.addEventListener('resize',()=>{
     if(!STATE.cameraOk) return;
+    if(STATE.uploadMode) return;   // uploads keep their own aspect; nothing to resize
     const _rs=renderSize(window.innerWidth,window.innerHeight);
     const cW=_rs.w, cH=_rs.h;
     compositeCanvas.width=cW; compositeCanvas.height=cH;
